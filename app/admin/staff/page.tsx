@@ -14,18 +14,18 @@ export default function StaffPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold text-label-primary">
-              Staff Management
+              Gestionare Personal
             </h1>
             <p className="text-label-secondary mt-1">
-              Manage doctors and medical staff
+              Gestionează doctori și personal medical
             </p>
           </div>
           <div className="space-x-2">
             <Button variant="ghost" onClick={() => router.push('/admin/dashboard')}>
-              Back
+              Înapoi
             </Button>
             <Button>
-              Add Doctor
+              Adaugă Doctor
             </Button>
           </div>
         </div>
@@ -37,10 +37,10 @@ export default function StaffPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold">Dr. Ana Popescu</h3>
-                <p className="text-sm text-label-secondary">Emergency • Spitalul Județean</p>
+                <p className="text-sm text-label-secondary">Urgențe • Spitalul Județean</p>
               </div>
               <Button size="sm" variant="ghost">
-                Edit
+                Editează
               </Button>
             </div>
           </Card>
@@ -49,10 +49,10 @@ export default function StaffPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold">Dr. Mihai Ionescu</h3>
-                <p className="text-sm text-label-secondary">Surgery • Spitalul Județean</p>
+                <p className="text-sm text-label-secondary">Chirurgie • Spitalul Județean</p>
               </div>
               <Button size="sm" variant="ghost">
-                Edit
+                Editează
               </Button>
             </div>
           </Card>
@@ -61,10 +61,10 @@ export default function StaffPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold">Dr. Elena Dumitrescu</h3>
-                <p className="text-sm text-label-secondary">Pediatrics • Spitalul Municipal</p>
+                <p className="text-sm text-label-secondary">Pediatrie • Spitalul Municipal</p>
               </div>
               <Button size="sm" variant="ghost">
-                Edit
+                Editează
               </Button>
             </div>
           </Card>

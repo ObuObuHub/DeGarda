@@ -14,27 +14,27 @@ export default function SwapsPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold text-label-primary">
-              Swap Requests
+              Cereri de Schimb
             </h1>
             <p className="text-label-secondary mt-1">
-              Manage shift exchange requests
+              Gestionează cererile de schimb de gărzi
             </p>
           </div>
           <Button variant="ghost" onClick={() => router.push('/admin/dashboard')}>
-            Back to Dashboard
+            Înapoi la Panou
           </Button>
         </div>
 
         {/* Tabs */}
         <div className="flex space-x-4 mb-6">
           <button className="pb-2 border-b-2 border-system-blue text-system-blue font-medium">
-            Pending (2)
+            În Așteptare (2)
           </button>
           <button className="pb-2 border-b-2 border-transparent text-label-tertiary">
-            Approved
+            Aprobate
           </button>
           <button className="pb-2 border-b-2 border-transparent text-label-tertiary">
-            Rejected
+            Respinse
           </button>
         </div>
 
@@ -46,23 +46,23 @@ export default function SwapsPage() {
                 <div>
                   <h3 className="font-semibold">Dr. Ana Popescu → Dr. Mihai Ionescu</h3>
                   <p className="text-sm text-label-secondary mt-1">
-                    December 25, 2024 • Night Shift • Emergency
+                    25 Decembrie 2024 • Gardă de Noapte • Urgențe
                   </p>
                   <p className="text-sm text-label-tertiary mt-2">
-                    Reason: Family emergency
+                    Motiv: Urgență familială
                   </p>
                 </div>
                 <div className="text-sm text-label-tertiary">
-                  2 hours ago
+                  acum 2 ore
                 </div>
               </div>
               
               <div className="flex justify-end space-x-2">
                 <Button variant="ghost" size="sm">
-                  Reject
+                  Respinge
                 </Button>
                 <Button variant="primary" size="sm">
-                  Approve
+                  Aprobă
                 </Button>
               </div>
             </div>
@@ -72,25 +72,25 @@ export default function SwapsPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-semibold">Dr. Elena Dumitrescu → Any Available</h3>
+                  <h3 className="font-semibold">Dr. Elena Dumitrescu → Oricine Disponibil</h3>
                   <p className="text-sm text-label-secondary mt-1">
-                    December 31, 2024 • 24h Shift • Pediatrics
+                    31 Decembrie 2024 • Gardă 24h • Pediatrie
                   </p>
                   <p className="text-sm text-label-tertiary mt-2">
-                    Reason: Personal commitment
+                    Motiv: Angajament personal
                   </p>
                 </div>
                 <div className="text-sm text-label-tertiary">
-                  1 day ago
+                  acum 1 zi
                 </div>
               </div>
               
               <div className="flex justify-end space-x-2">
                 <Button variant="ghost" size="sm">
-                  Reject
+                  Respinge
                 </Button>
                 <Button variant="primary" size="sm">
-                  Find Replacement
+                  Găsește Înlocuitor
                 </Button>
               </div>
             </div>
@@ -99,7 +99,7 @@ export default function SwapsPage() {
           {/* Empty State for other tabs */}
           <Card className="p-8">
             <div className="text-center text-label-tertiary">
-              <p>No more pending swap requests</p>
+              <p>Nu mai sunt cereri de schimb în așteptare</p>
             </div>
           </Card>
         </div>

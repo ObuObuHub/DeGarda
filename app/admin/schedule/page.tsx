@@ -14,14 +14,14 @@ export default function SchedulePage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold text-label-primary">
-              Schedule
+              Program Gărzi
             </h1>
             <p className="text-label-secondary mt-1">
-              Manage shift schedules
+              Gestionează programul gărzilor
             </p>
           </div>
           <Button variant="ghost" onClick={() => router.push('/admin/dashboard')}>
-            Back to Dashboard
+            Înapoi la Panou
           </Button>
         </div>
 
@@ -35,12 +35,12 @@ export default function SchedulePage() {
                 </svg>
               </div>
             </div>
-            <h2 className="text-xl font-semibold mb-2">Calendar View Coming Soon</h2>
+            <h2 className="text-xl font-semibold mb-2">Calendar în Dezvoltare</h2>
             <p className="text-label-secondary mb-6">
-              The shift calendar with reservation and swap features will be available here
+              Calendarul gărzilor cu funcții de rezervare și schimb va fi disponibil aici
             </p>
             <Button onClick={() => router.push('/admin/dashboard')}>
-              Return to Dashboard
+              Înapoi la Panou
             </Button>
           </div>
         </Card>

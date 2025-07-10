@@ -14,18 +14,18 @@ export default function HospitalsPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold text-label-primary">
-              Hospital Management
+              Gestionare Spitale
             </h1>
             <p className="text-label-secondary mt-1">
-              Configure medical facilities
+              Configurează unitățile medicale
             </p>
           </div>
           <div className="space-x-2">
             <Button variant="ghost" onClick={() => router.push('/admin/dashboard')}>
-              Back
+              Înapoi
             </Button>
             <Button>
-              Add Hospital
+              Adaugă Spital
             </Button>
           </div>
         </div>
@@ -41,21 +41,21 @@ export default function HospitalsPage() {
               
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-label-tertiary">Departments</p>
+                  <p className="text-label-tertiary">Secții</p>
                   <p className="font-medium">8</p>
                 </div>
                 <div>
-                  <p className="text-label-tertiary">Staff</p>
+                  <p className="text-label-tertiary">Personal</p>
                   <p className="font-medium">45</p>
                 </div>
               </div>
 
               <div className="flex justify-end space-x-2">
                 <Button size="sm" variant="ghost">
-                  View Details
+                  Vezi Detalii
                 </Button>
                 <Button size="sm">
-                  Edit
+                  Editează
                 </Button>
               </div>
             </div>
@@ -70,21 +70,21 @@ export default function HospitalsPage() {
               
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-label-tertiary">Departments</p>
+                  <p className="text-label-tertiary">Secții</p>
                   <p className="font-medium">5</p>
                 </div>
                 <div>
-                  <p className="text-label-tertiary">Staff</p>
+                  <p className="text-label-tertiary">Personal</p>
                   <p className="font-medium">28</p>
                 </div>
               </div>
 
               <div className="flex justify-end space-x-2">
                 <Button size="sm" variant="ghost">
-                  View Details
+                  Vezi Detalii
                 </Button>
                 <Button size="sm">
-                  Edit
+                  Editează
                 </Button>
               </div>
             </div>

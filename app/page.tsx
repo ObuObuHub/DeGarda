@@ -18,7 +18,7 @@ export default function Home() {
           DeGarda
         </h1>
         <p className="text-label-secondary">
-          Redirecting to dashboard...
+          Redirecționare către panou...
         </p>
       </div>
     </div>

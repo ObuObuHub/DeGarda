@@ -18,10 +18,10 @@ export default function AdminDashboard() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-label-primary">
-            Admin Dashboard
+            Panou Administrator
           </h1>
           <Button variant="ghost" onClick={handleLogout}>
-            Logout
+            Deconectare
           </Button>
         </div>
 
@@ -30,63 +30,63 @@ export default function AdminDashboard() {
           <Card>
             <div className="text-center">
               <p className="text-3xl font-bold text-system-blue">2</p>
-              <p className="text-label-secondary">Hospitals</p>
+              <p className="text-label-secondary">Spitale</p>
             </div>
           </Card>
           
           <Card>
             <div className="text-center">
               <p className="text-3xl font-bold text-system-green">1</p>
-              <p className="text-label-secondary">Staff Members</p>
+              <p className="text-label-secondary">Personal Medical</p>
             </div>
           </Card>
           
           <Card>
             <div className="text-center">
               <p className="text-3xl font-bold text-system-orange">0</p>
-              <p className="text-label-secondary">Shifts Today</p>
+              <p className="text-label-secondary">Gărzi Azi</p>
             </div>
           </Card>
         </div>
 
         {/* Quick Actions */}
-        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+        <h2 className="text-lg font-semibold mb-4">Acțiuni Rapide</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card hoverable onClick={() => router.push('/admin/staff')}>
             <div className="text-center py-4">
-              <p className="text-lg font-medium">Manage Staff</p>
-              <p className="text-sm text-label-secondary mt-1">Add or edit doctors</p>
+              <p className="text-lg font-medium">Gestionează Personal</p>
+              <p className="text-sm text-label-secondary mt-1">Adaugă sau editează doctori</p>
             </div>
           </Card>
           
           <Card hoverable onClick={() => router.push('/admin/hospitals')}>
             <div className="text-center py-4">
-              <p className="text-lg font-medium">Manage Hospitals</p>
-              <p className="text-sm text-label-secondary mt-1">Configure facilities</p>
+              <p className="text-lg font-medium">Gestionează Spitale</p>
+              <p className="text-sm text-label-secondary mt-1">Configurează unități</p>
             </div>
           </Card>
           
           <Card hoverable onClick={() => router.push('/admin/schedule')}>
             <div className="text-center py-4">
-              <p className="text-lg font-medium">View Schedule</p>
-              <p className="text-sm text-label-secondary mt-1">See all shifts</p>
+              <p className="text-lg font-medium">Vezi Programul</p>
+              <p className="text-sm text-label-secondary mt-1">Vezi toate gărzile</p>
             </div>
           </Card>
           
           <Card hoverable onClick={() => router.push('/admin/swaps')}>
             <div className="text-center py-4">
-              <p className="text-lg font-medium">Swap Requests</p>
-              <p className="text-sm text-label-secondary mt-1">Approve or deny swaps</p>
+              <p className="text-lg font-medium">Cereri de Schimb</p>
+              <p className="text-sm text-label-secondary mt-1">Aprobă sau respinge schimburi</p>
             </div>
           </Card>
         </div>
 
         {/* Recent Activity */}
         <div className="mt-8">
-          <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
+          <h2 className="text-lg font-semibold mb-4">Activitate Recentă</h2>
           <Card>
             <div className="text-center py-8 text-label-tertiary">
-              <p>No recent activity</p>
+              <p>Nicio activitate recentă</p>
             </div>
           </Card>
         </div>
