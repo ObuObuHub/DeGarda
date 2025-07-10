@@ -36,7 +36,7 @@ export default function AdminDashboard() {
           
           <Card>
             <div className="text-center">
-              <p className="text-3xl font-bold text-system-green">1</p>
+              <p className="text-3xl font-bold text-system-green">11</p>
               <p className="text-label-secondary">Personal Medical</p>
             </div>
           </Card>

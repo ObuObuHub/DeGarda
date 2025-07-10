@@ -21,6 +21,7 @@ export async function POST() {
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'manager', 'staff')),
+        type VARCHAR(50) DEFAULT 'medic' CHECK (type IN ('medic', 'biolog', 'chimist', 'asistent')),
         hospital_id INTEGER REFERENCES hospitals(id),
         specialization VARCHAR(100),
         is_active BOOLEAN DEFAULT true,
@@ -85,11 +86,11 @@ export async function POST() {
     await sql`CREATE INDEX IF NOT EXISTS idx_swaps_from_staff ON shift_swaps(from_staff_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_swaps_status ON shift_swaps(status)`
 
-    // Insert sample hospitals and get their IDs
+    // Insert actual hospitals from medical-shift-scheduler
     const hospitals = await sql`
       INSERT INTO hospitals (name, city) VALUES 
-        ('Spitalul Județean de Urgență', 'Piatra-Neamț'),
-        ('Spitalul Municipal', 'Roman')
+        ('Spitalul Județean de Urgență Piatra-Neamț', 'Piatra-Neamț'),
+        ('Spitalul "Prof. Dr. Eduard Apetrei" Buhuși', 'Buhuși')
       ON CONFLICT DO NOTHING
       RETURNING id
     `
@@ -105,13 +106,40 @@ export async function POST() {
       hospitalId = hospitals[0].id
     }
 
-    // Create admin user with hashed password
-    const hashedPassword = await bcrypt.hash('admin123', 10)
+    // Create admin and manager users with hashed passwords
+    const adminPassword = await bcrypt.hash('admin123', 10)
+    const managerPassword = await bcrypt.hash('manager123', 10)
+    
     await sql`
-      INSERT INTO staff (name, email, password, role, hospital_id, specialization) VALUES
-        ('Administrator', 'admin@degarda.ro', ${hashedPassword}, 'admin', ${hospitalId}, 'Administration')
+      INSERT INTO staff (name, email, password, role, type, hospital_id, specialization) VALUES
+        ('Administrator Principal', 'admin@degarda.ro', ${adminPassword}, 'admin', 'medic', ${hospitalId}, 'Administration'),
+        ('Manager Gărzi', 'manager@degarda.ro', ${managerPassword}, 'manager', 'medic', ${hospitalId}, 'Management')
       ON CONFLICT (email) DO NOTHING
     `
+
+    // Insert all staff members from medical-shift-scheduler
+    const defaultStaffPassword = await bcrypt.hash('staff123', 10)
+    const staffMembers = [
+      { name: 'Dr. Zugun Eduard', type: 'medic', email: 'zugun.eduard@degarda.ro' },
+      { name: 'Dr. Gîlea Arina', type: 'medic', email: 'gilea.arina@degarda.ro' },
+      { name: 'Dr. Manole Anca', type: 'medic', email: 'manole.anca@degarda.ro' },
+      { name: 'Biol. Alforei Magda Elena', type: 'biolog', email: 'alforei.magda@degarda.ro' },
+      { name: 'Dr. Rusica Iovu Elena', type: 'medic', email: 'rusica.elena@degarda.ro' },
+      { name: 'Dr. Grădinariu Cristina', type: 'medic', email: 'gradinariu.cristina@degarda.ro' },
+      { name: 'Dr. Ciorsac Alina', type: 'medic', email: 'ciorsac.alina@degarda.ro' },
+      { name: 'Dr. Constantinescu Raluca', type: 'medic', email: 'constantinescu.raluca@degarda.ro' },
+      { name: 'Dr. Dobrea Letiția', type: 'medic', email: 'dobrea.letitia@degarda.ro' },
+      { name: 'Ch. Dobre Liliana Gabriela', type: 'chimist', email: 'dobre.liliana@degarda.ro' },
+      { name: 'Dr. Chiper Leferman Andrei', type: 'medic', email: 'chiper.andrei@degarda.ro' }
+    ]
+
+    for (const member of staffMembers) {
+      await sql`
+        INSERT INTO staff (name, email, password, role, type, hospital_id, specialization) VALUES
+          (${member.name}, ${member.email}, ${defaultStaffPassword}, 'staff', ${member.type}, ${hospitalId}, 'Laborator')
+        ON CONFLICT (email) DO NOTHING
+      `
+    }
 
     return NextResponse.json({ 
       success: true, 

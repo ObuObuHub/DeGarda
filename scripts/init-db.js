@@ -8,9 +8,20 @@ async function initDatabase() {
     
     if (data.success) {
       console.log('✅ Database initialized successfully')
-      console.log('📧 Admin credentials:')
+      console.log('\n📍 Hospitals imported:')
+      console.log('   • Spitalul Județean de Urgență Piatra-Neamț')
+      console.log('   • Spitalul "Prof. Dr. Eduard Apetrei" Buhuși')
+      console.log('\n👥 Staff members imported:')
+      console.log('   • 11 medical staff members (8 doctors, 1 biologist, 1 chemist)')
+      console.log('   • All assigned to Laboratory department')
+      console.log('\n📧 Admin credentials:')
       console.log('   Email: admin@degarda.ro')
       console.log('   Password: admin123')
+      console.log('\n📧 Manager credentials:')
+      console.log('   Email: manager@degarda.ro')
+      console.log('   Password: manager123')
+      console.log('\n📧 Staff credentials:')
+      console.log('   Default password for all staff: staff123')
     } else {
       console.error('❌ Failed to initialize database:', data.error)
     }
