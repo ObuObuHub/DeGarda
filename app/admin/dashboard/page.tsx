@@ -8,7 +8,7 @@ export default function AdminDashboard() {
   const router = useRouter()
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    // Temporarily disabled
     router.push('/')
   }
 
