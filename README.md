@@ -45,14 +45,19 @@ JWT_SECRET=your_jwt_secret_key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-4. Run the development server:
-```bash
-npm run dev
-```
-
-5. Initialize the database:
+4. Initialize the database schema:
 ```bash
 npm run db:init
+```
+
+5. Run database migration to add initial data:
+```bash
+npm run db:migrate
+```
+
+6. Run the development server:
+```bash
+npm run dev
 ```
 
 Default admin credentials:
@@ -64,7 +69,10 @@ Default admin credentials:
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
-- `npm run db:init` - Initialize database with sample data
+- `npm run db:init` - Initialize database schema
+- `npm run db:migrate` - Populate database with initial data
+- `npm run lint` - Run ESLint
+- `npm run typecheck` - Check TypeScript types
 
 ## Project Structure
 
@@ -78,6 +86,39 @@ degarda-v2/
 ├── lib/            # Utilities and helpers
 ├── styles/         # Global styles
 └── scripts/        # Utility scripts
+```
+
+## Deployment
+
+### Vercel Deployment
+
+1. Push your code to GitHub
+2. Import the project in Vercel
+3. Set environment variables in Vercel dashboard:
+   - `DATABASE_URL` - Your Neon PostgreSQL connection string
+   - `JWT_SECRET` - A strong secret key for production
+   - `NEXT_PUBLIC_APP_URL` - Your production URL (e.g., https://your-app.vercel.app)
+
+4. After deployment, run the migration script:
+   - You can use Vercel's deployment hooks
+   - Or run it manually: `npm run db:migrate` with production DATABASE_URL
+
+### Manual Deployment
+
+1. Build the application:
+```bash
+npm run build
+```
+
+2. Set production environment variables
+3. Run database migrations:
+```bash
+npm run db:migrate
+```
+
+4. Start the production server:
+```bash
+npm start
 ```
 
 ## Contributing
