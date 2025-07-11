@@ -10,10 +10,10 @@ import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { ShiftOptionsModal } from '@/components/ShiftOptionsModal'
 import { generateMonthlySchedule } from '@/lib/shiftGenerator'
 import { staff } from '@/lib/data'
-import { HospitalSelector } from '@/components/HospitalSelector'
 import { useHospital } from '@/contexts/HospitalContext'
 import { exportScheduleToExcel } from '@/lib/exportUtils'
 import { usePolling } from '@/hooks/usePolling'
+import { showToast } from '@/components/Toast'
 
 
 export default function SchedulePage() {
@@ -93,8 +93,7 @@ export default function SchedulePage() {
       })
 
       if (response.ok) {
-        // Show success message or refresh
-        alert('Cerere de schimb trimisă cu succes!')
+        showToast('success', 'Cerere trimisă', 'Cererea de schimb a fost trimisă cu succes!')
       }
     } catch (error) {
       console.error('Failed to submit swap request:', error)
@@ -134,7 +133,7 @@ export default function SchedulePage() {
           })
         } else {
           const data = await response.json()
-          alert(data.error || 'Eroare la atribuire')
+          showToast('error', 'Eroare', data.error || 'Eroare la atribuire')
         }
       } catch (error) {
         console.error('Failed to assign shift:', error)
@@ -187,14 +186,14 @@ export default function SchedulePage() {
       if (response.ok) {
         // Refresh shifts
         fetchShifts()
-        alert('Gardă rezervată cu succes!')
+        showToast('success', 'Gardă rezervată', 'Garda a fost rezervată cu succes!')
       } else {
         const data = await response.json()
-        alert(data.error || 'Eroare la rezervare')
+        showToast('error', 'Eroare', data.error || 'Eroare la rezervare')
       }
     } catch (error) {
       console.error('Failed to reserve shift:', error)
-      alert('Eroare la rezervare')
+      showToast('error', 'Eroare', 'Eroare la rezervare')
     }
     
     setShowOptionsModal(false)
@@ -247,7 +246,9 @@ export default function SchedulePage() {
         
         // Show message if there were conflicts
         if (data.conflicts && data.conflicts.length > 0) {
-          alert(data.message)
+          showToast('info', 'Program generat', data.message)
+        } else {
+          showToast('success', 'Program generat', 'Programul a fost generat cu succes!')
         }
       }
     } catch (error) {
@@ -256,7 +257,7 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background-secondary p-4">
+    <div className="p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
@@ -269,14 +270,10 @@ export default function SchedulePage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <HospitalSelector />
-            <Button variant="ghost" onClick={() => router.push('/admin/dashboard')}>
-              Înapoi
+            <Button variant="secondary" onClick={handleExportExcel} icon="download">
+              Export Excel
             </Button>
-            <Button variant="secondary" onClick={handleExportExcel}>
-              📊 Export Excel
-            </Button>
-            <Button onClick={handleGenerateSchedule}>
+            <Button onClick={handleGenerateSchedule} icon="sparkles">
               Generează Program
             </Button>
           </div>
@@ -288,8 +285,9 @@ export default function SchedulePage() {
             <Card className="p-6">
               {/* Month Navigation */}
               <div className="flex justify-between items-center mb-6">
-                <Button variant="ghost" size="sm" onClick={handlePrevMonth}>
-                  ◀
+                <Button variant="ghost" size="sm" onClick={handlePrevMonth} icon="chevronLeft">
+                  {/* Empty children for icon-only button */}
+                  <span className="sr-only">Luna anterioară</span>
                 </Button>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" onClick={() => {
@@ -299,8 +297,9 @@ export default function SchedulePage() {
                     Azi
                   </Button>
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleNextMonth}>
-                  ▶
+                <Button variant="ghost" size="sm" onClick={handleNextMonth} icon="chevronRight">
+                  {/* Empty children for icon-only button */}
+                  <span className="sr-only">Luna următoare</span>
                 </Button>
               </div>
 

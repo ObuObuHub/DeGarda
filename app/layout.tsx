@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { HospitalProvider } from '@/contexts/HospitalContext'
+import { ToastContainer } from '@/components/Toast'
 import '@/styles/globals.css'
 
 const inter = Inter({ 
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-background-secondary">
         <HospitalProvider>
           {children}
+          <ToastContainer />
         </HospitalProvider>
       </body>
     </html>

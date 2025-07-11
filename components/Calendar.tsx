@@ -69,29 +69,27 @@ export const Calendar: React.FC<CalendarProps> = ({
     
     if (!shift) {
       return (
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-          isWeekend ? 'bg-system-blue/10 text-system-blue' : 'bg-gray-100'
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+          isWeekend ? 'bg-gradient-to-br from-system-blue/10 to-system-blue/5 border border-system-blue/20' : 'bg-gradient-to-br from-gray-100 to-gray-50 border border-gray-200'
         }`}>
-          <span className="text-sm">○</span>
+          <span className="text-lg">➕</span>
         </div>
       )
     }
     
     if (shift.status === 'reserved') {
       return (
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-          isWeekend ? 'bg-system-orange text-white' : 'bg-system-orange text-white'
-        }`}>
+        <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br from-system-orange to-system-orange/80 text-white shadow-sm">
           <span className="text-sm">🔒</span>
         </div>
       )
     }
     
     return (
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-        isWeekend ? 'bg-system-blue text-white' : 'bg-system-green text-white'
+      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm ${
+        isWeekend ? 'bg-gradient-to-br from-system-blue to-system-blue/80 text-white' : 'bg-gradient-to-br from-system-green to-system-green/80 text-white'
       }`}>
-        <span className="text-sm">●</span>
+        <span className="text-sm">✓</span>
       </div>
     )
   }
@@ -120,14 +118,18 @@ export const Calendar: React.FC<CalendarProps> = ({
           const dateStr = day ? `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : ''
           const shift = getShiftForDay(day)
           const isWeekend = day && new Date(year, month, day).getDay() % 6 === 0
+          const today = new Date()
+          const isToday = day && year === today.getFullYear() && month === today.getMonth() && day === today.getDate()
           
           return (
             <div
               key={index}
               className={`
-                aspect-square rounded-ios p-2
-                ${day ? 'bg-white hover:bg-gray-50 cursor-pointer transition-colors' : ''}
-                ${isWeekend && day ? 'ring-1 ring-system-blue/20' : ''}
+                aspect-square rounded-ios p-2 relative overflow-hidden
+                ${day ? 'bg-white hover:shadow-md cursor-pointer transition-all duration-200 transform hover:scale-[1.02]' : ''}
+                ${isWeekend && day ? 'bg-system-blue/5' : ''}
+                ${isToday ? 'ring-2 ring-system-blue shadow-ios' : ''}
+                ${shift ? 'border border-gray-100' : ''}
               `}
               onClick={() => {
                 if (!day) return
@@ -138,14 +140,17 @@ export const Calendar: React.FC<CalendarProps> = ({
                 }
               }}
             >
+              {isToday && (
+                <div className="absolute top-0 left-0 w-full h-1 bg-system-blue"></div>
+              )}
               {day && (
                 <div className="h-full flex flex-col items-center justify-between">
-                  <span className={`text-sm ${isWeekend ? 'text-system-blue font-medium' : 'text-label-primary'}`}>
+                  <span className={`text-sm font-medium ${isToday ? 'text-system-blue' : isWeekend ? 'text-system-blue' : 'text-label-primary'}`}>
                     {day}
                   </span>
                   {getDayIndicator(day)}
                   {shift && (
-                    <span className="text-xs text-label-secondary truncate max-w-full">
+                    <span className="text-xs text-label-secondary truncate max-w-full font-medium">
                       {shift.status === 'reserved' 
                         ? shift.reservedByName?.split(' ')[1] 
                         : shift.doctorName?.split(' ')[1]}
@@ -159,27 +164,36 @@ export const Calendar: React.FC<CalendarProps> = ({
       </div>
 
       {/* Legend */}
-      <div className="mt-6 space-y-2">
-        <div className="flex flex-wrap gap-4 text-sm">
+      <div className="mt-6 bg-gray-50 rounded-ios-lg p-4">
+        <h3 className="text-sm font-medium text-label-primary mb-3">Legendă</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-gray-100"></div>
-            <span className="text-label-secondary">Liber</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-100 to-gray-50 border border-gray-200 flex items-center justify-center">
+              <span className="text-xs">➕</span>
+            </div>
+            <span className="text-sm text-label-secondary">Liber</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-system-green"></div>
-            <span className="text-label-secondary">Atribuit</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-system-green to-system-green/80 flex items-center justify-center text-white">
+              <span className="text-xs">✓</span>
+            </div>
+            <span className="text-sm text-label-secondary">Atribuit</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-system-orange flex items-center justify-center text-xs">🔒</div>
-            <span className="text-label-secondary">Rezervat</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-system-orange to-system-orange/80 flex items-center justify-center text-white">
+              <span className="text-xs">🔒</span>
+            </div>
+            <span className="text-sm text-label-secondary">Rezervat</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-system-blue"></div>
-            <span className="text-label-secondary">Weekend</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-system-blue to-system-blue/80 flex items-center justify-center text-white">
+              <span className="text-xs">✓</span>
+            </div>
+            <span className="text-sm text-label-secondary">Weekend</span>
           </div>
         </div>
-        <p className="text-xs text-label-tertiary">
-          Click pe o gardă atribuită pentru a solicita schimb
+        <p className="text-xs text-label-tertiary mt-3 italic">
+          💡 Click pe o zi pentru a gestiona garda
         </p>
       </div>
     </div>

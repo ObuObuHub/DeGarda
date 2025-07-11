@@ -1,9 +1,12 @@
 import React from 'react'
+import { Icon } from './Icon'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
   size?: 'sm' | 'md' | 'lg'
   fullWidth?: boolean
+  icon?: string
+  iconPosition?: 'left' | 'right'
   children: React.ReactNode
 }
 
@@ -11,6 +14,8 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   fullWidth = false,
+  icon,
+  iconPosition = 'left',
   className = '',
   children,
   disabled,
@@ -33,13 +38,17 @@ export const Button: React.FC<ButtonProps> = ({
   
   const widthClass = fullWidth ? 'w-full' : ''
   
+  const iconSize = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
+  
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${className}`}
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${className} flex items-center justify-center gap-2`}
       disabled={disabled}
       {...props}
     >
+      {icon && iconPosition === 'left' && <Icon name={icon} size={iconSize} />}
       {children}
+      {icon && iconPosition === 'right' && <Icon name={icon} size={iconSize} />}
     </button>
   )
 }
