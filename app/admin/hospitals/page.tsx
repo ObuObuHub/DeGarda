@@ -1,17 +1,40 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { HospitalModal } from '@/components/HospitalModal'
-import { hospitals as initialHospitals, Hospital } from '@/lib/data'
+import { Hospital } from '@/lib/data'
 
 export default function HospitalsPage() {
   const router = useRouter()
-  const [hospitals, setHospitals] = useState(initialHospitals)
+  const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingHospital, setEditingHospital] = useState<Hospital | undefined>()
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch hospitals from API
+  useEffect(() => {
+    fetchHospitals()
+  }, [])
+
+  const fetchHospitals = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/hospitals')
+      if (!response.ok) {
+        throw new Error('Failed to fetch hospitals')
+      }
+      const data = await response.json()
+      setHospitals(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleAdd = () => {
     setEditingHospital(undefined)
@@ -23,27 +46,66 @@ export default function HospitalsPage() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Sigur vrei să ștergi acest spital?')) {
-      setHospitals(hospitals.filter(h => h.id !== id))
+      try {
+        const response = await fetch(`/api/hospitals/${id}`, {
+          method: 'DELETE',
+        })
+        
+        if (!response.ok) {
+          const error = await response.json()
+          alert(error.error || 'Failed to delete hospital')
+          return
+        }
+        
+        // Refresh the list
+        await fetchHospitals()
+      } catch (err) {
+        alert('An error occurred while deleting the hospital')
+      }
     }
   }
 
-  const handleSave = (hospitalData: Omit<Hospital, 'id'>) => {
-    if (editingHospital) {
-      // Edit existing
-      setHospitals(hospitals.map(h => 
-        h.id === editingHospital.id 
-          ? { ...hospitalData, id: editingHospital.id }
-          : h
-      ))
-    } else {
-      // Add new
-      const newHospital: Hospital = {
-        ...hospitalData,
-        id: Date.now().toString()
+  const handleSave = async (hospitalData: Omit<Hospital, 'id'>) => {
+    try {
+      if (editingHospital) {
+        // Edit existing
+        const response = await fetch(`/api/hospitals/${editingHospital.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(hospitalData),
+        })
+        
+        if (!response.ok) {
+          const error = await response.json()
+          alert(error.error || 'Failed to update hospital')
+          return
+        }
+      } else {
+        // Add new
+        const response = await fetch('/api/hospitals', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(hospitalData),
+        })
+        
+        if (!response.ok) {
+          const error = await response.json()
+          alert(error.error || 'Failed to create hospital')
+          return
+        }
       }
-      setHospitals([...hospitals, newHospital])
+      
+      // Refresh the list and close modal
+      await fetchHospitals()
+      setIsModalOpen(false)
+    } catch (err) {
+      alert('An error occurred while saving the hospital')
     }
   }
 
@@ -70,9 +132,26 @@ export default function HospitalsPage() {
           </div>
         </div>
 
+        {/* Loading and Error States */}
+        {isLoading && (
+          <div className="text-center py-8">
+            <p className="text-label-secondary">Se încarcă spitalele...</p>
+          </div>
+        )}
+        
+        {error && (
+          <div className="text-center py-8">
+            <p className="text-red-500">{error}</p>
+            <Button onClick={fetchHospitals} className="mt-2">
+              Reîncearcă
+            </Button>
+          </div>
+        )}
+
         {/* Hospitals Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {hospitals.map(hospital => (
+        {!isLoading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {hospitals.map(hospital => (
             <Card key={hospital.id} hoverable>
               <div className="space-y-4">
                 <div>
@@ -102,7 +181,8 @@ export default function HospitalsPage() {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
       </div>
 
       <HospitalModal

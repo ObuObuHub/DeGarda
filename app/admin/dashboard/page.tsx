@@ -1,13 +1,66 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useHospital } from '@/contexts/HospitalContext'
 
+interface DashboardStats {
+  hospitals: number
+  staff: number
+  todayShifts: number
+  pendingSwaps: number
+}
+
 export default function AdminDashboard() {
   const router = useRouter()
   const { selectedHospital } = useHospital()
+  const [stats, setStats] = useState<DashboardStats>({
+    hospitals: 0,
+    staff: 0,
+    todayShifts: 0,
+    pendingSwaps: 0
+  })
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetchDashboardStats()
+  }, [])
+
+  const fetchDashboardStats = async () => {
+    try {
+      setIsLoading(true)
+      
+      // Fetch hospitals count
+      const hospitalsRes = await fetch('/api/hospitals')
+      const hospitals = hospitalsRes.ok ? await hospitalsRes.json() : []
+      
+      // Fetch staff count
+      const staffRes = await fetch('/api/staff')
+      const staff = staffRes.ok ? await staffRes.json() : []
+      
+      // Fetch today's shifts count
+      const today = new Date().toISOString().split('T')[0]
+      const shiftsRes = await fetch(`/api/shifts?date=${today}`)
+      const shifts = shiftsRes.ok ? await shiftsRes.json() : []
+      
+      // Fetch pending swaps count
+      const swapsRes = await fetch('/api/swaps?status=pending')
+      const swaps = swapsRes.ok ? await swapsRes.json() : []
+      
+      setStats({
+        hospitals: hospitals.length,
+        staff: staff.length,
+        todayShifts: shifts.length,
+        pendingSwaps: swaps.length
+      })
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleLogout = async () => {
     // Temporarily disabled
@@ -34,7 +87,9 @@ export default function AdminDashboard() {
           <Card className="bg-gradient-to-br from-system-blue/10 to-system-blue/5 border border-system-blue/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl lg:text-3xl font-bold text-system-blue">2</p>
+                <p className="text-2xl lg:text-3xl font-bold text-system-blue">
+                  {isLoading ? '...' : stats.hospitals}
+                </p>
                 <p className="text-label-secondary text-sm mt-1">Spitale Active</p>
               </div>
               <div className="w-10 h-10 lg:w-12 lg:h-12 bg-system-blue/10 rounded-ios flex items-center justify-center">
@@ -46,7 +101,9 @@ export default function AdminDashboard() {
           <Card className="bg-gradient-to-br from-system-green/10 to-system-green/5 border border-system-green/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl lg:text-3xl font-bold text-system-green">11</p>
+                <p className="text-2xl lg:text-3xl font-bold text-system-green">
+                  {isLoading ? '...' : stats.staff}
+                </p>
                 <p className="text-label-secondary text-sm mt-1">Personal Medical</p>
               </div>
               <div className="w-10 h-10 lg:w-12 lg:h-12 bg-system-green/10 rounded-ios flex items-center justify-center">
@@ -58,7 +115,9 @@ export default function AdminDashboard() {
           <Card className="bg-gradient-to-br from-system-orange/10 to-system-orange/5 border border-system-orange/20 sm:col-span-2 lg:col-span-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl lg:text-3xl font-bold text-system-orange">0</p>
+                <p className="text-2xl lg:text-3xl font-bold text-system-orange">
+                  {isLoading ? '...' : stats.todayShifts}
+                </p>
                 <p className="text-label-secondary text-sm mt-1">Gărzi Azi</p>
               </div>
               <div className="w-10 h-10 lg:w-12 lg:h-12 bg-system-orange/10 rounded-ios flex items-center justify-center">

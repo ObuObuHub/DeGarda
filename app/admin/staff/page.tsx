@@ -1,20 +1,57 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { StaffModal } from '@/components/StaffModal'
-import { staff as initialStaff, hospitals, StaffMember } from '@/lib/data'
+import { StaffMember } from '@/lib/data'
 import { HospitalSelector } from '@/components/HospitalSelector'
 import { useHospital } from '@/contexts/HospitalContext'
 
 export default function StaffPage() {
   const router = useRouter()
   const { selectedHospitalId } = useHospital()
-  const [staffList, setStaffList] = useState(initialStaff)
+  const [staffList, setStaffList] = useState<StaffMember[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState<StaffMember | undefined>()
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [hospitals, setHospitals] = useState<any[]>([])
+
+  // Fetch staff from API
+  useEffect(() => {
+    fetchStaff()
+    fetchHospitals()
+  }, [])
+
+  const fetchStaff = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/staff')
+      if (!response.ok) {
+        throw new Error('Failed to fetch staff')
+      }
+      const data = await response.json()
+      setStaffList(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fetchHospitals = async () => {
+    try {
+      const response = await fetch('/api/hospitals')
+      if (response.ok) {
+        const data = await response.json()
+        setHospitals(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch hospitals:', err)
+    }
+  }
 
   // Filter staff by selected hospital
   const filteredStaff = staffList.filter(s => s.hospitalId === selectedHospitalId)
@@ -43,27 +80,66 @@ export default function StaffPage() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Sigur vrei să ștergi acest membru?')) {
-      setStaffList(staffList.filter(s => s.id !== id))
+      try {
+        const response = await fetch(`/api/staff/${id}`, {
+          method: 'DELETE',
+        })
+        
+        if (!response.ok) {
+          const error = await response.json()
+          alert(error.error || 'Failed to delete staff member')
+          return
+        }
+        
+        // Refresh the list
+        await fetchStaff()
+      } catch (err) {
+        alert('An error occurred while deleting the staff member')
+      }
     }
   }
 
-  const handleSave = (staffData: Omit<StaffMember, 'id'>) => {
-    if (editingStaff) {
-      // Edit existing
-      setStaffList(staffList.map(s => 
-        s.id === editingStaff.id 
-          ? { ...staffData, id: editingStaff.id }
-          : s
-      ))
-    } else {
-      // Add new
-      const newStaff: StaffMember = {
-        ...staffData,
-        id: Date.now().toString()
+  const handleSave = async (staffData: Omit<StaffMember, 'id'>) => {
+    try {
+      if (editingStaff) {
+        // Edit existing
+        const response = await fetch(`/api/staff/${editingStaff.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(staffData),
+        })
+        
+        if (!response.ok) {
+          const error = await response.json()
+          alert(error.error || 'Failed to update staff member')
+          return
+        }
+      } else {
+        // Add new
+        const response = await fetch('/api/staff', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(staffData),
+        })
+        
+        if (!response.ok) {
+          const error = await response.json()
+          alert(error.error || 'Failed to create staff member')
+          return
+        }
       }
-      setStaffList([...staffList, newStaff])
+      
+      // Refresh the list and close modal
+      await fetchStaff()
+      setIsModalOpen(false)
+    } catch (err) {
+      alert('An error occurred while saving the staff member')
     }
   }
 
@@ -91,9 +167,26 @@ export default function StaffPage() {
           </div>
         </div>
 
+        {/* Loading and Error States */}
+        {isLoading && (
+          <div className="text-center py-8">
+            <p className="text-label-secondary">Se încarcă personalul...</p>
+          </div>
+        )}
+        
+        {error && (
+          <div className="text-center py-8">
+            <p className="text-red-500">{error}</p>
+            <Button onClick={fetchStaff} className="mt-2">
+              Reîncearcă
+            </Button>
+          </div>
+        )}
+
         {/* Staff List */}
-        <div className="grid gap-4">
-          {filteredStaff.map(member => (
+        {!isLoading && !error && (
+          <div className="grid gap-4">
+            {filteredStaff.map(member => (
             <Card key={member.id} hoverable>
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -118,7 +211,8 @@ export default function StaffPage() {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
       </div>
 
       <StaffModal

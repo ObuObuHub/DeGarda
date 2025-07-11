@@ -2,16 +2,48 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useHospital } from '@/contexts/HospitalContext'
-import { hospitals } from '@/lib/data'
 import { Icon } from '@/components/ui/Icon'
+
+interface Hospital {
+  id: string
+  name: string
+  city: string
+  departments?: number
+  staff?: number
+}
 
 export function HospitalSelector() {
   const { selectedHospitalId, setSelectedHospitalId } = useHospital()
   const [isOpen, setIsOpen] = useState(false)
   const [focusedIndex, setFocusedIndex] = useState(-1)
+  const [hospitals, setHospitals] = useState<Hospital[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const dropdownRef = useRef<HTMLDivElement>(null)
   
   const selectedHospital = hospitals.find(h => h.id === selectedHospitalId)
+
+  // Fetch hospitals from API
+  useEffect(() => {
+    fetchHospitals()
+  }, [])
+
+  const fetchHospitals = async () => {
+    try {
+      const response = await fetch('/api/hospitals')
+      if (response.ok) {
+        const data = await response.json()
+        setHospitals(data)
+        // If no hospital is selected, select the first one
+        if (!selectedHospitalId && data.length > 0) {
+          setSelectedHospitalId(data[0].id)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch hospitals:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -90,7 +122,7 @@ export function HospitalSelector() {
             <span className="text-2xl flex-shrink-0">🏥</span>
             <div className="min-w-0">
               <p className="text-sm font-medium text-label-primary truncate">
-                {selectedHospital?.name || 'Selectează spital'}
+                {isLoading ? 'Se încarcă...' : (selectedHospital?.name || 'Selectează spital')}
               </p>
               {selectedHospital && (
                 <p className="text-xs text-label-tertiary">
@@ -140,7 +172,16 @@ export function HospitalSelector() {
             </div>
             
             <div className="overflow-y-auto max-h-[60vh] sm:max-h-[350px]">
-              {hospitals.map((hospital, index) => (
+              {isLoading ? (
+                <div className="text-center py-4 text-label-secondary">
+                  Se încarcă spitalele...
+                </div>
+              ) : hospitals.length === 0 ? (
+                <div className="text-center py-4 text-label-secondary">
+                  Niciun spital disponibil
+                </div>
+              ) : (
+                hospitals.map((hospital, index) => (
                 <button
                   key={hospital.id}
                   onClick={() => handleSelect(hospital.id)}
@@ -169,7 +210,8 @@ export function HospitalSelector() {
                     <Icon name="check" size="sm" className="text-system-blue" />
                   )}
                 </button>
-              ))}
+              ))
+              )}
             </div>
           </div>
         </>
