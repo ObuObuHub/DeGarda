@@ -19,7 +19,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background-secondary flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8">
+      <Card className="w-full max-w-md p-6 sm:p-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-label-primary mb-2">
             DeGarda

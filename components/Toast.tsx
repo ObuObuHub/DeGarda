@@ -38,7 +38,7 @@ function Toast({ toast, onClose }: ToastProps) {
 
   return (
     <div
-      className={`${bgColors[toast.type]} text-white rounded-ios-lg shadow-ios-lg p-4 min-w-[300px] max-w-md animate-slide-up`}
+      className={`${bgColors[toast.type]} text-white rounded-ios-lg shadow-ios-lg p-3 sm:p-4 w-full animate-slide-up`}
     >
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
@@ -78,7 +78,7 @@ export function ToastContainer() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 space-y-2">
+    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-50 space-y-2 max-w-sm mx-auto sm:mx-0">
       {toasts.map(toast => (
         <Toast key={toast.id} toast={toast} onClose={removeToast} />
       ))}

@@ -257,24 +257,37 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 lg:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-label-primary">
+            <h1 className="text-xl lg:text-2xl font-bold text-label-primary">
               Program Gărzi
             </h1>
-            <p className="text-label-secondary mt-1">
+            <p className="text-label-secondary text-sm mt-1">
               {selectedHospital?.name || 'Gestionează programul gărzilor'}
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleExportExcel} icon="download">
-              Export Excel
+            <Button 
+              variant="secondary" 
+              onClick={handleExportExcel} 
+              icon="download"
+              size="sm"
+              className="text-sm"
+            >
+              <span className="hidden sm:inline">Export Excel</span>
+              <span className="sm:hidden">Export</span>
             </Button>
-            <Button onClick={handleGenerateSchedule} icon="sparkles">
-              Generează Program
+            <Button 
+              onClick={handleGenerateSchedule} 
+              icon="sparkles"
+              size="sm"
+              className="text-sm"
+            >
+              <span className="hidden sm:inline">Generează Program</span>
+              <span className="sm:hidden">Generează</span>
             </Button>
           </div>
         </div>

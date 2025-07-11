@@ -19,7 +19,11 @@ const navItems: NavItem[] = [
   { label: 'Cereri Schimb', href: '/admin/swaps', icon: 'swap' },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { selectedHospital } = useHospital()
@@ -27,9 +31,19 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-white border-r border-separator h-full flex flex-col">
       {/* Logo Section */}
-      <div className="p-6 border-b border-separator">
-        <h1 className="text-2xl font-bold text-label-primary">DeGarda</h1>
-        <p className="text-sm text-label-secondary mt-1">v2.0</p>
+      <div className="p-6 border-b border-separator flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-label-primary">DeGarda</h1>
+          <p className="text-sm text-label-secondary mt-1">v2.0</p>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden p-2 hover:bg-gray-100 rounded-ios transition-colors"
+          >
+            <Icon name="close" size="md" />
+          </button>
+        )}
       </div>
 
       {/* Hospital Selector */}

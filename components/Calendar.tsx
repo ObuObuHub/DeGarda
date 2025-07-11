@@ -69,27 +69,27 @@ export const Calendar: React.FC<CalendarProps> = ({
     
     if (!shift) {
       return (
-        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-2xl flex items-center justify-center transition-all duration-200 ${
           isWeekend ? 'bg-gradient-to-br from-system-blue/10 to-system-blue/5 border border-system-blue/20' : 'bg-gradient-to-br from-gray-100 to-gray-50 border border-gray-200'
         }`}>
-          <span className="text-lg">➕</span>
+          <span className="text-sm sm:text-lg">➕</span>
         </div>
       )
     }
     
     if (shift.status === 'reserved') {
       return (
-        <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br from-system-orange to-system-orange/80 text-white shadow-sm">
-          <span className="text-sm">🔒</span>
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-2xl flex items-center justify-center bg-gradient-to-br from-system-orange to-system-orange/80 text-white shadow-sm">
+          <span className="text-xs sm:text-sm">🔒</span>
         </div>
       )
     }
     
     return (
-      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm ${
+      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-2xl flex items-center justify-center shadow-sm ${
         isWeekend ? 'bg-gradient-to-br from-system-blue to-system-blue/80 text-white' : 'bg-gradient-to-br from-system-green to-system-green/80 text-white'
       }`}>
-        <span className="text-sm">✓</span>
+        <span className="text-xs sm:text-sm">✓</span>
       </div>
     )
   }
@@ -104,16 +104,16 @@ export const Calendar: React.FC<CalendarProps> = ({
       </div>
 
       {/* Days of Week */}
-      <div className="grid grid-cols-7 gap-2 mb-2">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
         {DAYS.map(day => (
-          <div key={day} className="text-center text-sm font-medium text-label-secondary">
+          <div key={day} className="text-center text-xs sm:text-sm font-medium text-label-secondary">
             {day}
           </div>
         ))}
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {daysInMonth.map((day, index) => {
           const dateStr = day ? `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : ''
           const shift = getShiftForDay(day)
@@ -125,10 +125,10 @@ export const Calendar: React.FC<CalendarProps> = ({
             <div
               key={index}
               className={`
-                aspect-square rounded-ios p-2 relative overflow-hidden
+                aspect-square rounded-md sm:rounded-ios p-1 sm:p-2 relative overflow-hidden
                 ${day ? 'bg-white hover:shadow-md cursor-pointer transition-all duration-200 transform hover:scale-[1.02]' : ''}
                 ${isWeekend && day ? 'bg-system-blue/5' : ''}
-                ${isToday ? 'ring-2 ring-system-blue shadow-ios' : ''}
+                ${isToday ? 'ring-1 sm:ring-2 ring-system-blue shadow-ios' : ''}
                 ${shift ? 'border border-gray-100' : ''}
               `}
               onClick={() => {
@@ -141,16 +141,18 @@ export const Calendar: React.FC<CalendarProps> = ({
               }}
             >
               {isToday && (
-                <div className="absolute top-0 left-0 w-full h-1 bg-system-blue"></div>
+                <div className="absolute top-0 left-0 w-full h-0.5 sm:h-1 bg-system-blue"></div>
               )}
               {day && (
                 <div className="h-full flex flex-col items-center justify-between">
-                  <span className={`text-sm font-medium ${isToday ? 'text-system-blue' : isWeekend ? 'text-system-blue' : 'text-label-primary'}`}>
+                  <span className={`text-xs sm:text-sm font-medium ${isToday ? 'text-system-blue' : isWeekend ? 'text-system-blue' : 'text-label-primary'}`}>
                     {day}
                   </span>
-                  {getDayIndicator(day)}
+                  <div className="scale-75 sm:scale-100">
+                    {getDayIndicator(day)}
+                  </div>
                   {shift && (
-                    <span className="text-xs text-label-secondary truncate max-w-full font-medium">
+                    <span className="text-[10px] sm:text-xs text-label-secondary truncate max-w-full font-medium">
                       {shift.status === 'reserved' 
                         ? shift.reservedByName?.split(' ')[1] 
                         : shift.doctorName?.split(' ')[1]}

@@ -44,16 +44,22 @@ export const Modal: React.FC<ModalProps> = ({
       />
       
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
         <div
           className={`
-            bg-white rounded-ios-xl
+            bg-white rounded-t-ios-xl sm:rounded-ios-xl
             w-full ${sizeClasses[size]}
             transform transition-all duration-300
             shadow-ios-lg
+            max-h-[90vh] sm:max-h-[80vh] overflow-hidden flex flex-col
           `}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Mobile drag handle */}
+          <div className="sm:hidden flex justify-center pt-2 pb-1">
+            <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+          </div>
+          
           {/* Header */}
           {title && (
             <div className="px-6 py-4 border-b border-gray-100">
@@ -64,7 +70,7 @@ export const Modal: React.FC<ModalProps> = ({
           )}
           
           {/* Content */}
-          <div className="p-6">
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1">
             {children}
           </div>
         </div>

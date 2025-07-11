@@ -17,13 +17,15 @@ export function HospitalSelector() {
           bg-system-gray-6
           text-label-primary
           rounded-lg
-          px-4 py-2 pr-8
-          text-sm font-medium
+          px-3 py-2 pr-8
+          text-xs sm:text-sm font-medium
           focus:outline-none
           focus:ring-2
           focus:ring-system-blue
           cursor-pointer
           border border-separator-opaque
+          max-w-[180px] sm:max-w-none
+          truncate
         "
       >
         {hospitals.map(hospital => (
