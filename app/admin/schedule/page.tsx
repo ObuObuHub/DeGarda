@@ -7,22 +7,26 @@ import { Card } from '@/components/ui/Card'
 import { Calendar } from '@/components/Calendar'
 import { AssignShiftModal } from '@/components/AssignShiftModal'
 import { generateMonthlySchedule } from '@/lib/shiftGenerator'
+import { staff } from '@/lib/data'
 
-// Sample data - will be replaced with API calls
-const SAMPLE_DOCTORS = [
-  { id: '1', name: 'Dr. Ana Popescu', shiftsThisMonth: 3, weekendShifts: 0, isAvailable: true, unavailableDates: ['2025-01-15', '2025-01-16'] },
-  { id: '2', name: 'Dr. Mihai Ionescu', shiftsThisMonth: 5, weekendShifts: 1, isAvailable: true, unavailableDates: ['2025-01-20'] },
-  { id: '3', name: 'Dr. Elena Dumitrescu', shiftsThisMonth: 4, weekendShifts: 1, isAvailable: false, unavailableDates: [] },
-  { id: '4', name: 'Dr. Alexandru Popa', shiftsThisMonth: 2, weekendShifts: 0, isAvailable: true, unavailableDates: ['2025-01-08', '2025-01-09', '2025-01-10'] },
-  { id: '5', name: 'Dr. Maria Constantinescu', shiftsThisMonth: 6, weekendShifts: 2, isAvailable: true, unavailableDates: [] },
-]
+// Convert staff to calendar format
+const doctors = staff
+  .filter(s => s.role === 'staff') // Only show actual staff, not admin/manager
+  .map(s => ({
+    id: s.id,
+    name: s.name,
+    shiftsThisMonth: 0,
+    weekendShifts: 0,
+    isAvailable: true,
+    unavailableDates: [] as string[]
+  }))
 
 export default function SchedulePage() {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [shifts, setShifts] = useState<Record<string, any>>({
-    '2025-01-06': { id: '1', doctorId: '1', doctorName: 'Dr. Ana Popescu', type: '24h', status: 'assigned' },
-    '2025-01-13': { id: '2', doctorId: '2', doctorName: 'Dr. Mihai Ionescu', type: '24h', status: 'assigned' },
+    '2025-01-06': { id: '1', doctorId: '1', doctorName: 'Dr. Albu Cristina', type: '24h', status: 'assigned' },
+    '2025-01-13': { id: '2', doctorId: '2', doctorName: 'Dr. Radu Mihaela', type: '24h', status: 'assigned' },
   })
 
   const currentDate = new Date()
@@ -36,7 +40,7 @@ export default function SchedulePage() {
   const handleAssignDoctor = (doctorId: string) => {
     if (!selectedDate) return
     
-    const doctor = SAMPLE_DOCTORS.find(d => d.id === doctorId)
+    const doctor = doctors.find(d => d.id === doctorId)
     if (doctor) {
       setShifts({
         ...shifts,
@@ -72,7 +76,7 @@ export default function SchedulePage() {
 
   const handleGenerateSchedule = () => {
     // Filter only available doctors
-    const availableDoctors = SAMPLE_DOCTORS.filter(d => d.isAvailable)
+    const availableDoctors = doctors.filter(d => d.isAvailable)
     
     // Generate schedule for current month
     const generatedShifts = generateMonthlySchedule(
@@ -176,7 +180,7 @@ export default function SchedulePage() {
             <Card className="p-4">
               <h3 className="font-semibold mb-3">Top Doctori</h3>
               <div className="space-y-2">
-                {SAMPLE_DOCTORS.slice(0, 3).map(doctor => (
+                {doctors.slice(0, 3).map(doctor => (
                   <div key={doctor.id} className="flex justify-between text-sm">
                     <span className="text-label-secondary truncate">{doctor.name}</span>
                     <span className="font-medium">{doctor.shiftsThisMonth}</span>
@@ -192,7 +196,7 @@ export default function SchedulePage() {
         isOpen={!!selectedDate}
         onClose={() => setSelectedDate(null)}
         date={selectedDate || ''}
-        doctors={SAMPLE_DOCTORS.map(d => ({
+        doctors={doctors.map(d => ({
           ...d,
           isAvailable: d.isAvailable && !d.unavailableDates.includes(selectedDate || '')
         }))}
