@@ -47,14 +47,9 @@ export function Sidebar({ onClose }: SidebarProps) {
       </div>
 
       {/* Hospital Selector */}
-      <div className="p-4 border-b border-separator">
-        <label className="text-xs text-label-tertiary mb-2 block">Spital Selectat</label>
+      <div className="p-4 border-b border-separator bg-gray-50">
+        <label className="text-xs font-medium text-label-secondary mb-2 block uppercase tracking-wider">Spital Activ</label>
         <HospitalSelector />
-        {selectedHospital && (
-          <p className="text-xs text-label-tertiary mt-2">
-            {selectedHospital.city} • {selectedHospital.staff} personal
-          </p>
-        )}
       </div>
 
       {/* Navigation */}

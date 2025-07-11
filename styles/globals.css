@@ -85,4 +85,34 @@
   .animate-slide-up {
     animation: slide-up 0.3s ease-out;
   }
+
+  /* Dropdown animations */
+  @keyframes dropdown-enter {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-dropdown {
+    animation: dropdown-enter 0.2s ease-out;
+  }
+  
+  /* Mobile slide up animation */
+  @keyframes mobile-slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-mobile-slide-up {
+    animation: mobile-slide-up 0.3s ease-out;
+  }
 }
