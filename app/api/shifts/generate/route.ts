@@ -73,8 +73,25 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Generate shifts error:', error)
+    
+    // Check for database connection errors
+    if (error.message?.includes('Cannot convert argument to a ByteString')) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Database connection error. Please check your database configuration.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Failed to generate shifts' },
+      { 
+        success: false, 
+        error: 'Failed to generate shifts',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }

@@ -76,7 +76,11 @@ export async function GET(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch shifts' },
+      { 
+        success: false, 
+        error: 'Failed to fetch shifts',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }
@@ -158,7 +162,11 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Create/update shift error:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to save shift' },
+      { 
+        success: false, 
+        error: 'Failed to save shift',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }
@@ -188,7 +196,11 @@ export async function DELETE(request: NextRequest) {
   } catch (error: any) {
     console.error('Delete shift error:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to remove shift assignment' },
+      { 
+        success: false, 
+        error: 'Failed to remove shift assignment',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }
