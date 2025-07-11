@@ -3,9 +3,13 @@
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { HospitalSelector } from '@/components/HospitalSelector'
+import { NotificationBell } from '@/components/NotificationBell'
+import { useHospital } from '@/contexts/HospitalContext'
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const { selectedHospital } = useHospital()
 
   const handleLogout = async () => {
     // Temporarily disabled
@@ -17,12 +21,23 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-label-primary">
-            Panou Administrator
-          </h1>
-          <Button variant="ghost" onClick={handleLogout}>
-            Deconectare
-          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-label-primary">
+              Panou Administrator
+            </h1>
+            {selectedHospital && (
+              <p className="text-sm text-label-secondary mt-1">
+                {selectedHospital.city}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-4">
+            <HospitalSelector />
+            <NotificationBell userId="1" />
+            <Button variant="ghost" onClick={handleLogout}>
+              Deconectare
+            </Button>
+          </div>
         </div>
 
         {/* Stats Grid */}

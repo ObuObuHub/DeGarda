@@ -67,6 +67,18 @@ CREATE TABLE IF NOT EXISTS staff_unavailability (
   UNIQUE(staff_id, date)
 );
 
+-- Notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES staff(id),
+  type VARCHAR(50) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  read BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_shifts_date ON shifts(date);
 CREATE INDEX IF NOT EXISTS idx_shifts_hospital ON shifts(hospital_id);
@@ -74,6 +86,8 @@ CREATE INDEX IF NOT EXISTS idx_shifts_staff ON shifts(staff_id);
 CREATE INDEX IF NOT EXISTS idx_reservations_staff ON shift_reservations(staff_id);
 CREATE INDEX IF NOT EXISTS idx_swaps_from_staff ON shift_swaps(from_staff_id);
 CREATE INDEX IF NOT EXISTS idx_swaps_status ON shift_swaps(status);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
 
 -- Insert sample data
 INSERT INTO hospitals (name, city) VALUES 

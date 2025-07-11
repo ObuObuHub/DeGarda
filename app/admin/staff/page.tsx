@@ -6,12 +6,18 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { StaffModal } from '@/components/StaffModal'
 import { staff as initialStaff, hospitals, StaffMember } from '@/lib/data'
+import { HospitalSelector } from '@/components/HospitalSelector'
+import { useHospital } from '@/contexts/HospitalContext'
 
 export default function StaffPage() {
   const router = useRouter()
+  const { selectedHospitalId } = useHospital()
   const [staffList, setStaffList] = useState(initialStaff)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState<StaffMember | undefined>()
+
+  // Filter staff by selected hospital
+  const filteredStaff = staffList.filter(s => s.hospitalId === selectedHospitalId)
 
   const getHospitalName = (hospitalId: string) => {
     return hospitals.find(h => h.id === hospitalId)?.name || 'Unknown'
@@ -75,6 +81,7 @@ export default function StaffPage() {
             </p>
           </div>
           <div className="space-x-2">
+            <HospitalSelector />
             <Button variant="ghost" onClick={() => router.push('/admin/dashboard')}>
               Înapoi
             </Button>
@@ -86,7 +93,7 @@ export default function StaffPage() {
 
         {/* Staff List */}
         <div className="grid gap-4">
-          {staffList.map(member => (
+          {filteredStaff.map(member => (
             <Card key={member.id} hoverable>
               <div className="flex items-center justify-between">
                 <div className="flex-1">

@@ -8,7 +8,9 @@ interface Shift {
   doctorId: string
   doctorName: string
   type: 'day' | 'night' | '24h'
-  status: 'assigned' | 'open'
+  status: 'assigned' | 'open' | 'reserved'
+  reservedBy?: string
+  reservedByName?: string
 }
 
 interface CalendarProps {
@@ -16,6 +18,7 @@ interface CalendarProps {
   month: number
   shifts?: Record<string, Shift>
   onDayClick?: (date: string) => void
+  onSwapRequest?: (date: string, shift: Shift) => void
 }
 
 const DAYS = ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sâ', 'Du']
@@ -28,7 +31,8 @@ export const Calendar: React.FC<CalendarProps> = ({
   year,
   month,
   shifts = {},
-  onDayClick
+  onDayClick,
+  onSwapRequest
 }) => {
   const daysInMonth = useMemo(() => {
     const firstDay = new Date(year, month, 1)
@@ -69,6 +73,16 @@ export const Calendar: React.FC<CalendarProps> = ({
           isWeekend ? 'bg-system-blue/10 text-system-blue' : 'bg-gray-100'
         }`}>
           <span className="text-sm">○</span>
+        </div>
+      )
+    }
+    
+    if (shift.status === 'reserved') {
+      return (
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+          isWeekend ? 'bg-system-orange text-white' : 'bg-system-orange text-white'
+        }`}>
+          <span className="text-sm">🔒</span>
         </div>
       )
     }
@@ -115,7 +129,14 @@ export const Calendar: React.FC<CalendarProps> = ({
                 ${day ? 'bg-white hover:bg-gray-50 cursor-pointer transition-colors' : ''}
                 ${isWeekend && day ? 'ring-1 ring-system-blue/20' : ''}
               `}
-              onClick={() => day && onDayClick?.(dateStr)}
+              onClick={() => {
+                if (!day) return
+                if (shift && onSwapRequest) {
+                  onSwapRequest(dateStr, shift)
+                } else if (onDayClick) {
+                  onDayClick(dateStr)
+                }
+              }}
             >
               {day && (
                 <div className="h-full flex flex-col items-center justify-between">
@@ -125,7 +146,9 @@ export const Calendar: React.FC<CalendarProps> = ({
                   {getDayIndicator(day)}
                   {shift && (
                     <span className="text-xs text-label-secondary truncate max-w-full">
-                      {shift.doctorName.split(' ')[1]}
+                      {shift.status === 'reserved' 
+                        ? shift.reservedByName?.split(' ')[1] 
+                        : shift.doctorName?.split(' ')[1]}
                     </span>
                   )}
                 </div>
@@ -136,19 +159,28 @@ export const Calendar: React.FC<CalendarProps> = ({
       </div>
 
       {/* Legend */}
-      <div className="mt-6 flex flex-wrap gap-4 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-gray-100"></div>
-          <span className="text-label-secondary">Liber</span>
+      <div className="mt-6 space-y-2">
+        <div className="flex flex-wrap gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-gray-100"></div>
+            <span className="text-label-secondary">Liber</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-system-green"></div>
+            <span className="text-label-secondary">Atribuit</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-system-orange flex items-center justify-center text-xs">🔒</div>
+            <span className="text-label-secondary">Rezervat</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-system-blue"></div>
+            <span className="text-label-secondary">Weekend</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-system-green"></div>
-          <span className="text-label-secondary">Atribuit</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-system-blue"></div>
-          <span className="text-label-secondary">Weekend</span>
-        </div>
+        <p className="text-xs text-label-tertiary">
+          Click pe o gardă atribuită pentru a solicita schimb
+        </p>
       </div>
     </div>
   )
