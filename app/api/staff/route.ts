@@ -99,23 +99,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, email, type, specialization, hospitalId, role = 'staff' } = body
     
-    if (!name || !email || !type || !hospitalId) {
+    if (!name || !type || !hospitalId) {
       return NextResponse.json(
-        { error: 'Name, email, type, and hospital are required' },
+        { error: 'Name, type, and hospital are required' },
         { status: 400 }
       )
     }
     
-    // Check if email already exists
-    const existing = await sql`
-      SELECT id FROM staff WHERE email = ${email}
-    `
-    
-    if (existing.length > 0) {
-      return NextResponse.json(
-        { error: 'Email already exists' },
-        { status: 400 }
-      )
+    // Check if email already exists (only if email is provided)
+    if (email) {
+      const existing = await sql`
+        SELECT id FROM staff WHERE email = ${email}
+      `
+      
+      if (existing.length > 0) {
+        return NextResponse.json(
+          { error: 'Email already exists' },
+          { status: 400 }
+        )
+      }
     }
     
     // Generate a secure temporary password
@@ -127,7 +129,7 @@ export async function POST(request: NextRequest) {
     
     const result = await sql`
       INSERT INTO staff (name, email, password, role, hospital_id, specialization, is_active)
-      VALUES (${name}, ${email}, ${hashedPassword}, ${role}, ${parseInt(hospitalId)}, ${specialization}, true)
+      VALUES (${name}, ${email || null}, ${hashedPassword}, ${role}, ${parseInt(hospitalId)}, ${specialization}, true)
       RETURNING id, name, email, role, hospital_id, specialization, is_active, created_at
     `
     

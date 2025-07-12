@@ -77,7 +77,6 @@ export const StaffModal: React.FC<StaffModalProps> = ({
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           placeholder="nume.prenume@degarda.ro"
-          required
         />
 
         <div>
