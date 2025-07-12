@@ -4,12 +4,6 @@
   "framework": "nextjs",
   "installCommand": "npm install",
   "regions": ["fra1"],
-  "env": {
-    "NODE_ENV": "production",
-    "DATABASE_URL": "@database_url",
-    "JWT_SECRET": "@jwt_secret",
-    "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
-  },
   "build": {
     "env": {
       "DATABASE_URL": "postgresql://dummy:dummy@dummy/dummy?sslmode=require"
