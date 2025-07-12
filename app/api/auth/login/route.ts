@@ -6,20 +6,20 @@ import { logActivity } from '@/lib/activity-logger'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { email, password, hospitalId } = await request.json()
 
-    if (!email || !password) {
+    if (!email || !password || !hospitalId) {
       return NextResponse.json(
-        { success: false, error: 'Email and password are required' },
+        { success: false, error: 'Email, password, and hospital are required' },
         { status: 400 }
       )
     }
 
-    // Find user by email
+    // Find user by email AND hospital
     const result = await sql`
       SELECT id, name, email, password, role, hospital_id, specialization, is_active
       FROM staff
-      WHERE email = ${email}
+      WHERE email = ${email} AND hospital_id = ${hospitalId}
       LIMIT 1
     `
     

@@ -1,34 +1,57 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { hospitals } from '@/lib/data'
+
+interface Hospital {
+  id: string
+  name: string
+  city: string
+  staff?: number
+}
 
 interface HospitalContextType {
   selectedHospitalId: string
-  selectedHospital: typeof hospitals[0] | null
+  selectedHospital: Hospital | null
   setSelectedHospitalId: (id: string) => void
 }
 
 const HospitalContext = createContext<HospitalContextType | undefined>(undefined)
 
 export function HospitalProvider({ children }: { children: ReactNode }) {
-  const [selectedHospitalId, setSelectedHospitalId] = useState<string>('1')
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>('')
+  const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null)
   
-  // Load from localStorage on mount
+  // Load from localStorage on mount (set during login)
   useEffect(() => {
     const saved = localStorage.getItem('selectedHospitalId')
-    if (saved && hospitals.find(h => h.id === saved)) {
+    if (saved) {
       setSelectedHospitalId(saved)
+      fetchHospital(saved)
     }
   }, [])
+
+  const fetchHospital = async (hospitalId: string) => {
+    try {
+      const response = await fetch(`/api/hospitals/${hospitalId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setSelectedHospital(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch hospital:', error)
+    }
+  }
 
   // Save to localStorage when changed
   const handleSetHospitalId = (id: string) => {
     setSelectedHospitalId(id)
     localStorage.setItem('selectedHospitalId', id)
+    if (id) {
+      fetchHospital(id)
+    } else {
+      setSelectedHospital(null)
+    }
   }
-
-  const selectedHospital = hospitals.find(h => h.id === selectedHospitalId) || null
 
   return (
     <HospitalContext.Provider 

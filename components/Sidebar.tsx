@@ -2,7 +2,6 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import { Icon } from '@/components/ui/Icon'
-import { HospitalSelector } from '@/components/HospitalSelector'
 import { useHospital } from '@/contexts/HospitalContext'
 
 interface NavItem {
@@ -46,11 +45,21 @@ export function Sidebar({ onClose }: SidebarProps) {
         )}
       </div>
 
-      {/* Hospital Selector */}
-      <div className="p-4 border-b border-separator bg-gray-50">
-        <label className="text-xs font-medium text-label-secondary mb-2 block uppercase tracking-wider">Spital Activ</label>
-        <HospitalSelector />
-      </div>
+      {/* Current Hospital Display */}
+      {selectedHospital && (
+        <div className="p-4 border-b border-separator bg-gray-50">
+          <label className="text-xs font-medium text-label-secondary mb-2 block uppercase tracking-wider">Spital Activ</label>
+          <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🏥</span>
+              <div>
+                <p className="text-sm font-medium text-label-primary">{selectedHospital.name}</p>
+                <p className="text-xs text-label-tertiary">{selectedHospital.city}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-4">
@@ -82,7 +91,11 @@ export function Sidebar({ onClose }: SidebarProps) {
       {/* Bottom Actions */}
       <div className="p-4 border-t border-separator">
         <button
-          onClick={() => router.push('/')}
+          onClick={() => {
+            localStorage.removeItem('selectedHospitalId')
+            sessionStorage.removeItem('selectedHospitalId')
+            router.push('/')
+          }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-ios text-sm font-medium text-label-primary hover:bg-system-gray-6/10 transition-all duration-200"
         >
           <Icon name="logout" size="md" />
