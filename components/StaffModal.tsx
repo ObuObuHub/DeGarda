@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { StaffMember, hospitals } from '@/lib/data'
+import { StaffMember } from '@/lib/data'
+import { useData } from '@/contexts/DataContext'
 
 interface StaffModalProps {
   isOpen: boolean
@@ -19,6 +20,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
   onSave,
   staff
 }) => {
+  const { hospitals } = useData()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -105,7 +107,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
             onChange={(e) => setFormData({ ...formData, hospitalId: e.target.value })}
           >
             {hospitals.map(h => (
-              <option key={h.id} value={h.id}>{h.name}</option>
+              <option key={h.id} value={h.id.toString()}>{h.name}</option>
             ))}
           </select>
         </div>

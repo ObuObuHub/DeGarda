@@ -4,17 +4,39 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { HospitalSelector } from '@/components/HospitalSelector'
-import { useHospital } from '@/contexts/HospitalContext'
+import { Input } from '@/components/ui/Input'
 
 export default function Home() {
   const router = useRouter()
-  const { selectedHospital } = useHospital()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleContinue = () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
     setIsLoading(true)
-    router.push('/admin/dashboard')
+    setError('')
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        router.push('/admin/dashboard')
+      } else {
+        setError(data.error || 'Login failed')
+      }
+    } catch (err) {
+      setError('Connection error')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -29,27 +51,37 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-label-secondary mb-2">
-              Selectează Spitalul
-            </label>
-            <HospitalSelector />
-            {selectedHospital && (
-              <p className="text-sm text-label-tertiary mt-2">
-                {selectedHospital.city} • {selectedHospital.departments} secții • {selectedHospital.staff} personal
-              </p>
-            )}
-          </div>
+        <form onSubmit={handleLogin} className="space-y-6">
+          <Input
+            type="email"
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="admin@degarda.ro"
+            required
+          />
+
+          <Input
+            type="password"
+            label="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
+            required
+          />
+
+          {error && (
+            <p className="text-sm text-system-red">{error}</p>
+          )}
 
           <Button 
-            onClick={handleContinue}
+            type="submit"
             fullWidth
             disabled={isLoading}
           >
-            {isLoading ? 'Se încarcă...' : 'Continuă'}
+            {isLoading ? 'Logging in...' : 'Login'}
           </Button>
-        </div>
+        </form>
 
         <div className="mt-8 pt-6 border-t border-separator text-center">
           <p className="text-xs text-label-tertiary">

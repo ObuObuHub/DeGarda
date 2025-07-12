@@ -90,7 +90,7 @@ export default function AdminDashboard() {
   }
 
   const handleLogout = async () => {
-    // Temporarily disabled
+    await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/')
   }
 
@@ -127,15 +127,20 @@ export default function AdminDashboard() {
     <div className="p-4 lg:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-label-primary">
-            Panou Principal
-          </h1>
-          {selectedHospital && (
-            <p className="text-sm text-label-secondary mt-1">
-              {selectedHospital.name} • {selectedHospital.city}
-            </p>
-          )}
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold text-label-primary">
+              Panou Principal
+            </h1>
+            {selectedHospital && (
+              <p className="text-sm text-label-secondary mt-1">
+                {selectedHospital.name} • {selectedHospital.city}
+              </p>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            Logout
+          </Button>
         </div>
 
         {/* Stats Grid */}
