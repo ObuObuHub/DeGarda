@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { HospitalProvider } from '@/contexts/HospitalContext'
+import { DataProvider } from '@/contexts/DataContext'
 import { ToastContainer } from '@/components/Toast'
 import '@/styles/globals.css'
 
@@ -29,10 +30,12 @@ export default function RootLayout({
   return (
     <html lang="ro" className={inter.variable}>
       <body className="min-h-screen bg-background-secondary">
-        <HospitalProvider>
-          {children}
-          <ToastContainer />
-        </HospitalProvider>
+        <DataProvider>
+          <HospitalProvider>
+            {children}
+            <ToastContainer />
+          </HospitalProvider>
+        </DataProvider>
       </body>
     </html>
   )

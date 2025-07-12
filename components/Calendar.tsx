@@ -2,16 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Card } from '@/components/ui/Card'
-
-interface Shift {
-  id: string
-  doctorId: string
-  doctorName: string
-  type: 'day' | 'night' | '24h'
-  status: 'assigned' | 'open' | 'reserved'
-  reservedBy?: string
-  reservedByName?: string
-}
+import { Shift } from '@/types'
 
 interface CalendarProps {
   year: number

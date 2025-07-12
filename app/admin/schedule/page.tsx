@@ -9,19 +9,26 @@ import { AssignShiftModal } from '@/components/AssignShiftModal'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { ShiftOptionsModal } from '@/components/ShiftOptionsModal'
 import { generateMonthlySchedule } from '@/lib/shiftGenerator'
-import { staff } from '@/lib/data'
 import { useHospital } from '@/contexts/HospitalContext'
+import { useData } from '@/contexts/DataContext'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import { exportScheduleToExcel } from '@/lib/exportUtils'
-import { usePolling } from '@/hooks/usePolling'
 import { showToast } from '@/components/Toast'
 
 
 export default function SchedulePage() {
   const router = useRouter()
   const { selectedHospitalId, selectedHospital } = useHospital()
+  const { 
+    shifts, 
+    staff, 
+    isLoading, 
+    loadShifts, 
+    updateShift,
+    addNotification 
+  } = useData()
+  
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [shifts, setShifts] = useState<Record<string, any>>({})
-  const [loading, setLoading] = useState(true)
   const [swapModalData, setSwapModalData] = useState<{ date: string; shift: any } | null>(null)
   const [showOptionsModal, setShowOptionsModal] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
@@ -30,11 +37,18 @@ export default function SchedulePage() {
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth())
   const [viewYear, setViewYear] = useState(currentDate.getFullYear())
 
+  // Use real-time sync
+  const { syncData, lastSync } = useRealtimeSync({
+    hospitalId: selectedHospitalId,
+    year: viewYear,
+    month: viewMonth
+  })
+
   // Convert staff to calendar format - filtered by hospital
   const doctors = staff
-    .filter(s => s.role === 'staff' && s.hospitalId === selectedHospitalId)
+    .filter(s => s.role === 'staff' && s.hospitalId === parseInt(selectedHospitalId || '0'))
     .map(s => ({
-      id: s.id,
+      id: s.id.toString(),
       name: s.name,
       shiftsThisMonth: 0,
       weekendShifts: 0,
@@ -42,28 +56,12 @@ export default function SchedulePage() {
       unavailableDates: [] as string[]
     }))
 
-  const fetchShifts = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/shifts?year=${viewYear}&month=${viewMonth}&hospitalId=${selectedHospitalId}`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setShifts(data.shifts)
-      }
-    } catch (error) {
-      console.error('Failed to fetch shifts:', error)
-    } finally {
-      setLoading(false)
+  // Load shifts when month/year/hospital changes
+  useEffect(() => {
+    if (selectedHospitalId) {
+      loadShifts(viewYear, viewMonth, selectedHospitalId)
     }
-  }
-
-  // Use polling hook for auto-refresh
-  const { lastUpdate } = usePolling(
-    fetchShifts,
-    [viewMonth, viewYear, selectedHospitalId],
-    { interval: 30000, enabled: true }
-  )
+  }, [viewYear, viewMonth, selectedHospitalId, loadShifts])
 
   const handleDayClick = (date: string) => {
     setSelectedDate(date)
@@ -103,41 +101,16 @@ export default function SchedulePage() {
   }
 
   const handleAssignDoctor = async (doctorId: string) => {
-    if (!selectedDate) return
+    if (!selectedDate || !selectedHospitalId) return
     
-    const doctor = doctors.find(d => d.id === doctorId)
-    if (doctor) {
-      try {
-        const response = await fetch('/api/shifts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            date: selectedDate,
-            staffId: doctorId,
-            hospitalId: selectedHospitalId,
-            type: '24h'
-          })
-        })
-
-        if (response.ok) {
-          // Update local state
-          setShifts({
-            ...shifts,
-            [selectedDate]: {
-              id: Date.now().toString(),
-              doctorId,
-              doctorName: doctor.name,
-              type: '24h',
-              status: 'assigned'
-            }
-          })
-        } else {
-          const data = await response.json()
-          showToast('error', 'Eroare', data.error || 'Eroare la atribuire')
-        }
-      } catch (error) {
-        console.error('Failed to assign shift:', error)
-      }
+    try {
+      await updateShift(selectedDate, doctorId, selectedHospitalId, '24h')
+      setShowAssignModal(false)
+      setShowOptionsModal(false)
+      // Sync data to get latest updates
+      syncData()
+    } catch (error: any) {
+      // Error is already shown by updateShift
     }
     setShowAssignModal(false)
     setSelectedDate(null)
@@ -162,7 +135,18 @@ export default function SchedulePage() {
   }
 
   const handleExportExcel = () => {
-    exportScheduleToExcel(shifts, viewMonth, viewYear, selectedHospital?.name || 'Hospital')
+    // Convert shifts to the format expected by exportScheduleToExcel
+    const formattedShifts: Record<string, any> = {}
+    Object.entries(shifts).forEach(([date, shift]) => {
+      formattedShifts[date] = {
+        date: shift.date || date,
+        doctorId: shift.doctorId || null,
+        doctorName: shift.doctorName || null,
+        type: shift.type || '24h',
+        status: shift.status || 'open'
+      }
+    })
+    exportScheduleToExcel(formattedShifts, viewMonth, viewYear, selectedHospital?.name || 'Hospital')
   }
 
   const handleReserveShift = async () => {
@@ -185,7 +169,7 @@ export default function SchedulePage() {
 
       if (response.ok) {
         // Refresh shifts
-        fetchShifts()
+        syncData()
         showToast('success', 'Gardă rezervată', 'Garda a fost rezervată cu succes!')
       } else {
         const data = await response.json()
@@ -226,23 +210,8 @@ export default function SchedulePage() {
       if (response.ok) {
         const data = await response.json()
         
-        // Convert to shift records for local state
-        const newShifts = { ...shifts }
-        generatedShifts.forEach(shift => {
-          // Only add if no conflict
-          const hasConflict = data.conflicts?.some((c: any) => c.date === shift.date)
-          if (!hasConflict) {
-            newShifts[shift.date] = {
-              id: Date.now().toString() + Math.random(),
-              doctorId: shift.doctorId,
-              doctorName: shift.doctorName,
-              type: shift.type,
-              status: 'assigned'
-            }
-          }
-        })
-        
-        setShifts(newShifts)
+        // Sync data to get the latest shifts
+        await syncData()
         
         // Show message if there were conflicts
         if (data.conflicts && data.conflicts.length > 0) {
@@ -316,7 +285,7 @@ export default function SchedulePage() {
                 </Button>
               </div>
 
-              {loading ? (
+              {isLoading ? (
                 <div className="text-center py-8 text-label-tertiary">
                   Se încarcă programul...
                 </div>
@@ -354,7 +323,7 @@ export default function SchedulePage() {
               </div>
               <div className="mt-3 pt-3 border-t border-separator">
                 <p className="text-xs text-label-tertiary">
-                  Actualizat: {lastUpdate.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}
+                  Actualizat: {lastSync.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             </Card>

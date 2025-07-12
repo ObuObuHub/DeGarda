@@ -78,6 +78,19 @@ export async function POST() {
       )
     `
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES staff(id),
+        type VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        read BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP
+      )
+    `
+
     // Create indexes
     await sql`CREATE INDEX IF NOT EXISTS idx_shifts_date ON shifts(date)`
     await sql`CREATE INDEX IF NOT EXISTS idx_shifts_hospital ON shifts(hospital_id)`
@@ -85,6 +98,9 @@ export async function POST() {
     await sql`CREATE INDEX IF NOT EXISTS idx_reservations_staff ON shift_reservations(staff_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_swaps_from_staff ON shift_swaps(from_staff_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_swaps_status ON shift_swaps(status)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC)`
 
     // Insert actual hospitals from medical-shift-scheduler
     const hospitals = await sql`
