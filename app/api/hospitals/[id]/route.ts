@@ -148,3 +148,50 @@ export async function DELETE(
     )
   }
 }
+
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  try {
+    const hospitalId = parseInt(params.id)
+    
+    // Get hospital data
+    const result = await sql`
+      SELECT id, name, city, created_at
+      FROM hospitals
+      WHERE id = ${hospitalId}
+    `
+    
+    if (result.length === 0) {
+      return NextResponse.json(
+        { error: 'Hospital not found' },
+        { status: 404 }
+      )
+    }
+    
+    const hospital = result[0]
+    
+    // Get staff count
+    const staffCount = await sql`
+      SELECT COUNT(*) as count
+      FROM staff
+      WHERE hospital_id = ${hospitalId}
+    `
+    
+    return NextResponse.json({
+      id: hospital.id.toString(),
+      name: hospital.name,
+      city: hospital.city,
+      staff: parseInt(staffCount[0].count),
+      created_at: hospital.created_at
+    })
+  } catch (error) {
+    console.error('Error fetching hospital:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch hospital' },
+      { status: 500 }
+    )
+  }
+}

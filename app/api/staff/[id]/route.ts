@@ -149,3 +149,58 @@ export async function DELETE(
     )
   }
 }
+
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  try {
+    const staffId = parseInt(params.id)
+    
+    // Get staff data with hospital info
+    const result = await sql`
+      SELECT 
+        s.id,
+        s.name,
+        s.email,
+        s.role,
+        s.hospital_id,
+        s.specialization,
+        s.is_active,
+        s.created_at,
+        h.name as hospital_name
+      FROM staff s
+      LEFT JOIN hospitals h ON s.hospital_id = h.id
+      WHERE s.id = ${staffId}
+    `
+    
+    if (result.length === 0) {
+      return NextResponse.json(
+        { error: 'Staff member not found' },
+        { status: 404 }
+      )
+    }
+    
+    const staff = result[0]
+    
+    return NextResponse.json({
+      id: staff.id.toString(),
+      name: staff.name,
+      email: staff.email,
+      role: staff.role,
+      type: 'doctor',
+      specialization: staff.specialization || '',
+      hospitalId: staff.hospital_id?.toString() || '',
+      hospitalName: staff.hospital_name || '',
+      isActive: staff.is_active,
+      createdAt: staff.created_at
+    })
+  } catch (error) {
+    console.error('Error fetching staff:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch staff member' },
+      { status: 500 }
+    )
+  }
+}
