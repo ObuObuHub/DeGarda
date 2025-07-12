@@ -36,12 +36,12 @@ export async function PATCH(
   
   try {
     const body = await request.json()
-    const { name, city } = body
+    const { name } = body
     const hospitalId = parseInt(params.id)
     
-    if (!name || !city) {
+    if (!name) {
       return NextResponse.json(
-        { error: 'Name and city are required' },
+        { error: 'Name is required' },
         { status: 400 }
       )
     }
@@ -60,7 +60,7 @@ export async function PATCH(
     
     const result = await sql`
       UPDATE hospitals
-      SET name = ${name}, city = ${city}
+      SET name = ${name}
       WHERE id = ${hospitalId}
       RETURNING id, name, city, created_at
     `

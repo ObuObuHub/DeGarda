@@ -20,26 +20,17 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
   hospital
 }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    city: '',
-    departments: 5,
-    staff: 20
+    name: ''
   })
 
   useEffect(() => {
     if (hospital) {
       setFormData({
-        name: hospital.name,
-        city: hospital.city,
-        departments: hospital.departments || 5,
-        staff: hospital.staff || 20
+        name: hospital.name
       })
     } else {
       setFormData({
-        name: '',
-        city: '',
-        departments: 5,
-        staff: 20
+        name: ''
       })
     }
   }, [hospital])
@@ -61,33 +52,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
           label="Nume Spital"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="ex: Spitalul Județean"
-          required
-        />
-
-        <Input
-          label="Oraș"
-          value={formData.city}
-          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-          placeholder="ex: Piatra-Neamț"
-          required
-        />
-
-        <Input
-          label="Număr Secții"
-          type="number"
-          value={formData.departments}
-          onChange={(e) => setFormData({ ...formData, departments: parseInt(e.target.value) })}
-          min="1"
-          required
-        />
-
-        <Input
-          label="Număr Personal"
-          type="number"
-          value={formData.staff}
-          onChange={(e) => setFormData({ ...formData, staff: parseInt(e.target.value) })}
-          min="1"
+          placeholder="ex: Spitalul Județean de Urgență Piatra-Neamț"
           required
         />
 
