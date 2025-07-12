@@ -267,15 +267,11 @@ export default function SchedulePage() {
       return
     }
 
-    console.log('Selected Hospital ID:', selectedHospitalId)
-    console.log('All staff:', staff)
-    console.log('Filtered doctors:', doctors)
-
     // Filter only available doctors
     const availableDoctors = doctors.filter(d => d.isAvailable)
     
     if (availableDoctors.length === 0) {
-      showToast('error', 'Eroare', `Nu există personal disponibil pentru generare. Total staff: ${staff.length}, Doctors in hospital: ${doctors.length}`)
+      showToast('error', 'Eroare', 'Nu există personal disponibil pentru generare')
       return
     }
     

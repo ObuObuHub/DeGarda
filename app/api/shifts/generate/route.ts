@@ -20,15 +20,11 @@ export async function POST(request: NextRequest) {
     for (const shift of shifts) {
       const { date, doctorId, doctorName, type = '24h', department } = shift
       
-      // Check for conflicts
+      // Check for conflicts - doctor already has a shift on this date
       const existingShifts = await sql`
         SELECT * FROM shifts 
         WHERE staff_id = ${doctorId} 
           AND date = ${date}
-          AND id != COALESCE(
-            (SELECT id FROM shifts WHERE date = ${date} AND type = ${type} AND hospital_id = ${hospitalId}),
-            0
-          )
       `
       
       if (existingShifts.length > 0) {
@@ -59,8 +55,8 @@ export async function POST(request: NextRequest) {
           VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${doctorId}, ${hospitalId}, ${department}, 'assigned')
           ON CONFLICT (date, type, hospital_id, department) 
           DO UPDATE SET 
-            staff_id = ${doctorId},
-            status = 'assigned'
+            staff_id = EXCLUDED.staff_id,
+            status = EXCLUDED.status
           RETURNING *
         `
       } catch (error: any) {
@@ -71,8 +67,8 @@ export async function POST(request: NextRequest) {
             VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${doctorId}, ${hospitalId}, 'assigned')
             ON CONFLICT (date, type, hospital_id) 
             DO UPDATE SET 
-              staff_id = ${doctorId},
-              status = 'assigned'
+              staff_id = EXCLUDED.staff_id,
+              status = EXCLUDED.status
             RETURNING *
           `
         } else {
