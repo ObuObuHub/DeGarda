@@ -125,9 +125,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       if (!response.ok) throw new Error('Failed to fetch staff')
       
       const data = await response.json()
-      if (data.success) {
-        setStaff(data.staff || [])
-      }
+      // API returns array directly, not wrapped in success object
+      setStaff(Array.isArray(data) ? data : (data.staff || []))
     } catch (error) {
       console.error('Error loading staff:', error)
       addNotification('Failed to load staff', 'error')

@@ -47,7 +47,7 @@ export default function SchedulePage() {
 
   // Convert staff to calendar format - filtered by hospital
   const doctors = staff
-    .filter(s => s.role === 'staff' && s.hospitalId === parseInt(selectedHospitalId || '0'))
+    .filter(s => s.role === 'staff' && s.hospitalId?.toString() === selectedHospitalId)
     .map(s => ({
       id: s.id.toString(),
       name: s.name,
@@ -267,11 +267,15 @@ export default function SchedulePage() {
       return
     }
 
+    console.log('Selected Hospital ID:', selectedHospitalId)
+    console.log('All staff:', staff)
+    console.log('Filtered doctors:', doctors)
+
     // Filter only available doctors
     const availableDoctors = doctors.filter(d => d.isAvailable)
     
     if (availableDoctors.length === 0) {
-      showToast('error', 'Eroare', 'Nu există personal disponibil pentru generare')
+      showToast('error', 'Eroare', `Nu există personal disponibil pentru generare. Total staff: ${staff.length}, Doctors in hospital: ${doctors.length}`)
       return
     }
     
