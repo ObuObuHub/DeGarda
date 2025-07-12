@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { StaffMember } from '@/lib/data'
-import { useData } from '@/contexts/DataContext'
+import { useHospital } from '@/contexts/HospitalContext'
 
 interface StaffModalProps {
   isOpen: boolean
@@ -20,13 +20,13 @@ export const StaffModal: React.FC<StaffModalProps> = ({
   onSave,
   staff
 }) => {
-  const { hospitals } = useData()
+  const { selectedHospitalId } = useHospital()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     type: 'medic' as StaffMember['type'],
     specialization: 'Laborator',
-    hospitalId: '1',
+    hospitalId: selectedHospitalId || '1',
     role: 'staff' as StaffMember['role']
   })
 
@@ -46,11 +46,11 @@ export const StaffModal: React.FC<StaffModalProps> = ({
         email: '',
         type: 'medic',
         specialization: 'Laborator',
-        hospitalId: '1',
+        hospitalId: selectedHospitalId || '1',
         role: 'staff'
       })
     }
-  }, [staff])
+  }, [staff, selectedHospitalId])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -94,21 +94,6 @@ export const StaffModal: React.FC<StaffModalProps> = ({
             <option value="biolog">Biolog</option>
             <option value="chimist">Chimist</option>
             <option value="asistent">Asistent</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-label-secondary mb-2">
-            Spital
-          </label>
-          <select
-            className="w-full px-4 py-3 bg-background-secondary border border-transparent rounded-ios text-base"
-            value={formData.hospitalId}
-            onChange={(e) => setFormData({ ...formData, hospitalId: e.target.value })}
-          >
-            {hospitals.map(h => (
-              <option key={h.id} value={h.id.toString()}>{h.name}</option>
-            ))}
           </select>
         </div>
 
