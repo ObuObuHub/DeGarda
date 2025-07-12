@@ -116,6 +116,31 @@ export default function SchedulePage() {
     setSelectedDate(null)
   }
 
+  const handleDeleteShift = async () => {
+    if (!selectedDate || !shifts[selectedDate]?.id) return
+    
+    try {
+      const response = await fetch(`/api/shifts?id=${shifts[selectedDate].id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // Refresh shifts
+        await syncData()
+        showToast('success', 'Succes', 'Garda a fost ștearsă!')
+      } else {
+        const data = await response.json()
+        showToast('error', 'Eroare', data.error || 'Eroare la ștergere')
+      }
+    } catch (error) {
+      console.error('Failed to delete shift:', error)
+      showToast('error', 'Eroare', 'Eroare la ștergere')
+    }
+    
+    setShowOptionsModal(false)
+    setSelectedDate(null)
+  }
+
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
       setViewMonth(11)
@@ -182,6 +207,36 @@ export default function SchedulePage() {
     
     setShowOptionsModal(false)
     setSelectedDate(null)
+  }
+
+  const handleClearSchedule = async () => {
+    if (!selectedHospitalId) {
+      showToast('error', 'Eroare', 'Selectați un spital')
+      return
+    }
+
+    // Confirm action
+    if (!confirm('Sigur doriți să ștergeți toate gărzile pentru luna aceasta?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/shifts/clear?year=${viewYear}&month=${viewMonth}&hospitalId=${selectedHospitalId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // Refresh shifts
+        await syncData()
+        showToast('success', 'Succes', 'Toate gărzile au fost șterse!')
+      } else {
+        const data = await response.json()
+        showToast('error', 'Eroare', data.error || 'Eroare la ștergere')
+      }
+    } catch (error) {
+      console.error('Failed to clear schedule:', error)
+      showToast('error', 'Eroare', 'Eroare la ștergere')
+    }
   }
 
   const handleGenerateSchedule = async () => {
@@ -257,6 +312,16 @@ export default function SchedulePage() {
             >
               <span className="hidden sm:inline">Generează Program</span>
               <span className="sm:hidden">Generează</span>
+            </Button>
+            <Button 
+              onClick={handleClearSchedule} 
+              variant="danger"
+              icon="trash"
+              size="sm"
+              className="text-sm"
+            >
+              <span className="hidden sm:inline">Șterge</span>
+              <span className="sm:hidden">Șterge</span>
             </Button>
           </div>
         </div>
@@ -355,6 +420,8 @@ export default function SchedulePage() {
           setShowAssignModal(true)
         }}
         onReserve={handleReserveShift}
+        onDelete={handleDeleteShift}
+        hasShift={selectedDate ? !!shifts[selectedDate]?.doctorId : false}
       />
 
       <AssignShiftModal

@@ -10,6 +10,8 @@ interface ShiftOptionsModalProps {
   date: string
   onAssign: () => void
   onReserve: () => void
+  onDelete?: () => void
+  hasShift?: boolean
   currentUserId?: string // To show reservation count
 }
 
@@ -19,6 +21,8 @@ export const ShiftOptionsModal: React.FC<ShiftOptionsModalProps> = ({
   date,
   onAssign,
   onReserve,
+  onDelete,
+  hasShift,
   currentUserId
 }) => {
   const formatDate = (dateStr: string) => {
@@ -51,6 +55,16 @@ export const ShiftOptionsModal: React.FC<ShiftOptionsModalProps> = ({
           >
             🔒 Rezervă pentru Mine
           </Button>
+
+          {hasShift && onDelete && (
+            <Button 
+              fullWidth 
+              variant="danger"
+              onClick={onDelete}
+            >
+              Șterge Garda
+            </Button>
+          )}
           
           <p className="text-xs text-center text-label-tertiary">
             Max. 3 rezervări pe lună
