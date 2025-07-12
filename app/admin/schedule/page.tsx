@@ -39,7 +39,7 @@ export default function SchedulePage() {
 
   // Use real-time sync
   const { syncData, lastSync } = useRealtimeSync({
-    hospitalId: selectedHospitalId,
+    hospitalId: selectedHospitalId || undefined,
     year: viewYear,
     month: viewMonth
   })
@@ -109,7 +109,7 @@ export default function SchedulePage() {
       setShowOptionsModal(false)
       // Sync data to get latest updates
       syncData()
-    } catch (error: any) {
+    } catch (error) {
       // Error is already shown by updateShift
     }
     setShowAssignModal(false)
