@@ -34,7 +34,7 @@ export interface Hospital {
 
 export interface Notification {
   id: number
-  type: string
+  type: 'success' | 'error' | 'info' | 'warning'
   title: string
   message: string
   read: boolean

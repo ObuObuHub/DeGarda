@@ -216,9 +216,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         }))
         addNotification('Shift updated successfully', 'success')
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating shift:', error)
-      addNotification(error.message || 'Failed to update shift', 'error')
+      addNotification(error instanceof Error ? error.message : 'Failed to update shift', 'error')
       throw error
     }
   }
