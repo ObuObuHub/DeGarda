@@ -162,6 +162,14 @@ export async function POST(request: NextRequest) {
         shiftDepartment = staffData[0]?.specialization
       }
       
+      // STRICT: Validate department match if both are provided
+      if (staffId && shiftDepartment && department && shiftDepartment !== department) {
+        return NextResponse.json(
+          { success: false, error: `Personal din departamentul ${shiftDepartment} nu poate fi asignat la o gardă din departamentul ${department}` },
+          { status: 400 }
+        )
+      }
+      
       // Try with department first, fallback to without if column doesn't exist
       let result
       try {

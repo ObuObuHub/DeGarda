@@ -8,6 +8,7 @@ import { Calendar } from '@/components/Calendar'
 import { AssignShiftModal } from '@/components/AssignShiftModal'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { ShiftOptionsModal } from '@/components/ShiftOptionsModal'
+import { DepartmentSelectModal } from '@/components/DepartmentSelectModal'
 import { generateAllDepartmentsSchedule } from '@/lib/shiftGenerator'
 import { useHospital } from '@/contexts/HospitalContext'
 import { useData } from '@/contexts/DataContext'
@@ -32,7 +33,9 @@ export default function SchedulePage() {
   const [swapModalData, setSwapModalData] = useState<{ date: string; shift: any } | null>(null)
   const [showOptionsModal, setShowOptionsModal] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
+  const [showDepartmentModal, setShowDepartmentModal] = useState(false)
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all')
+  const [pendingShiftDepartment, setPendingShiftDepartment] = useState<string | null>(null)
 
   const currentDate = new Date()
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth())
@@ -84,8 +87,21 @@ export default function SchedulePage() {
     setSelectedDate(date)
     const shift = shifts[date]
     if (!shift || shift.status === 'open') {
-      setShowOptionsModal(true)
+      // If we have a department filter, use it. Otherwise ask for department
+      if (selectedDepartment !== 'all') {
+        setPendingShiftDepartment(selectedDepartment)
+        setShowOptionsModal(true)
+      } else {
+        // Show department selection modal first
+        setShowDepartmentModal(true)
+      }
     }
+  }
+  
+  const handleDepartmentSelected = (department: string) => {
+    setPendingShiftDepartment(department)
+    setShowDepartmentModal(false)
+    setShowOptionsModal(true)
   }
 
   const handleSwapRequest = (date: string, shift: any) => {
@@ -123,12 +139,13 @@ export default function SchedulePage() {
     try {
       // Get the doctor's department
       const doctor = doctors.find(d => d.id === doctorId)
-      const department = doctor?.department || 
+      const department = doctor?.department || pendingShiftDepartment || 
                         (selectedDepartment !== 'all' ? selectedDepartment : undefined)
       
       await updateShift(selectedDate, doctorId, selectedHospitalId, '24h', department)
       setShowAssignModal(false)
       setShowOptionsModal(false)
+      setPendingShiftDepartment(null)
       // Sync data to get latest updates
       syncData()
     } catch (error) {
@@ -478,11 +495,22 @@ export default function SchedulePage() {
         hasShift={selectedDate ? !!shifts[selectedDate]?.doctorId : false}
       />
 
+      <DepartmentSelectModal
+        isOpen={showDepartmentModal}
+        onClose={() => {
+          setShowDepartmentModal(false)
+          setSelectedDate(null)
+        }}
+        date={selectedDate || ''}
+        onSelect={handleDepartmentSelected}
+      />
+
       <AssignShiftModal
         isOpen={showAssignModal}
         onClose={() => {
           setShowAssignModal(false)
           setSelectedDate(null)
+          setPendingShiftDepartment(null)
         }}
         date={selectedDate || ''}
         doctors={doctors.map(d => ({
@@ -490,7 +518,7 @@ export default function SchedulePage() {
           isAvailable: d.isAvailable && !d.unavailableDates.includes(selectedDate || '')
         }))}
         onAssign={handleAssignDoctor}
-        selectedDepartment={selectedDepartment === 'all' ? undefined : selectedDepartment}
+        selectedDepartment={pendingShiftDepartment || (selectedDepartment === 'all' ? undefined : selectedDepartment)}
         shiftDepartment={selectedDate && shifts[selectedDate]?.department}
       />
 

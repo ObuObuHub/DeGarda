@@ -20,6 +20,30 @@ export async function POST(request: NextRequest) {
     for (const shift of shifts) {
       const { date, doctorId, doctorName, type = '24h', department } = shift
       
+      // STRICT: Validate department is provided
+      if (!department) {
+        return NextResponse.json(
+          { success: false, error: 'Department is required for each shift' },
+          { status: 400 }
+        )
+      }
+      
+      // Get doctor's department to validate match
+      const doctorData = await sql`
+        SELECT specialization FROM staff WHERE id = ${doctorId}
+      `
+      const doctorDepartment = doctorData[0]?.specialization
+      
+      // STRICT: Validate doctor's department matches shift department
+      if (doctorDepartment && doctorDepartment !== department) {
+        conflicts.push({
+          date,
+          doctorName,
+          message: `${doctorName} (${doctorDepartment}) nu poate fi asignat la o gardă din departamentul ${department}`
+        })
+        continue
+      }
+      
       // Check for conflicts - doctor already has a shift on this date
       const existingShifts = await sql`
         SELECT * FROM shifts 

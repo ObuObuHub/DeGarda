@@ -50,11 +50,18 @@ export function generateAllDepartmentsSchedule(
     // Filter existing shifts for this department only
     const deptExistingShifts: Record<string, any> = {}
     Object.entries(existingShifts).forEach(([date, shift]) => {
-      // Check if shift belongs to this department
-      const doctor = doctors.find(d => d.id === shift.doctorId?.toString())
-      if (doctor && doctor.department === dept) {
+      // STRICT: Check if shift belongs to this department using the shift's department field
+      // If shift doesn't have department field, look up from assigned doctor
+      if (shift.department === dept) {
         deptExistingShifts[date] = shift
+      } else if (!shift.department && shift.doctorId) {
+        // Fallback: check doctor's department only if shift doesn't have department
+        const doctor = doctors.find(d => d.id === shift.doctorId?.toString())
+        if (doctor && doctor.department === dept) {
+          deptExistingShifts[date] = shift
+        }
       }
+      // If shift has no department and no doctor, it doesn't belong to any department
     })
     
     const deptShifts = generateDepartmentSchedule(year, month, doctors, dept, deptExistingShifts)
