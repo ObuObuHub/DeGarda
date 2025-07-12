@@ -13,6 +13,15 @@ interface DashboardStats {
   pendingSwaps: number
 }
 
+interface Activity {
+  id: number
+  userId: number
+  userName?: string
+  type: string
+  description: string
+  createdAt: string
+}
+
 export default function AdminDashboard() {
   const router = useRouter()
   const { selectedHospital } = useHospital()
@@ -22,10 +31,13 @@ export default function AdminDashboard() {
     todayShifts: 0,
     pendingSwaps: 0
   })
+  const [activities, setActivities] = useState<Activity[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true)
 
   useEffect(() => {
     fetchDashboardStats()
+    fetchRecentActivities()
   }, [])
 
   const fetchDashboardStats = async () => {
@@ -62,9 +74,53 @@ export default function AdminDashboard() {
     }
   }
 
+  const fetchRecentActivities = async () => {
+    try {
+      setIsLoadingActivities(true)
+      const res = await fetch('/api/activities?limit=5')
+      if (res.ok) {
+        const data = await res.json()
+        setActivities(data.activities || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch activities:', error)
+    } finally {
+      setIsLoadingActivities(false)
+    }
+  }
+
   const handleLogout = async () => {
     // Temporarily disabled
     router.push('/')
+  }
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'login': return '🔑'
+      case 'logout': return '🚪'
+      case 'shift_assigned': return '✅'
+      case 'shift_swapped': return '🔄'
+      case 'shift_reserved': return '📌'
+      case 'staff_created': return '👤'
+      case 'staff_updated': return '✏️'
+      case 'hospital_created': return '🏥'
+      case 'schedule_generated': return '📅'
+      default: return '📝'
+    }
+  }
+
+  const formatActivityTime = (createdAt: string) => {
+    const date = new Date(createdAt)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+
+    if (minutes < 1) return 'Chiar acum'
+    if (minutes < 60) return `${minutes} minute în urmă`
+    if (hours < 24) return `${hours} ore în urmă`
+    return `${days} zile în urmă`
   }
 
   return (
@@ -178,11 +234,39 @@ export default function AdminDashboard() {
 
         {/* Recent Activity */}
         <div className="mt-8">
-          <h2 className="text-lg font-semibold mb-4">Activitate Recentă</h2>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <span className="text-2xl">📊</span>
+            Activitate Recentă
+          </h2>
           <Card>
-            <div className="text-center py-8 text-label-tertiary">
-              <p>Nicio activitate recentă</p>
-            </div>
+            {isLoadingActivities ? (
+              <div className="text-center py-8 text-label-tertiary">
+                <p>Se încarcă activitățile...</p>
+              </div>
+            ) : activities.length === 0 ? (
+              <div className="text-center py-8 text-label-tertiary">
+                <p>Nicio activitate recentă</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-separator">
+                {activities.map((activity) => (
+                  <div key={activity.id} className="p-4 hover:bg-fill-tertiary/30 transition-colors">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl mt-0.5">{getActivityIcon(activity.type)}</span>
+                      <div className="flex-1">
+                        <p className="text-label-primary">
+                          <span className="font-medium">{activity.userName || 'Utilizator'}</span>
+                          {' '}{activity.description}
+                        </p>
+                        <p className="text-xs text-label-tertiary mt-1">
+                          {formatActivityTime(activity.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       </div>

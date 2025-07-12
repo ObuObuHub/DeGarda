@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { generateSecurePassword } from '@/lib/password-generator'
 
 export async function POST() {
   try {
@@ -122,9 +123,18 @@ export async function POST() {
       hospitalId = hospitals[0].id
     }
 
-    // Create admin and manager users with hashed passwords
-    const adminPassword = await bcrypt.hash('admin123', 10)
-    const managerPassword = await bcrypt.hash('manager123', 10)
+    // Create admin and manager users with secure passwords
+    const adminPasswordPlain = generateSecurePassword()
+    const managerPasswordPlain = generateSecurePassword()
+    
+    // Log passwords securely (these should be saved/communicated securely)
+    console.log('\n=== IMPORTANT: Save these passwords securely ===');
+    console.log(`Admin password for admin@degarda.ro: ${adminPasswordPlain}`);
+    console.log(`Manager password for manager@degarda.ro: ${managerPasswordPlain}`);
+    console.log('================================================\n');
+    
+    const adminPassword = await bcrypt.hash(adminPasswordPlain, 10)
+    const managerPassword = await bcrypt.hash(managerPasswordPlain, 10)
     
     await sql`
       INSERT INTO staff (name, email, password, role, type, hospital_id, specialization) VALUES
@@ -134,7 +144,8 @@ export async function POST() {
     `
 
     // Insert all staff members from medical-shift-scheduler
-    const defaultStaffPassword = await bcrypt.hash('staff123', 10)
+    // Generate unique passwords for each staff member
+    console.log('\n=== Staff Member Passwords ===');
     const staffMembers = [
       { name: 'Dr. Zugun Eduard', type: 'medic', email: 'zugun.eduard@degarda.ro' },
       { name: 'Dr. Gîlea Arina', type: 'medic', email: 'gilea.arina@degarda.ro' },
@@ -150,18 +161,23 @@ export async function POST() {
     ]
 
     for (const member of staffMembers) {
+      const staffPassword = generateSecurePassword()
+      console.log(`${member.email}: ${staffPassword}`);
+      const hashedPassword = await bcrypt.hash(staffPassword, 10)
+      
       await sql`
         INSERT INTO staff (name, email, password, role, type, hospital_id, specialization) VALUES
-          (${member.name}, ${member.email}, ${defaultStaffPassword}, 'staff', ${member.type}, ${hospitalId}, 'Laborator')
+          (${member.name}, ${member.email}, ${hashedPassword}, 'staff', ${member.type}, ${hospitalId}, 'Laborator')
         ON CONFLICT (email) DO NOTHING
       `
     }
+    console.log('==============================\n');
 
     return NextResponse.json({ 
       success: true, 
       message: 'Database initialized successfully' 
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Database initialization error:', error)
     return NextResponse.json(
       { 

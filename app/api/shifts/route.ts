@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { notifyShiftAssignment } from '@/lib/notifications'
 import { hospitals } from '@/lib/data'
+import { logActivity } from '@/lib/activity-logger'
 
 // GET shifts for a specific month/year and hospital
 export async function GET(request: NextRequest) {
@@ -144,6 +145,13 @@ export async function POST(request: NextRequest) {
       if (hospital) {
         await notifyShiftAssignment(staffId, date, hospital.name)
       }
+      
+      // Log activity (TODO: get current user ID from auth context)
+      await logActivity(
+        parseInt(staffId), 
+        'shift_assigned', 
+        `a fost asignat(ă) la garda din ${date}`
+      )
       
       return NextResponse.json({ success: true, shift: result[0] })
     } else {

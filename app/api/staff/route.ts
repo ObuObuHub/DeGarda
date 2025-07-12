@@ -3,6 +3,7 @@ import { sql } from '@/lib/db'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
+import { generateMemorablePassword } from '@/lib/password-generator'
 
 // Verify user is admin or manager
 async function verifyAdminOrManager(request: NextRequest) {
@@ -117,9 +118,12 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Generate a temporary password (should be changed on first login)
-    const tempPassword = `${email.split('@')[0]}123`
+    // Generate a secure temporary password
+    const tempPassword = generateMemorablePassword()
     const hashedPassword = await bcrypt.hash(tempPassword, 10)
+    
+    // TODO: Send this password to the user via secure email
+    console.log(`New staff member created: ${email} with temporary password: ${tempPassword}`)
     
     const result = await sql`
       INSERT INTO staff (name, email, password, role, hospital_id, specialization, is_active)

@@ -8,7 +8,9 @@ A clean, minimalistic medical shift scheduling application with iPhone-style UI 
 - 🔐 **Authentication** - Secure JWT-based authentication system
 - 🏥 **Multi-Hospital** - Support for multiple medical facilities
 - 📅 **Shift Management** - Easy shift scheduling and management
-- 🔄 **Shift Swaps** - Request and approve shift exchanges (coming soon)
+- 🔄 **Shift Swaps** - Request and approve shift exchanges
+- 📊 **Activity Tracking** - Real-time activity monitoring
+- 🔐 **Secure Passwords** - Auto-generated secure passwords for staff
 - 📱 **Responsive** - Works perfectly on all devices
 
 ## Tech Stack
@@ -60,9 +62,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Default admin credentials:
-- Email: admin@degarda.ro
-- Password: admin123
+Note: Admin credentials are auto-generated during database initialization. Check the console output or server logs for the secure password.
 
 ## Scripts
 
@@ -102,6 +102,17 @@ degarda-v2/
 4. After deployment, run the migration script:
    - You can use Vercel's deployment hooks
    - Or run it manually: `npm run db:migrate` with production DATABASE_URL
+
+### Database Initialization
+
+To initialize the database with the activities table:
+```bash
+# First, create the base tables
+curl -X POST https://your-app.vercel.app/api/db/init
+
+# Then, add the activities table
+curl -X POST https://your-app.vercel.app/api/db/add-activities-table
+```
 
 ### Manual Deployment
 

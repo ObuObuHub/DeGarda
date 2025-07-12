@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { comparePassword, generateToken } from '@/lib/auth'
 import { ensureArray } from '@/lib/db-helpers'
+import { logActivity } from '@/lib/activity-logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,6 +58,9 @@ export async function POST(request: NextRequest) {
       role: user.role,
       hospitalId: user.hospital_id
     })
+
+    // Log successful login
+    await logActivity(user.id, 'login', `a intrat în aplicație`)
 
     // Return user data without password
     const { password: _, ...userWithoutPassword } = user
