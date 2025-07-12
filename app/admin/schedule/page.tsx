@@ -241,8 +241,18 @@ export default function SchedulePage() {
   }
 
   const handleGenerateSchedule = async () => {
+    if (!selectedHospitalId) {
+      showToast('error', 'Eroare', 'Selectați un spital')
+      return
+    }
+
     // Filter only available doctors
     const availableDoctors = doctors.filter(d => d.isAvailable)
+    
+    if (availableDoctors.length === 0) {
+      showToast('error', 'Eroare', 'Nu există personal disponibil pentru generare')
+      return
+    }
     
     // Generate schedule for all departments
     const generatedShifts = generateAllDepartmentsSchedule(
@@ -251,6 +261,11 @@ export default function SchedulePage() {
       availableDoctors,
       shifts
     )
+    
+    if (generatedShifts.length === 0) {
+      showToast('info', 'Info', 'Nu s-au generat gărzi noi - luna este deja completă')
+      return
+    }
     
     try {
       // Save all generated shifts to database
@@ -275,9 +290,13 @@ export default function SchedulePage() {
         } else {
           showToast('success', 'Program generat', 'Programul a fost generat cu succes!')
         }
+      } else {
+        const errorData = await response.json()
+        showToast('error', 'Eroare', errorData.error || 'Eroare la generarea programului')
       }
     } catch (error) {
       console.error('Failed to generate schedule:', error)
+      showToast('error', 'Eroare', 'Eroare la generarea programului')
     }
   }
 
