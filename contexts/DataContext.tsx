@@ -72,7 +72,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   }
 
   // Add notification to local state
-  const addNotification = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+  const addNotification = useCallback((message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     const notification: Notification = {
       id: Date.now(),
       type,
@@ -87,10 +87,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== notification.id))
     }, 5000)
-  }
+  }, [])
 
   // Load shifts
-  const loadShifts = async (year: number, month: number, hospitalId?: string) => {
+  const loadShifts = useCallback(async (year: number, month: number, hospitalId?: string) => {
     try {
       setIsLoading(true)
       const params = new URLSearchParams({
@@ -116,10 +116,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [addNotification])
 
   // Load staff
-  const loadStaff = async () => {
+  const loadStaff = useCallback(async () => {
     try {
       const response = await fetch('/api/staff')
       if (!response.ok) throw new Error('Failed to fetch staff')
@@ -132,10 +132,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       console.error('Error loading staff:', error)
       addNotification('Failed to load staff', 'error')
     }
-  }
+  }, [addNotification])
 
   // Load hospitals
-  const loadHospitals = async () => {
+  const loadHospitals = useCallback(async () => {
     try {
       const response = await fetch('/api/hospitals')
       if (!response.ok) throw new Error('Failed to fetch hospitals')
@@ -148,10 +148,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       console.error('Error loading hospitals:', error)
       addNotification('Failed to load hospitals', 'error')
     }
-  }
+  }, [addNotification])
 
   // Load notifications
-  const loadNotifications = async (userId: string) => {
+  const loadNotifications = useCallback(async (userId: string) => {
     try {
       const response = await fetch(`/api/notifications?userId=${userId}`)
       if (!response.ok) throw new Error('Failed to fetch notifications')
@@ -164,10 +164,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Error loading notifications:', error)
     }
-  }
+  }, [])
 
   // Mark notifications as read
-  const markNotificationsAsRead = async (notificationIds: number[], userId: string) => {
+  const markNotificationsAsRead = useCallback(async (notificationIds: number[], userId: string) => {
     try {
       const response = await fetch('/api/notifications', {
         method: 'POST',
@@ -187,10 +187,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Error marking notifications as read:', error)
     }
-  }
+  }, [])
 
   // Update shift
-  const updateShift = async (date: string, staffId: string | null, hospitalId: string, type: ShiftType = '24h') => {
+  const updateShift = useCallback(async (date: string, staffId: string | null, hospitalId: string, type: ShiftType = '24h') => {
     try {
       const response = await fetch('/api/shifts', {
         method: 'POST',
@@ -221,13 +221,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       addNotification(error instanceof Error ? error.message : 'Failed to update shift', 'error')
       throw error
     }
-  }
+  }, [staff, addNotification])
 
   // Refresh all data
   const refreshData = useCallback(async () => {
     const promises = [loadHospitals(), loadStaff()]
     await Promise.all(promises)
-  }, [])
+  }, [loadHospitals, loadStaff])
 
   // Auto-refresh functionality
   useEffect(() => {
