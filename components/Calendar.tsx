@@ -10,6 +10,7 @@ interface CalendarProps {
   shifts?: Record<string, Shift>
   onDayClick?: (date: string) => void
   onSwapRequest?: (date: string, shift: Shift) => void
+  doctors?: Array<{ id: string; name: string; department?: string }>
 }
 
 const DAYS = ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sâ', 'Du']
@@ -23,7 +24,8 @@ export const Calendar: React.FC<CalendarProps> = ({
   month,
   shifts = {},
   onDayClick,
-  onSwapRequest
+  onSwapRequest,
+  doctors = []
 }) => {
   const daysInMonth = useMemo(() => {
     const firstDay = new Date(year, month, 1)
@@ -143,11 +145,18 @@ export const Calendar: React.FC<CalendarProps> = ({
                     {getDayIndicator(day)}
                   </div>
                   {shift && (
-                    <span className="text-[10px] sm:text-xs text-label-secondary truncate max-w-full font-medium">
-                      {shift.status === 'reserved' 
-                        ? shift.reservedByName?.split(' ')[1] 
-                        : shift.doctorName?.split(' ')[1]}
-                    </span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] sm:text-xs text-label-secondary truncate max-w-full font-medium">
+                        {shift.status === 'reserved' 
+                          ? shift.reservedByName?.split(' ')[1] 
+                          : shift.doctorName?.split(' ')[1]}
+                      </span>
+                      {shift.doctorId && doctors.length > 0 && (
+                        <span className="text-[8px] sm:text-[10px] text-label-tertiary">
+                          {doctors.find(d => d.id === shift.doctorId?.toString())?.department || ''}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

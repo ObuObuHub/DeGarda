@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -32,6 +32,7 @@ export default function SchedulePage() {
   const [swapModalData, setSwapModalData] = useState<{ date: string; shift: any } | null>(null)
   const [showOptionsModal, setShowOptionsModal] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all')
 
   const currentDate = new Date()
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth())
@@ -56,6 +57,21 @@ export default function SchedulePage() {
       isAvailable: true,
       unavailableDates: [] as string[]
     }))
+
+  // Filter shifts by department
+  const filteredShifts = useMemo(() => {
+    if (selectedDepartment === 'all') return shifts
+    
+    const filtered: Record<string, any> = {}
+    Object.entries(shifts).forEach(([date, shift]) => {
+      // Find the doctor's department
+      const doctor = doctors.find(d => d.id === shift.doctorId?.toString())
+      if (doctor && doctor.department === selectedDepartment) {
+        filtered[date] = shift
+      }
+    })
+    return filtered
+  }, [shifts, selectedDepartment, doctors])
 
   // Load shifts when month/year/hospital changes
   useEffect(() => {
@@ -314,6 +330,18 @@ export default function SchedulePage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <select
+              className="px-3 py-2 bg-background-secondary border border-transparent rounded-ios text-sm"
+              value={selectedDepartment}
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+            >
+              <option value="all">Toate departamentele</option>
+              <option value="ATI">ATI</option>
+              <option value="Urgențe">Urgențe</option>
+              <option value="Laborator">Laborator</option>
+              <option value="Medicină Internă">Medicină Internă</option>
+              <option value="Chirurgie">Chirurgie</option>
+            </select>
             <Button 
               variant="secondary" 
               onClick={handleExportExcel} 
@@ -378,9 +406,10 @@ export default function SchedulePage() {
                 <Calendar
                   year={viewYear}
                   month={viewMonth}
-                  shifts={shifts}
+                  shifts={filteredShifts}
                   onDayClick={handleDayClick}
                   onSwapRequest={handleSwapRequest}
+                  doctors={doctors}
                 />
               )}
             </Card>
@@ -397,7 +426,7 @@ export default function SchedulePage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-label-secondary">Atribuite:</span>
-                  <span className="font-medium text-system-green">{Object.keys(shifts).length}</span>
+                  <span className="font-medium text-system-green">{Object.keys(filteredShifts).length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-label-secondary">Libere:</span>
