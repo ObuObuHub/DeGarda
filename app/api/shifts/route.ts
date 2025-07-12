@@ -23,26 +23,46 @@ export async function GET(request: NextRequest) {
     const endDate = `${year}-${String(parseInt(month) + 1).padStart(2, '0')}-31`
 
     // Get shifts with staff info and reservations
-    const shifts = await sql`
-      SELECT 
-        s.id,
-        s.date,
-        s.type,
-        s.staff_id,
-        s.hospital_id,
-        s.status,
-        st.name as staff_name,
-        sr.staff_id as reserved_by,
-        rst.name as reserved_by_name
-      FROM shifts s
-      LEFT JOIN staff st ON s.staff_id = st.id
-      LEFT JOIN shift_reservations sr ON s.id = sr.shift_id
-      LEFT JOIN staff rst ON sr.staff_id = rst.id
-      WHERE s.date >= ${startDate} 
-        AND s.date <= ${endDate}
-        ${hospitalId ? sql`AND s.hospital_id = ${hospitalId}` : sql``}
-      ORDER BY s.date
-    `
+    const shifts = hospitalId
+      ? await sql`
+          SELECT 
+            s.id,
+            s.date,
+            s.type,
+            s.staff_id,
+            s.hospital_id,
+            s.status,
+            st.name as staff_name,
+            sr.staff_id as reserved_by,
+            rst.name as reserved_by_name
+          FROM shifts s
+          LEFT JOIN staff st ON s.staff_id = st.id
+          LEFT JOIN shift_reservations sr ON s.id = sr.shift_id
+          LEFT JOIN staff rst ON sr.staff_id = rst.id
+          WHERE s.date >= ${startDate} 
+            AND s.date <= ${endDate}
+            AND s.hospital_id = ${hospitalId}
+          ORDER BY s.date
+        `
+      : await sql`
+          SELECT 
+            s.id,
+            s.date,
+            s.type,
+            s.staff_id,
+            s.hospital_id,
+            s.status,
+            st.name as staff_name,
+            sr.staff_id as reserved_by,
+            rst.name as reserved_by_name
+          FROM shifts s
+          LEFT JOIN staff st ON s.staff_id = st.id
+          LEFT JOIN shift_reservations sr ON s.id = sr.shift_id
+          LEFT JOIN staff rst ON sr.staff_id = rst.id
+          WHERE s.date >= ${startDate} 
+            AND s.date <= ${endDate}
+          ORDER BY s.date
+        `
 
     // Convert to format expected by calendar
     const shiftMap: Record<string, any> = {}
