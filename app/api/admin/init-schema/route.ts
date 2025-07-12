@@ -107,6 +107,14 @@ export async function POST(request: NextRequest) {
     await sql`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read)`
 
+    // Fix email constraint to allow NULL
+    try {
+      await sql`ALTER TABLE staff ALTER COLUMN email DROP NOT NULL`
+      console.log('Email constraint updated to allow NULL')
+    } catch (e) {
+      console.log('Email constraint already allows NULL or error updating:', e)
+    }
+
     return NextResponse.json({ 
       success: true,
       message: 'Database schema initialized successfully!'
