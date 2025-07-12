@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const endDate = `${year}-${String(parseInt(month) + 1).padStart(2, '0')}-31`
 
     // Get shifts with staff info and reservations
+    // Note: department column might not exist yet in production
     const shifts = hospitalId
       ? await sql`
           SELECT 
@@ -31,7 +32,6 @@ export async function GET(request: NextRequest) {
             s.type,
             s.staff_id,
             s.hospital_id,
-            s.department,
             s.status,
             st.name as staff_name,
             st.specialization as staff_department,
@@ -53,7 +53,6 @@ export async function GET(request: NextRequest) {
             s.type,
             s.staff_id,
             s.hospital_id,
-            s.department,
             s.status,
             st.name as staff_name,
             st.specialization as staff_department,
@@ -76,7 +75,7 @@ export async function GET(request: NextRequest) {
         id: shift.id.toString(),
         doctorId: shift.staff_id?.toString() || null,
         doctorName: shift.staff_name || null,
-        department: shift.department || shift.staff_department || null,
+        department: shift.staff_department || null,
         type: shift.type,
         status: shift.status,
         hospitalId: shift.hospital_id.toString(),
@@ -163,15 +162,34 @@ export async function POST(request: NextRequest) {
         shiftDepartment = staffData[0]?.specialization
       }
       
-      const result = await sql`
-        INSERT INTO shifts (date, type, start_time, end_time, staff_id, hospital_id, department, status)
-        VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${staffId}, ${hospitalId}, ${shiftDepartment}, 'assigned')
-        ON CONFLICT (date, type, hospital_id, department) 
-        DO UPDATE SET 
-          staff_id = ${staffId},
-          status = 'assigned'
-        RETURNING *
-      `
+      // Try with department first, fallback to without if column doesn't exist
+      let result
+      try {
+        result = await sql`
+          INSERT INTO shifts (date, type, start_time, end_time, staff_id, hospital_id, department, status)
+          VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${staffId}, ${hospitalId}, ${shiftDepartment}, 'assigned')
+          ON CONFLICT (date, type, hospital_id, department) 
+          DO UPDATE SET 
+            staff_id = ${staffId},
+            status = 'assigned'
+          RETURNING *
+        `
+      } catch (error: any) {
+        if (error.message?.includes('column "department" of relation "shifts" does not exist')) {
+          // Fallback to old schema without department
+          result = await sql`
+            INSERT INTO shifts (date, type, start_time, end_time, staff_id, hospital_id, status)
+            VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${staffId}, ${hospitalId}, 'assigned')
+            ON CONFLICT (date, type, hospital_id) 
+            DO UPDATE SET 
+              staff_id = ${staffId},
+              status = 'assigned'
+            RETURNING *
+          `
+        } else {
+          throw error
+        }
+      }
       
       // Create notification for the assigned staff
       await notifyShiftAssignment(staffId, date, 'Hospital')
@@ -186,15 +204,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, shift: result[0] })
     } else {
       // Remove assignment (make shift open)
-      const result = await sql`
-        INSERT INTO shifts (date, type, start_time, end_time, hospital_id, department, status)
-        VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${hospitalId}, ${department}, 'open')
-        ON CONFLICT (date, type, hospital_id, department) 
-        DO UPDATE SET 
-          staff_id = NULL,
-          status = 'open'
-        RETURNING *
-      `
+      let result
+      try {
+        result = await sql`
+          INSERT INTO shifts (date, type, start_time, end_time, hospital_id, department, status)
+          VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${hospitalId}, ${department}, 'open')
+          ON CONFLICT (date, type, hospital_id, department) 
+          DO UPDATE SET 
+            staff_id = NULL,
+            status = 'open'
+          RETURNING *
+        `
+      } catch (error: any) {
+        if (error.message?.includes('column "department" of relation "shifts" does not exist')) {
+          // Fallback to old schema without department
+          result = await sql`
+            INSERT INTO shifts (date, type, start_time, end_time, hospital_id, status)
+            VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${hospitalId}, 'open')
+            ON CONFLICT (date, type, hospital_id) 
+            DO UPDATE SET 
+              staff_id = NULL,
+              status = 'open'
+            RETURNING *
+          `
+        } else {
+          throw error
+        }
+      }
       return NextResponse.json({ success: true, shift: result[0] })
     }
   } catch (error: any) {
