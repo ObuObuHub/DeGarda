@@ -9,6 +9,7 @@ import { showToast } from '@/components/Toast'
 export default function SettingsPage() {
   const router = useRouter()
   const [isClearing, setIsClearing] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(false)
 
   const handleClearDatabase = async () => {
     const confirmed = confirm(
@@ -53,6 +54,26 @@ export default function SettingsPage() {
     }
   }
 
+  const handleInitSchema = async () => {
+    try {
+      setIsInitializing(true)
+      const response = await fetch('/api/admin/init-schema', {
+        method: 'POST'
+      })
+
+      if (response.ok) {
+        showToast('success', 'Succes', 'Schema bazei de date a fost inițializată!')
+      } else {
+        const data = await response.json()
+        showToast('error', 'Eroare', data.error || 'Nu s-a putut inițializa schema')
+      }
+    } catch (error) {
+      showToast('error', 'Eroare', 'Eroare la conectarea cu serverul')
+    } finally {
+      setIsInitializing(false)
+    }
+  }
+
   return (
     <div className="p-4 lg:p-6">
       <div className="max-w-7xl mx-auto">
@@ -86,15 +107,39 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        {/* Database Setup */}
+        <Card className="mt-6">
+          <div className="p-6">
+            <h2 className="text-xl font-bold mb-4">Configurare Bază de Date</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium mb-2">Inițializare Schema</h3>
+                <p className="text-sm text-label-secondary mb-4">
+                  Creează toate tabelele necesare în baza de date. Rulează aceasta dacă vezi erori despre tabele lipsă.
+                </p>
+                <Button
+                  variant="primary"
+                  onClick={handleInitSchema}
+                  disabled={isInitializing}
+                  icon={isInitializing ? undefined : "database"}
+                >
+                  {isInitializing ? 'Se inițializează...' : 'Inițializează Schema'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Instructions */}
         <Card className="mt-6">
           <div className="p-6">
-            <h2 className="text-lg font-bold mb-4">După curățarea bazei de date:</h2>
+            <h2 className="text-lg font-bold mb-4">Instrucțiuni:</h2>
             <ol className="list-decimal list-inside space-y-2 text-sm text-label-secondary">
-              <li>Vei fi redirecționat la pagina de selectare spital</li>
+              <li>Dacă vezi erori despre tabele lipsă, apasă "Inițializează Schema" mai întâi</li>
+              <li>După curățarea bazei de date, vei fi redirecționat</li>
               <li>Adaugă spitalele dorite din meniul "Spitale"</li>
               <li>Adaugă personalul pentru fiecare spital din meniul "Personal"</li>
-              <li>Primul utilizator adăugat ar trebui să aibă rol de "admin"</li>
               <li>Gărzile pot fi generate automat sau adăugate manual</li>
             </ol>
           </div>

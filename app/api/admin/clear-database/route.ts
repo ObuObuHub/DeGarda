@@ -31,23 +31,67 @@ export async function DELETE(request: NextRequest) {
     //   )
     // }
 
-    // Clear database in correct order
-    await sql`DELETE FROM notifications`
-    await sql`DELETE FROM staff_unavailability`
-    await sql`DELETE FROM shift_swaps`
-    await sql`DELETE FROM shift_reservations`
-    await sql`DELETE FROM shifts`
-    await sql`DELETE FROM staff`
-    await sql`DELETE FROM hospitals`
+    // Clear database in correct order - only delete from tables that exist
+    try {
+      await sql`DELETE FROM notifications`
+    } catch (e) {
+      console.log('Notifications table does not exist, skipping...')
+    }
 
-    // Reset sequences
-    await sql`ALTER SEQUENCE hospitals_id_seq RESTART WITH 1`
-    await sql`ALTER SEQUENCE staff_id_seq RESTART WITH 1`
-    await sql`ALTER SEQUENCE shifts_id_seq RESTART WITH 1`
-    await sql`ALTER SEQUENCE shift_reservations_id_seq RESTART WITH 1`
-    await sql`ALTER SEQUENCE shift_swaps_id_seq RESTART WITH 1`
-    await sql`ALTER SEQUENCE staff_unavailability_id_seq RESTART WITH 1`
-    await sql`ALTER SEQUENCE notifications_id_seq RESTART WITH 1`
+    try {
+      await sql`DELETE FROM staff_unavailability`
+    } catch (e) {
+      console.log('Staff unavailability table does not exist, skipping...')
+    }
+
+    try {
+      await sql`DELETE FROM shift_swaps`
+    } catch (e) {
+      console.log('Shift swaps table does not exist, skipping...')
+    }
+
+    try {
+      await sql`DELETE FROM shift_reservations`
+    } catch (e) {
+      console.log('Shift reservations table does not exist, skipping...')
+    }
+
+    try {
+      await sql`DELETE FROM shifts`
+    } catch (e) {
+      console.log('Shifts table does not exist, skipping...')
+    }
+
+    try {
+      await sql`DELETE FROM staff`
+    } catch (e) {
+      console.log('Staff table does not exist, skipping...')
+    }
+
+    try {
+      await sql`DELETE FROM hospitals`
+    } catch (e) {
+      console.log('Hospitals table does not exist, skipping...')
+    }
+
+    // Reset sequences - only if they exist
+    const sequences = [
+      'hospitals_id_seq',
+      'staff_id_seq',
+      'shifts_id_seq',
+      'shift_reservations_id_seq',
+      'shift_swaps_id_seq',
+      'staff_unavailability_id_seq',
+      'notifications_id_seq'
+    ]
+
+    for (const seq of sequences) {
+      try {
+        await sql`ALTER SEQUENCE ${sql.raw(seq)} RESTART WITH 1`
+      } catch (e) {
+        console.log(`Sequence ${seq} does not exist, skipping...`)
+      }
+    }
 
     return NextResponse.json({ 
       success: true,
