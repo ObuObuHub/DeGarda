@@ -147,50 +147,6 @@ export default function AdminDashboard() {
           </Button>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-gradient-to-br from-system-blue/10 to-system-blue/5 border border-system-blue/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl lg:text-3xl font-bold text-system-blue">
-                  {isLoading ? '...' : stats.hospitals}
-                </p>
-                <p className="text-label-secondary text-sm mt-1">Spitale Active</p>
-              </div>
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-system-blue/10 rounded-ios flex items-center justify-center">
-                <span className="text-system-blue text-xl lg:text-2xl">🏥</span>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-system-green/10 to-system-green/5 border border-system-green/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl lg:text-3xl font-bold text-system-green">
-                  {isLoading ? '...' : stats.staff}
-                </p>
-                <p className="text-label-secondary text-sm mt-1">Personal Medical</p>
-              </div>
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-system-green/10 rounded-ios flex items-center justify-center">
-                <span className="text-system-green text-xl lg:text-2xl">👥</span>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-system-orange/10 to-system-orange/5 border border-system-orange/20 sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl lg:text-3xl font-bold text-system-orange">
-                  {isLoading ? '...' : stats.todayShifts}
-                </p>
-                <p className="text-label-secondary text-sm mt-1">Gărzi Azi</p>
-              </div>
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-system-orange/10 rounded-ios flex items-center justify-center">
-                <span className="text-system-orange text-xl lg:text-2xl">📅</span>
-              </div>
-            </div>
-          </Card>
-        </div>
 
         {/* Quick Actions */}
         <div className="mb-8">
