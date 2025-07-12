@@ -1,6 +1,7 @@
 interface Doctor {
   id: string
   name: string
+  department?: string
   shiftsThisMonth: number
   weekendShifts: number
   unavailableDates: string[]
@@ -10,7 +11,47 @@ interface GeneratedShift {
   date: string
   doctorId: string
   doctorName: string
+  department?: string
   type: '24h' | 'day' | 'night'
+}
+
+// Generate shifts for a specific department
+export function generateDepartmentSchedule(
+  year: number,
+  month: number,
+  doctors: Doctor[],
+  department: string,
+  existingShifts: Record<string, any> = {}
+): GeneratedShift[] {
+  // Filter doctors by department
+  const departmentDoctors = doctors.filter(d => d.department === department)
+  
+  // Generate shifts for this department
+  const shifts = generateMonthlySchedule(year, month, departmentDoctors, existingShifts)
+  
+  // Add department to each shift
+  return shifts.map(shift => ({
+    ...shift,
+    department
+  }))
+}
+
+// Generate shifts for all departments
+export function generateAllDepartmentsSchedule(
+  year: number,
+  month: number,
+  doctors: Doctor[],
+  existingShifts: Record<string, any> = {}
+): GeneratedShift[] {
+  const departments = ['ATI', 'Urgențe', 'Laborator', 'Medicină Internă', 'Chirurgie']
+  const allShifts: GeneratedShift[] = []
+  
+  for (const dept of departments) {
+    const deptShifts = generateDepartmentSchedule(year, month, doctors, dept, existingShifts)
+    allShifts.push(...deptShifts)
+  }
+  
+  return allShifts
 }
 
 export function generateMonthlySchedule(

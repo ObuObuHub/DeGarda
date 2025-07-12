@@ -25,7 +25,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
     name: '',
     email: '',
     type: 'medic' as StaffMember['type'],
-    specialization: 'Laborator',
+    specialization: 'ATI',
     hospitalId: selectedHospitalId || '1',
     role: 'staff' as StaffMember['role']
   })
@@ -45,7 +45,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
         name: '',
         email: '',
         type: 'medic',
-        specialization: 'Laborator',
+        specialization: 'ATI',
         hospitalId: selectedHospitalId || '1',
         role: 'staff'
       })
@@ -97,13 +97,23 @@ export const StaffModal: React.FC<StaffModalProps> = ({
           </select>
         </div>
 
-        <Input
-          label="Specializare"
-          value={formData.specialization}
-          onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-          placeholder="ex: Laborator"
-          required
-        />
+        <div>
+          <label className="block text-sm font-medium text-label-secondary mb-2">
+            Departament
+          </label>
+          <select
+            className="w-full px-4 py-3 bg-background-secondary border border-transparent rounded-ios text-base"
+            value={formData.specialization}
+            onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+            required
+          >
+            <option value="ATI">ATI</option>
+            <option value="Urgențe">Urgențe</option>
+            <option value="Laborator">Laborator</option>
+            <option value="Medicină Internă">Medicină Internă</option>
+            <option value="Chirurgie">Chirurgie</option>
+          </select>
+        </div>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button variant="ghost" onClick={onClose}>

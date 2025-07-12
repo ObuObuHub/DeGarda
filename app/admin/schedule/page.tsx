@@ -8,7 +8,7 @@ import { Calendar } from '@/components/Calendar'
 import { AssignShiftModal } from '@/components/AssignShiftModal'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { ShiftOptionsModal } from '@/components/ShiftOptionsModal'
-import { generateMonthlySchedule } from '@/lib/shiftGenerator'
+import { generateAllDepartmentsSchedule } from '@/lib/shiftGenerator'
 import { useHospital } from '@/contexts/HospitalContext'
 import { useData } from '@/contexts/DataContext'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
@@ -50,6 +50,7 @@ export default function SchedulePage() {
     .map(s => ({
       id: s.id.toString(),
       name: s.name,
+      department: s.specialization, // specialization now holds department
       shiftsThisMonth: 0,
       weekendShifts: 0,
       isAvailable: true,
@@ -243,8 +244,8 @@ export default function SchedulePage() {
     // Filter only available doctors
     const availableDoctors = doctors.filter(d => d.isAvailable)
     
-    // Generate schedule for current month
-    const generatedShifts = generateMonthlySchedule(
+    // Generate schedule for all departments
+    const generatedShifts = generateAllDepartmentsSchedule(
       viewYear,
       viewMonth,
       availableDoctors,

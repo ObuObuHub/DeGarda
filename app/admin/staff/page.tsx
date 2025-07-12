@@ -174,33 +174,42 @@ export default function StaffPage() {
           </div>
         )}
 
-        {/* Staff List */}
+        {/* Staff List - Grouped by Department */}
         {!isLoading && !error && (
-          <div className="grid gap-4">
-            {filteredStaff.map(member => (
-            <Card key={member.id} hoverable>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h3 className="font-semibold">
-                    {member.name}
-                  </h3>
-                  <p className="text-sm text-label-secondary">
-                    {member.specialization} • {getHospitalName(member.hospitalId)}
-                  </p>
-                  <p className="text-xs text-label-tertiary mt-1">
-                    {member.email}
-                  </p>
+          <div className="space-y-6">
+            {['ATI', 'Urgențe', 'Laborator', 'Medicină Internă', 'Chirurgie'].map(dept => {
+              const deptStaff = filteredStaff.filter(s => s.specialization === dept)
+              if (deptStaff.length === 0) return null
+              
+              return (
+                <div key={dept}>
+                  <h3 className="text-lg font-semibold mb-3">{dept}</h3>
+                  <div className="grid gap-4">
+                    {deptStaff.map(member => (
+                      <Card key={member.id} hoverable>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold">
+                              {member.name}
+                            </h3>
+                            <p className="text-xs text-label-tertiary mt-1">
+                              {member.email || 'Fără email'}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => handleEdit(member)}>
+                              Editează
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(member.id)}>
+                              Șterge
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => handleEdit(member)}>
-                    Editează
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDelete(member.id)}>
-                    Șterge
-                  </Button>
-                </div>
-              </div>
-            </Card>
+              )
           ))}
           </div>
         )}
