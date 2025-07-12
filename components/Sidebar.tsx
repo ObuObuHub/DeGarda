@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
   { label: 'Personal', href: '/admin/staff', icon: 'users' },
   { label: 'Spitale', href: '/admin/hospitals', icon: 'hospital' },
   { label: 'Cereri Schimb', href: '/admin/swaps', icon: 'swap' },
+  { label: 'Setări', href: '/admin/settings', icon: 'settings' },
 ]
 
 interface SidebarProps {
