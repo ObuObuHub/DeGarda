@@ -31,8 +31,10 @@ export async function GET(request: NextRequest) {
             s.type,
             s.staff_id,
             s.hospital_id,
+            s.department,
             s.status,
             st.name as staff_name,
+            st.specialization as staff_department,
             sr.staff_id as reserved_by,
             rst.name as reserved_by_name
           FROM shifts s
@@ -51,8 +53,10 @@ export async function GET(request: NextRequest) {
             s.type,
             s.staff_id,
             s.hospital_id,
+            s.department,
             s.status,
             st.name as staff_name,
+            st.specialization as staff_department,
             sr.staff_id as reserved_by,
             rst.name as reserved_by_name
           FROM shifts s
@@ -72,6 +76,7 @@ export async function GET(request: NextRequest) {
         id: shift.id.toString(),
         doctorId: shift.staff_id?.toString() || null,
         doctorName: shift.staff_name || null,
+        department: shift.department || shift.staff_department || null,
         type: shift.type,
         status: shift.status,
         hospitalId: shift.hospital_id.toString(),
@@ -109,7 +114,7 @@ export async function GET(request: NextRequest) {
 // POST to create or update a shift
 export async function POST(request: NextRequest) {
   try {
-    const { date, staffId, hospitalId, type = '24h' } = await request.json()
+    const { date, staffId, hospitalId, type = '24h', department } = await request.json()
 
     if (!date || !hospitalId) {
       return NextResponse.json(
@@ -149,10 +154,19 @@ export async function POST(request: NextRequest) {
         )
       }
       
+      // Get staff department if not provided
+      let shiftDepartment = department
+      if (!shiftDepartment && staffId) {
+        const staffData = await sql`
+          SELECT specialization FROM staff WHERE id = ${staffId}
+        `
+        shiftDepartment = staffData[0]?.specialization
+      }
+      
       const result = await sql`
-        INSERT INTO shifts (date, type, start_time, end_time, staff_id, hospital_id, status)
-        VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${staffId}, ${hospitalId}, 'assigned')
-        ON CONFLICT (date, type, hospital_id) 
+        INSERT INTO shifts (date, type, start_time, end_time, staff_id, hospital_id, department, status)
+        VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${staffId}, ${hospitalId}, ${shiftDepartment}, 'assigned')
+        ON CONFLICT (date, type, hospital_id, department) 
         DO UPDATE SET 
           staff_id = ${staffId},
           status = 'assigned'
@@ -173,9 +187,9 @@ export async function POST(request: NextRequest) {
     } else {
       // Remove assignment (make shift open)
       const result = await sql`
-        INSERT INTO shifts (date, type, start_time, end_time, hospital_id, status)
-        VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${hospitalId}, 'open')
-        ON CONFLICT (date, type, hospital_id) 
+        INSERT INTO shifts (date, type, start_time, end_time, hospital_id, department, status)
+        VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${hospitalId}, ${department}, 'open')
+        ON CONFLICT (date, type, hospital_id, department) 
         DO UPDATE SET 
           staff_id = NULL,
           status = 'open'

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const conflicts = []
     
     for (const shift of shifts) {
-      const { date, doctorId, doctorName, type = '24h' } = shift
+      const { date, doctorId, doctorName, type = '24h', department } = shift
       
       // Check for conflicts
       const existingShifts = await sql`
@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
       }
 
       const result = await sql`
-        INSERT INTO shifts (date, type, start_time, end_time, staff_id, hospital_id, status)
-        VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${doctorId}, ${hospitalId}, 'assigned')
-        ON CONFLICT (date, type, hospital_id) 
+        INSERT INTO shifts (date, type, start_time, end_time, staff_id, hospital_id, department, status)
+        VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${doctorId}, ${hospitalId}, ${department}, 'assigned')
+        ON CONFLICT (date, type, hospital_id, department) 
         DO UPDATE SET 
           staff_id = ${doctorId},
           status = 'assigned'

@@ -40,9 +40,10 @@ export async function POST(request: NextRequest) {
         end_time TIME NOT NULL,
         staff_id INTEGER REFERENCES staff(id),
         hospital_id INTEGER NOT NULL REFERENCES hospitals(id),
+        department VARCHAR(100),
         status VARCHAR(50) DEFAULT 'open' CHECK (status IN ('open', 'assigned', 'reserved')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(date, type, hospital_id)
+        UNIQUE(date, type, hospital_id, department)
       )
     `
 

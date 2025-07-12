@@ -21,7 +21,7 @@ interface DataContextType {
   loadHospitals: () => Promise<void>
   loadNotifications: (userId: string) => Promise<void>
   markNotificationsAsRead: (notificationIds: number[], userId: string) => Promise<void>
-  updateShift: (date: string, staffId: string | null, hospitalId: string, type?: ShiftType) => Promise<void>
+  updateShift: (date: string, staffId: string | null, hospitalId: string, type?: ShiftType, department?: string) => Promise<void>
   setAutoRefresh: (enabled: boolean) => void
   setSelectedHospital: (hospitalId: string | null) => void
   refreshData: () => Promise<void>
@@ -190,12 +190,12 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   }, [])
 
   // Update shift
-  const updateShift = useCallback(async (date: string, staffId: string | null, hospitalId: string, type: ShiftType = '24h') => {
+  const updateShift = useCallback(async (date: string, staffId: string | null, hospitalId: string, type: ShiftType = '24h', department?: string) => {
     try {
       const response = await fetch('/api/shifts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, staffId, hospitalId, type })
+        body: JSON.stringify({ date, staffId, hospitalId, type, department })
       })
       
       if (!response.ok) {

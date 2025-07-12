@@ -47,7 +47,17 @@ export function generateAllDepartmentsSchedule(
   const allShifts: GeneratedShift[] = []
   
   for (const dept of departments) {
-    const deptShifts = generateDepartmentSchedule(year, month, doctors, dept, existingShifts)
+    // Filter existing shifts for this department only
+    const deptExistingShifts: Record<string, any> = {}
+    Object.entries(existingShifts).forEach(([date, shift]) => {
+      // Check if shift belongs to this department
+      const doctor = doctors.find(d => d.id === shift.doctorId?.toString())
+      if (doctor && doctor.department === dept) {
+        deptExistingShifts[date] = shift
+      }
+    })
+    
+    const deptShifts = generateDepartmentSchedule(year, month, doctors, dept, deptExistingShifts)
     allShifts.push(...deptShifts)
   }
   

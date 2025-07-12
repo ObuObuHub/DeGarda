@@ -10,6 +10,7 @@ export default function SettingsPage() {
   const router = useRouter()
   const [isClearing, setIsClearing] = useState(false)
   const [isInitializing, setIsInitializing] = useState(false)
+  const [isMigrating, setIsMigrating] = useState(false)
 
   const handleClearDatabase = async () => {
     const confirmed = confirm(
@@ -74,6 +75,27 @@ export default function SettingsPage() {
     }
   }
 
+  const handleDepartmentMigration = async () => {
+    try {
+      setIsMigrating(true)
+      const response = await fetch('/api/admin/add-department-column', {
+        method: 'POST'
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        showToast('success', 'Succes', data.message || 'Migrarea departamentelor a fost completată!')
+      } else {
+        const data = await response.json()
+        showToast('error', 'Eroare', data.error || 'Nu s-a putut efectua migrarea')
+      }
+    } catch (error) {
+      showToast('error', 'Eroare', 'Eroare la conectarea cu serverul')
+    } finally {
+      setIsMigrating(false)
+    }
+  }
+
   return (
     <div className="p-4 lg:p-6">
       <div className="max-w-7xl mx-auto">
@@ -125,6 +147,21 @@ export default function SettingsPage() {
                   icon={isInitializing ? undefined : "database"}
                 >
                   {isInitializing ? 'Se inițializează...' : 'Inițializează Schema'}
+                </Button>
+              </div>
+              
+              <div>
+                <h3 className="font-medium mb-2">Migrare Departamente</h3>
+                <p className="text-sm text-label-secondary mb-4">
+                  Adaugă suport pentru departamente separate. Actualizează gărzile existente cu departamentul personalului asignat.
+                </p>
+                <Button
+                  variant="secondary"
+                  onClick={handleDepartmentMigration}
+                  disabled={isMigrating}
+                  icon={isMigrating ? undefined : "wrench"}
+                >
+                  {isMigrating ? 'Se migrează...' : 'Migrează Departamente'}
                 </Button>
               </div>
             </div>

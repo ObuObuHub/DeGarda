@@ -121,7 +121,12 @@ export default function SchedulePage() {
     if (!selectedDate || !selectedHospitalId) return
     
     try {
-      await updateShift(selectedDate, doctorId, selectedHospitalId, '24h')
+      // Get the doctor's department
+      const doctor = doctors.find(d => d.id === doctorId)
+      const department = doctor?.department || 
+                        (selectedDepartment !== 'all' ? selectedDepartment : undefined)
+      
+      await updateShift(selectedDate, doctorId, selectedHospitalId, '24h', department)
       setShowAssignModal(false)
       setShowOptionsModal(false)
       // Sync data to get latest updates
@@ -485,6 +490,8 @@ export default function SchedulePage() {
           isAvailable: d.isAvailable && !d.unavailableDates.includes(selectedDate || '')
         }))}
         onAssign={handleAssignDoctor}
+        selectedDepartment={selectedDepartment === 'all' ? undefined : selectedDepartment}
+        shiftDepartment={selectedDate && shifts[selectedDate]?.department}
       />
 
       {swapModalData && (

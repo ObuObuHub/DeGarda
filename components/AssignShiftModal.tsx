@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 interface Doctor {
   id: string
   name: string
+  department?: string
   shiftsThisMonth: number
   weekendShifts: number
   isAvailable: boolean
@@ -18,6 +19,8 @@ interface AssignShiftModalProps {
   date: string
   doctors: Doctor[]
   onAssign: (doctorId: string) => void
+  selectedDepartment?: string
+  shiftDepartment?: string
 }
 
 export const AssignShiftModal: React.FC<AssignShiftModalProps> = ({
@@ -25,7 +28,9 @@ export const AssignShiftModal: React.FC<AssignShiftModalProps> = ({
   onClose,
   date,
   doctors,
-  onAssign
+  onAssign,
+  selectedDepartment,
+  shiftDepartment
 }) => {
   const formatDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-')
@@ -41,6 +46,12 @@ export const AssignShiftModal: React.FC<AssignShiftModalProps> = ({
   }
 
   const weekend = isWeekend(date)
+  
+  // Filter doctors by department
+  const departmentToShow = shiftDepartment || selectedDepartment
+  const filteredDoctors = departmentToShow 
+    ? doctors.filter(d => d.department === departmentToShow)
+    : doctors
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Atribuie Gardă" size="md">
@@ -50,10 +61,18 @@ export const AssignShiftModal: React.FC<AssignShiftModalProps> = ({
           {weekend && (
             <p className="text-sm text-system-blue mt-1">Gardă de Weekend</p>
           )}
+          {departmentToShow && (
+            <p className="text-sm text-label-secondary mt-1">Departament: {departmentToShow}</p>
+          )}
         </div>
 
         <div className="space-y-2 max-h-96 overflow-y-auto">
-          {doctors.map(doctor => (
+          {filteredDoctors.length === 0 ? (
+            <p className="text-center text-label-secondary py-8">
+              Nu există personal disponibil pentru acest departament
+            </p>
+          ) : (
+            filteredDoctors.map(doctor => (
             <div
               key={doctor.id}
               className={`
@@ -100,7 +119,8 @@ export const AssignShiftModal: React.FC<AssignShiftModalProps> = ({
                 </div>
               )}
             </div>
-          ))}
+          ))
+          )}
         </div>
 
         <div className="flex justify-end">
