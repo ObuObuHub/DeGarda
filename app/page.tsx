@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 interface Hospital {
   id: string
@@ -91,6 +92,28 @@ export default function HospitalSelectionPage() {
                 </div>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Staff Portal Link */}
+        {hospitals.length > 0 && (
+          <div className="text-center mt-8">
+            <div className="inline-flex flex-col items-center p-6 bg-white rounded-lg shadow-sm">
+              <p className="text-gray-600 mb-3">Ești membru al personalului medical?</p>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (hospitals.length === 1) {
+                    localStorage.setItem('selectedHospitalId', hospitals[0].id)
+                    router.push('/staff')
+                  } else {
+                    alert('Selectează mai întâi spitalul tău din lista de mai sus')
+                  }
+                }}
+              >
+                Portal Personal Medical
+              </Button>
+            </div>
           </div>
         )}
 

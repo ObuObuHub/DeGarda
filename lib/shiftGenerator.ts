@@ -4,7 +4,9 @@ interface Doctor {
   department?: string
   shiftsThisMonth: number
   weekendShifts: number
+  lastShiftDate?: string
   unavailableDates: string[]
+  reservedDates?: string[]
 }
 
 interface GeneratedShift {
@@ -99,15 +101,57 @@ export function generateMonthlySchedule(
   const doctorStats = doctors.map(d => ({
     ...d,
     assignedShifts: 0,
-    assignedWeekends: 0
+    assignedWeekends: 0,
+    lastShiftDate: d.lastShiftDate || null
   }))
+  
+  // First pass: Assign all reserved shifts
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    
+    // Skip if already has a shift
+    if (existingShifts[dateStr]) continue
+    
+    // Check if any doctor reserved this date
+    const reservingDoctor = doctorStats.find(d => d.reservedDates?.includes(dateStr))
+    if (reservingDoctor) {
+      shifts.push({
+        date: dateStr,
+        doctorId: reservingDoctor.id,
+        doctorName: reservingDoctor.name,
+        type: '24h'
+      })
+      
+      reservingDoctor.assignedShifts++
+      reservingDoctor.lastShiftDate = dateStr
+      
+      // Track weekend assignments
+      const dayOfWeek = new Date(year, month, day).getDay()
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        reservingDoctor.assignedWeekends++
+      }
+    }
+  }
   
   // Helper function to get available doctors for a date
   const getAvailableDoctors = (day: number, isWeekend: boolean) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const yesterday = new Date(year, month, day - 1)
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
     
     return doctorStats
-      .filter(d => !d.unavailableDates.includes(dateStr))
+      .filter(d => {
+        // Check unavailable dates
+        if (d.unavailableDates.includes(dateStr)) return false
+        
+        // Check consecutive days (no back-to-back shifts)
+        if (d.lastShiftDate === yesterdayStr) return false
+        
+        // Check weekend limit (max 2 per month)
+        if (isWeekend && d.assignedWeekends >= 2) return false
+        
+        return true
+      })
       .sort((a, b) => {
         // For weekends, prioritize doctors with 0 weekend shifts
         if (isWeekend && a.assignedWeekends !== b.assignedWeekends) {
@@ -122,8 +166,8 @@ export function generateMonthlySchedule(
   for (const day of weekends) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     
-    // Skip if already has a shift
-    if (existingShifts[dateStr]) continue
+    // Skip if already has a shift (including reserved shifts)
+    if (existingShifts[dateStr] || shifts.find(s => s.date === dateStr)) continue
     
     const availableDoctors = getAvailableDoctors(day, true)
     
@@ -139,6 +183,7 @@ export function generateMonthlySchedule(
       
       selectedDoctor.assignedShifts++
       selectedDoctor.assignedWeekends++
+      selectedDoctor.lastShiftDate = dateStr
     }
   }
   
@@ -146,8 +191,8 @@ export function generateMonthlySchedule(
   for (const day of weekdays) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     
-    // Skip if already has a shift
-    if (existingShifts[dateStr]) continue
+    // Skip if already has a shift (including reserved shifts)
+    if (existingShifts[dateStr] || shifts.find(s => s.date === dateStr)) continue
     
     const availableDoctors = getAvailableDoctors(day, false)
     
@@ -162,6 +207,7 @@ export function generateMonthlySchedule(
       })
       
       selectedDoctor.assignedShifts++
+      selectedDoctor.lastShiftDate = dateStr
     }
   }
   
