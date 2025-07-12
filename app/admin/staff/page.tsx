@@ -60,15 +60,6 @@ export default function StaffPage() {
     return hospitals.find(h => h.id === hospitalId)?.name || 'Unknown'
   }
 
-  const getTypePrefix = (type: string) => {
-    switch (type) {
-      case 'medic': return 'Dr.'
-      case 'biolog': return 'Biol.'
-      case 'chimist': return 'Ch.'
-      case 'asistent': return 'As.'
-      default: return ''
-    }
-  }
 
   const handleAdd = () => {
     setEditingStaff(undefined)
@@ -191,7 +182,7 @@ export default function StaffPage() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <h3 className="font-semibold">
-                    {getTypePrefix(member.type)} {member.name}
+                    {member.name}
                   </h3>
                   <p className="text-sm text-label-secondary">
                     {member.specialization} • {getHospitalName(member.hospitalId)}

@@ -69,7 +69,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
           label="Nume"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Dr. Nume Prenume"
+          placeholder="Nume Prenume"
           required
         />
 
