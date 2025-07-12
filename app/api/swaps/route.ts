@@ -11,33 +11,57 @@ export async function GET(request: NextRequest) {
     const hospitalId = searchParams.get('hospitalId')
 
     // Get swap requests with staff and shift info
-    const swaps = await sql`
-      SELECT 
-        ss.id,
-        ss.from_staff_id,
-        ss.to_staff_id,
-        ss.shift_id,
-        ss.reason,
-        ss.status,
-        ss.created_at,
-        s.date as shift_date,
-        s.type as shift_type,
-        s.hospital_id,
-        sf.name as from_staff_name,
-        st.name as to_staff_name,
-        h.name as hospital_name
-      FROM shift_swaps ss
-      JOIN shifts s ON ss.shift_id = s.id
-      JOIN staff sf ON ss.from_staff_id = sf.id
-      LEFT JOIN staff st ON ss.to_staff_id = st.id
-      JOIN hospitals h ON s.hospital_id = h.id
-      WHERE ss.status = ${status}
-        ${hospitalId ? sql`AND s.hospital_id = ${hospitalId}` : sql``}
-      ORDER BY ss.created_at DESC
-    `
+    const swaps = hospitalId
+      ? await sql`
+          SELECT 
+            ss.id,
+            ss.from_staff_id,
+            ss.to_staff_id,
+            ss.shift_id,
+            ss.reason,
+            ss.status,
+            ss.created_at,
+            s.date as shift_date,
+            s.type as shift_type,
+            s.hospital_id,
+            sf.name as from_staff_name,
+            st.name as to_staff_name,
+            h.name as hospital_name
+          FROM shift_swaps ss
+          JOIN shifts s ON ss.shift_id = s.id
+          JOIN staff sf ON ss.from_staff_id = sf.id
+          LEFT JOIN staff st ON ss.to_staff_id = st.id
+          JOIN hospitals h ON s.hospital_id = h.id
+          WHERE ss.status = ${status}
+            AND s.hospital_id = ${hospitalId}
+          ORDER BY ss.created_at DESC
+        `
+      : await sql`
+          SELECT 
+            ss.id,
+            ss.from_staff_id,
+            ss.to_staff_id,
+            ss.shift_id,
+            ss.reason,
+            ss.status,
+            ss.created_at,
+            s.date as shift_date,
+            s.type as shift_type,
+            s.hospital_id,
+            sf.name as from_staff_name,
+            st.name as to_staff_name,
+            h.name as hospital_name
+          FROM shift_swaps ss
+          JOIN shifts s ON ss.shift_id = s.id
+          JOIN staff sf ON ss.from_staff_id = sf.id
+          LEFT JOIN staff st ON ss.to_staff_id = st.id
+          JOIN hospitals h ON s.hospital_id = h.id
+          WHERE ss.status = ${status}
+          ORDER BY ss.created_at DESC
+        `
 
     return NextResponse.json({ success: true, swaps })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Get swaps error:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to fetch swap requests' },
@@ -88,7 +112,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, swap: result[0] })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Create swap error:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to create swap request' },
