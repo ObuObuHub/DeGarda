@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { comparePassword, generateToken } from '@/lib/auth'
+import { ensureArray } from '@/lib/db-helpers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,12 +15,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by email
-    const users = await sql`
+    const result = await sql`
       SELECT id, name, email, password, role, hospital_id, specialization, is_active
       FROM staff
       WHERE email = ${email}
       LIMIT 1
     `
+    
+    const users = ensureArray(result)
 
     if (users.length === 0) {
       return NextResponse.json(
@@ -73,7 +76,7 @@ export async function POST(request: NextRequest) {
     })
 
     return response
-  } catch (error: any) {
+  } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(
       { success: false, error: 'Login failed' },
