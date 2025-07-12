@@ -396,10 +396,8 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Calendar */}
-          <div className="lg:col-span-3">
-            <Card className="p-6">
+        {/* Calendar */}
+        <Card className="p-6">
               {/* Month Navigation */}
               <div className="flex justify-between items-center mb-6">
                 <Button variant="ghost" size="sm" onClick={handlePrevMonth} icon="chevronLeft">
@@ -434,49 +432,7 @@ export default function SchedulePage() {
                   doctors={doctors}
                 />
               )}
-            </Card>
-          </div>
-
-          {/* Stats Sidebar */}
-          <div className="space-y-4">
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3">Statistici Lunare</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-label-secondary">Total gărzi:</span>
-                  <span className="font-medium">{new Date(viewYear, viewMonth + 1, 0).getDate()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-label-secondary">Atribuite:</span>
-                  <span className="font-medium text-system-green">{Object.keys(filteredShifts).length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-label-secondary">Libere:</span>
-                  <span className="font-medium text-system-orange">
-                    {new Date(viewYear, viewMonth + 1, 0).getDate() - Object.keys(shifts).length}
-                  </span>
-                </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-separator">
-                <p className="text-xs text-label-tertiary">
-                  Actualizat: {lastSync.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3">Top Doctori</h3>
-              <div className="space-y-2">
-                {doctors.slice(0, 3).map(doctor => (
-                  <div key={doctor.id} className="flex justify-between text-sm">
-                    <span className="text-label-secondary truncate">{doctor.name}</span>
-                    <span className="font-medium">{doctor.shiftsThisMonth}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-        </div>
+        </Card>
       </div>
 
       <ShiftOptionsModal
