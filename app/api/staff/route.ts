@@ -125,7 +125,6 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(tempPassword, 10)
     
     // TODO: Send this password to the user via secure email
-    console.log(`New staff member created: ${email} with temporary password: ${tempPassword}`)
     
     const result = await sql`
       INSERT INTO staff (name, email, password, role, hospital_id, specialization, is_active)

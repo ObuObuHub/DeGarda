@@ -127,11 +127,7 @@ export async function POST() {
     const adminPasswordPlain = generateSecurePassword()
     const managerPasswordPlain = generateSecurePassword()
     
-    // Log passwords securely (these should be saved/communicated securely)
-    console.log('\n=== IMPORTANT: Save these passwords securely ===');
-    console.log(`Admin password for admin@degarda.ro: ${adminPasswordPlain}`);
-    console.log(`Manager password for manager@degarda.ro: ${managerPasswordPlain}`);
-    console.log('================================================\n');
+    // Return passwords in response instead of logging them
     
     const adminPassword = await bcrypt.hash(adminPasswordPlain, 10)
     const managerPassword = await bcrypt.hash(managerPasswordPlain, 10)
@@ -145,7 +141,6 @@ export async function POST() {
 
     // Insert all staff members from medical-shift-scheduler
     // Generate unique passwords for each staff member
-    console.log('\n=== Staff Member Passwords ===');
     const staffMembers = [
       { name: 'Dr. Zugun Eduard', type: 'medic', email: 'zugun.eduard@degarda.ro' },
       { name: 'Dr. Gîlea Arina', type: 'medic', email: 'gilea.arina@degarda.ro' },
@@ -162,7 +157,6 @@ export async function POST() {
 
     for (const member of staffMembers) {
       const staffPassword = generateSecurePassword()
-      console.log(`${member.email}: ${staffPassword}`);
       const hashedPassword = await bcrypt.hash(staffPassword, 10)
       
       await sql`
@@ -171,11 +165,14 @@ export async function POST() {
         ON CONFLICT (email) DO NOTHING
       `
     }
-    console.log('==============================\n');
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Database initialized successfully' 
+      message: 'Database initialized successfully',
+      credentials: {
+        admin: adminPasswordPlain,
+        manager: managerPasswordPlain
+      }
     })
   } catch (error) {
     console.error('Database initialization error:', error)

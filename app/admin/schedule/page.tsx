@@ -153,8 +153,8 @@ export default function SchedulePage() {
     if (!selectedDate) return
     
     try {
-      // For now, using a hardcoded staff ID - in real app, get from auth context
-      const currentStaffId = '1' // This should come from auth
+      // TODO: Get current staff ID from auth context
+      const currentStaffId = '1'
       
       const response = await fetch(`/api/shifts/${shifts[selectedDate]?.id || 'new'}/reserve`, {
         method: 'POST',
