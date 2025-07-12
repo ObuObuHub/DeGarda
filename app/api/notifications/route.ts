@@ -16,20 +16,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Get notifications
-    const notifications = await sql`
-      SELECT 
-        id,
-        type,
-        title,
-        message,
-        read,
-        created_at
-      FROM notifications
-      WHERE user_id = ${userId}
-        ${unreadOnly ? sql`AND read = false` : sql``}
-      ORDER BY created_at DESC
-      LIMIT 50
-    `
+    const notifications = unreadOnly
+      ? await sql`
+          SELECT id, type, title, message, read, created_at
+          FROM notifications
+          WHERE user_id = ${userId} AND read = false
+          ORDER BY created_at DESC
+          LIMIT 50
+        `
+      : await sql`
+          SELECT id, type, title, message, read, created_at
+          FROM notifications
+          WHERE user_id = ${userId}
+          ORDER BY created_at DESC
+          LIMIT 50
+        `
 
     // Get unread count
     const unreadCount = await sql`
