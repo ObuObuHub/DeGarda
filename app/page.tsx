@@ -62,8 +62,7 @@ export default function HospitalSelectionPage() {
               <Card
                 key={hospital.id}
                 hoverable
-                onClick={() => handleSelectHospital(hospital.id)}
-                className="p-8 cursor-pointer transform transition-all duration-200 hover:scale-105 bg-white hover:shadow-2xl"
+                className="p-8 transform transition-all duration-200 hover:scale-105 bg-white hover:shadow-2xl"
               >
                 <div className="text-center space-y-4">
                   {/* Hospital Icon */}
@@ -80,14 +79,25 @@ export default function HospitalSelectionPage() {
                     )}
                   </div>
 
-                  {/* Select Button */}
-                  <div className="pt-4">
-                    <div className="inline-flex items-center text-blue-600 font-medium">
-                      <span>Selectează</span>
-                      <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
+                  {/* Action Buttons */}
+                  <div className="pt-4 space-y-3">
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      onClick={() => handleSelectHospital(hospital.id)}
+                    >
+                      Dashboard Admin
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      fullWidth
+                      onClick={() => {
+                        localStorage.setItem('selectedHospitalId', hospital.id)
+                        router.push('/staff')
+                      }}
+                    >
+                      Portal Personal Medical
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -95,27 +105,6 @@ export default function HospitalSelectionPage() {
           </div>
         )}
 
-        {/* Staff Portal Link */}
-        {hospitals.length > 0 && (
-          <div className="text-center mt-8">
-            <div className="inline-flex flex-col items-center p-6 bg-white rounded-lg shadow-sm">
-              <p className="text-gray-600 mb-3">Ești membru al personalului medical?</p>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  if (hospitals.length === 1) {
-                    localStorage.setItem('selectedHospitalId', hospitals[0].id)
-                    router.push('/staff')
-                  } else {
-                    alert('Selectează mai întâi spitalul tău din lista de mai sus')
-                  }
-                }}
-              >
-                Portal Personal Medical
-              </Button>
-            </div>
-          </div>
-        )}
 
         {/* Footer */}
         <div className="text-center mt-12 text-gray-500">
