@@ -37,7 +37,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardStats()
-    fetchRecentActivities()
+    // fetchRecentActivities() // Disabled - table doesn't exist
   }, [])
 
   const fetchDashboardStats = async () => {
@@ -53,9 +53,13 @@ export default function AdminDashboard() {
       const staff = staffRes.ok ? await staffRes.json() : []
       
       // Fetch today's shifts count
-      const today = new Date().toISOString().split('T')[0]
-      const shiftsRes = await fetch(`/api/shifts?date=${today}`)
-      const shifts = shiftsRes.ok ? await shiftsRes.json() : []
+      const today = new Date()
+      const year = today.getFullYear()
+      const month = today.getMonth()
+      const shiftsRes = await fetch(`/api/shifts?year=${year}&month=${month}`)
+      const shiftsData = shiftsRes.ok ? await shiftsRes.json() : { shifts: {} }
+      const todayStr = today.toISOString().split('T')[0]
+      const todayShift = shiftsData.shifts?.[todayStr] ? 1 : 0
       
       // Fetch pending swaps count
       const swapsRes = await fetch('/api/swaps?status=pending')
@@ -64,8 +68,8 @@ export default function AdminDashboard() {
       setStats({
         hospitals: hospitals.length,
         staff: staff.length,
-        todayShifts: shifts.length,
-        pendingSwaps: swaps.length
+        todayShifts: todayShift,
+        pendingSwaps: swaps.swaps?.length || 0
       })
     } catch (error) {
       console.error('Failed to fetch dashboard stats:', error)
