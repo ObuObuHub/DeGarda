@@ -35,9 +35,9 @@ export default function HospitalSelectionPage() {
   }
 
   const handleSelectHospital = (hospitalId: string) => {
-    // Store in session storage for login page
-    sessionStorage.setItem('selectedHospitalId', hospitalId)
-    router.push(`/${hospitalId}/login`)
+    // Store hospital selection and go directly to dashboard
+    localStorage.setItem('selectedHospitalId', hospitalId)
+    router.push('/admin/dashboard')
   }
 
   return (

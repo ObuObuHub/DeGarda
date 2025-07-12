@@ -23,14 +23,14 @@ async function verifyAdminOrManager() {
 // DELETE all shifts for a specific month/year and hospital
 export async function DELETE(request: NextRequest) {
   try {
-    // Verify authorization
-    const isAuthorized = await verifyAdminOrManager()
-    if (!isAuthorized) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    // Auth disabled temporarily
+    // const isAuthorized = await verifyAdminOrManager()
+    // if (!isAuthorized) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Unauthorized' },
+    //     { status: 401 }
+    //   )
+    // }
 
     const { searchParams } = new URL(request.url)
     const year = searchParams.get('year')
