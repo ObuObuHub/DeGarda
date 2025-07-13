@@ -228,6 +228,14 @@ export async function POST(request: NextRequest) {
       // Remove assignment (make shift open)
       let result
       try {
+        // When creating open shift, department must be provided
+        if (!department) {
+          return NextResponse.json(
+            { success: false, error: 'Department is required when creating an open shift' },
+            { status: 400 }
+          )
+        }
+        
         result = await sql`
           INSERT INTO shifts (date, type, start_time, end_time, hospital_id, department, status)
           VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${hospitalId}, ${department}, 'open')
@@ -257,11 +265,22 @@ export async function POST(request: NextRequest) {
     }
   } catch (error: any) {
     console.error('Create/update shift error:', error)
+    console.error('Request data:', { date, staffId, hospitalId, type, department })
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to save shift'
+    if (error.code === '23505') {
+      errorMessage = 'A shift already exists for this date, type, and department'
+    } else if (error.code === '23503') {
+      errorMessage = 'Invalid staff or hospital reference'
+    }
+    
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to save shift',
-        details: error.message || 'Unknown error'
+        error: errorMessage,
+        details: error.message || 'Unknown error',
+        code: error.code
       },
       { status: 500 }
     )

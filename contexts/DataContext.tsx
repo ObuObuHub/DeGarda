@@ -247,9 +247,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         setShifts(prev => ({
           ...prev,
           [date]: {
-            ...data.shift,
+            id: data.shift.id?.toString(),
             doctorId: staffId,
-            doctorName: staffId ? staff.find(s => s.id.toString() === staffId)?.name || null : null
+            doctorName: staffId ? staff.find(s => s.id.toString() === staffId)?.name || null : null,
+            department: data.shift.department || department,
+            type: data.shift.type || type,
+            status: data.shift.status,
+            hospitalId: data.shift.hospital_id?.toString() || hospitalId
           }
         }))
         addNotification('Shift updated successfully', 'success')
