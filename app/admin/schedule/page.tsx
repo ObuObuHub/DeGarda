@@ -8,8 +8,7 @@ import { Calendar } from '@/components/Calendar'
 import { AssignShiftModal } from '@/components/AssignShiftModal'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { ShiftOptionsModal } from '@/components/ShiftOptionsModal'
-import { DepartmentSelectModal } from '@/components/DepartmentSelectModal'
-import { generateAllDepartmentsSchedule, VALID_DEPARTMENTS, normalizeDepartment } from '@/lib/shiftGeneratorV2'
+import { generateDepartmentSchedule, VALID_DEPARTMENTS, normalizeDepartment } from '@/lib/shiftGeneratorV2'
 import { assignDepartmentsToDoctors } from '@/lib/assignDepartments'
 import { useHospital } from '@/contexts/HospitalContext'
 import { useData } from '@/contexts/DataContext'
@@ -34,7 +33,6 @@ export default function SchedulePage() {
   const [swapModalData, setSwapModalData] = useState<{ date: string; shift: any } | null>(null)
   const [showOptionsModal, setShowOptionsModal] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
-  const [showDepartmentModal, setShowDepartmentModal] = useState(false)
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all')
   const [pendingShiftDepartment, setPendingShiftDepartment] = useState<string | null>(null)
 
@@ -87,23 +85,19 @@ export default function SchedulePage() {
   const handleDayClick = (date: string) => {
     setSelectedDate(date)
     const shift = shifts[date]
+    
+    // Don't allow shift creation when viewing all departments
+    if (selectedDepartment === 'all') {
+      return
+    }
+    
     if (!shift || shift.status === 'open') {
-      // If we have a department filter, use it. Otherwise ask for department
-      if (selectedDepartment !== 'all') {
-        setPendingShiftDepartment(selectedDepartment)
-        setShowOptionsModal(true)
-      } else {
-        // Show department selection modal first
-        setShowDepartmentModal(true)
-      }
+      // We have a specific department selected, use it
+      setPendingShiftDepartment(selectedDepartment)
+      setShowOptionsModal(true)
     }
   }
   
-  const handleDepartmentSelected = (department: string) => {
-    setPendingShiftDepartment(department)
-    setShowDepartmentModal(false)
-    setShowOptionsModal(true)
-  }
 
   const handleSwapRequest = (date: string, shift: any) => {
     setSwapModalData({ date, shift: { ...shift, shiftId: shift.id } })
@@ -284,59 +278,35 @@ export default function SchedulePage() {
       showToast('error', 'Eroare', 'Selectați un spital')
       return
     }
-
-    // Debug: Log all doctors and their departments
-    console.log('All doctors:', doctors)
-    console.log('Staff data:', staff)
-
-    // Filter only available doctors
-    const availableDoctors = doctors.filter(d => d.isAvailable)
     
-    console.log('Available doctors:', availableDoctors)
-    console.log('Available doctors by department:', availableDoctors.reduce((acc, d) => {
-      const dept = normalizeDepartment(d.department) || 'NO_DEPARTMENT'
-      acc[dept] = (acc[dept] || 0) + 1
-      return acc
-    }, {} as Record<string, number>))
+    if (selectedDepartment === 'all') {
+      showToast('error', 'Eroare', 'Selectați un departament specific pentru generare')
+      return
+    }
+
+    // Filter only available doctors for the selected department
+    const departmentDoctors = doctors
+      .filter(d => d.isAvailable && d.department === selectedDepartment)
     
-    if (availableDoctors.length === 0) {
-      showToast('error', 'Eroare', 'Nu există personal disponibil pentru generare')
+    console.log(`Generating for department: ${selectedDepartment}`)
+    console.log(`Available doctors in ${selectedDepartment}:`, departmentDoctors.length)
+    
+    if (departmentDoctors.length === 0) {
+      showToast('error', 'Eroare', `Nu există personal disponibil în departamentul ${selectedDepartment}`)
       return
     }
     
-    // Assign departments to doctors who don't have them
-    const doctorsWithDepartments = assignDepartmentsToDoctors(availableDoctors)
-    
-    console.log('After department assignment:', doctorsWithDepartments.reduce((acc, d) => {
-      const dept = d.department || 'NO_DEPARTMENT'
-      acc[dept] = (acc[dept] || 0) + 1
-      return acc
-    }, {} as Record<string, number>))
-    
-    // Generate schedule for all departments
-    const { shifts: generatedShifts, stats } = generateAllDepartmentsSchedule(
+    // Generate schedule for the selected department only
+    const { shifts: generatedShifts, stats } = generateDepartmentSchedule(
       viewYear,
       viewMonth,
-      doctorsWithDepartments,
+      departmentDoctors,
+      selectedDepartment,
       shifts
     )
     
     if (generatedShifts.length === 0) {
-      // Provide more detailed feedback
-      const missingDoctors = VALID_DEPARTMENTS.filter(dept => {
-        const deptDoctors = doctorsWithDepartments.filter(d => 
-          d.department === dept
-        );
-        return deptDoctors.length === 0;
-      });
-      
-      if (missingDoctors.length > 0) {
-        showToast('warning', 'Atenție', 
-          `Nu există personal disponibil pentru departamentele: ${missingDoctors.join(', ')}`
-        )
-      } else {
-        showToast('info', 'Info', 'Nu s-au generat gărzi noi - luna este deja completă')
-      }
+      showToast('info', 'Info', `Nu s-au generat gărzi noi pentru ${selectedDepartment} - luna este deja completă`)
       return
     }
     
@@ -358,7 +328,7 @@ export default function SchedulePage() {
         await syncData()
         
         // Show detailed generation statistics
-        let message = `Generat ${generatedShifts.length} gărzi`
+        let message = `Generat ${generatedShifts.length} gărzi pentru ${selectedDepartment}`
         if (stats.unassignedDates.length > 0) {
           message += `. ${stats.unassignedDates.length} zile fără personal disponibil`
         }
@@ -371,9 +341,8 @@ export default function SchedulePage() {
         }
         
         // Log detailed stats for debugging
-        console.log('Generation statistics:', {
+        console.log(`Generation statistics for ${selectedDepartment}:`, {
           totalGenerated: stats.totalShiftsGenerated,
-          departmentStats: stats.departmentStats,
           unassignedDates: stats.unassignedDates
         })
       } else {
@@ -422,15 +391,17 @@ export default function SchedulePage() {
               <span className="hidden sm:inline">Export Excel</span>
               <span className="sm:hidden">Export</span>
             </Button>
-            <Button 
-              onClick={handleGenerateSchedule} 
-              icon="sparkles"
-              size="sm"
-              className="text-sm"
-            >
-              <span className="hidden sm:inline">Generează Program</span>
-              <span className="sm:hidden">Generează</span>
-            </Button>
+            {selectedDepartment !== 'all' && (
+              <Button 
+                onClick={handleGenerateSchedule} 
+                icon="sparkles"
+                size="sm"
+                className="text-sm"
+              >
+                <span className="hidden sm:inline">Generează Program</span>
+                <span className="sm:hidden">Generează</span>
+              </Button>
+            )}
             <Button 
               onClick={handleClearSchedule} 
               variant="danger"
@@ -499,15 +470,6 @@ export default function SchedulePage() {
         hasShift={selectedDate ? !!shifts[selectedDate]?.doctorId : false}
       />
 
-      <DepartmentSelectModal
-        isOpen={showDepartmentModal}
-        onClose={() => {
-          setShowDepartmentModal(false)
-          setSelectedDate(null)
-        }}
-        date={selectedDate || ''}
-        onSelect={handleDepartmentSelected}
-      />
 
       <AssignShiftModal
         isOpen={showAssignModal}
