@@ -333,6 +333,7 @@ export default function SchedulePage() {
 
       if (response.ok) {
         const data = await response.json()
+        console.log('Generation response:', data)
         
         // Sync data to get the latest shifts
         await syncData()
@@ -345,9 +346,10 @@ export default function SchedulePage() {
         
         // Show message if there were conflicts
         if (data.conflicts && data.conflicts.length > 0) {
-          showToast('info', 'Program generat', data.message)
+          console.log('Conflicts found:', data.conflicts)
+          showToast('warning', 'Program generat cu conflicte', `${data.message}. Verificați consolă pentru detalii.`)
         } else {
-          showToast('success', 'Program generat', message)
+          showToast('success', 'Program generat', `Salvat ${data.shifts?.length || 0} din ${generatedShifts.length} gărzi`)
         }
         
         // Log detailed stats for debugging
