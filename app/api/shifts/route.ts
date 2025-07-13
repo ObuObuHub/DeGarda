@@ -19,8 +19,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate date range for the month
-    const startDate = `${year}-${String(parseInt(month) + 1).padStart(2, '0')}-01`
-    const endDate = `${year}-${String(parseInt(month) + 1).padStart(2, '0')}-31`
+    // Frontend sends 0-indexed months (0-11), but SQL needs 1-indexed (1-12)
+    const monthNum = parseInt(month);
+    const yearNum = parseInt(year);
+    const sqlMonth = monthNum + 1;
+    
+    const startDate = `${year}-${String(sqlMonth).padStart(2, '0')}-01`
+    
+    // Calculate proper last day of month
+    const lastDayDate = new Date(yearNum, monthNum + 1, 0);
+    const lastDay = lastDayDate.getDate();
+    const endDate = `${year}-${String(sqlMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
     // Get shifts with staff info and reservations
     // Use indexed queries for better performance
