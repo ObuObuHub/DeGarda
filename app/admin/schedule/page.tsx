@@ -9,7 +9,7 @@ import { AssignShiftModal } from '@/components/AssignShiftModal'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { ShiftOptionsModal } from '@/components/ShiftOptionsModal'
 import { DepartmentSelectModal } from '@/components/DepartmentSelectModal'
-import { generateAllDepartmentsSchedule } from '@/lib/shiftGenerator'
+import { generateAllDepartmentsSchedule, VALID_DEPARTMENTS, normalizeDepartment } from '@/lib/shiftGeneratorV2'
 import { useHospital } from '@/contexts/HospitalContext'
 import { useData } from '@/contexts/DataContext'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
@@ -293,7 +293,7 @@ export default function SchedulePage() {
     }
     
     // Generate schedule for all departments
-    const generatedShifts = generateAllDepartmentsSchedule(
+    const { shifts: generatedShifts, stats } = generateAllDepartmentsSchedule(
       viewYear,
       viewMonth,
       availableDoctors,
@@ -301,7 +301,21 @@ export default function SchedulePage() {
     )
     
     if (generatedShifts.length === 0) {
-      showToast('info', 'Info', 'Nu s-au generat gărzi noi - luna este deja completă')
+      // Provide more detailed feedback
+      const missingDoctors = VALID_DEPARTMENTS.filter(dept => {
+        const deptDoctors = availableDoctors.filter(d => 
+          normalizeDepartment(d.department) === dept
+        );
+        return deptDoctors.length === 0;
+      });
+      
+      if (missingDoctors.length > 0) {
+        showToast('warning', 'Atenție', 
+          `Nu există personal disponibil pentru departamentele: ${missingDoctors.join(', ')}`
+        )
+      } else {
+        showToast('info', 'Info', 'Nu s-au generat gărzi noi - luna este deja completă')
+      }
       return
     }
     
@@ -322,12 +336,25 @@ export default function SchedulePage() {
         // Sync data to get the latest shifts
         await syncData()
         
+        // Show detailed generation statistics
+        let message = `Generat ${generatedShifts.length} gărzi`
+        if (stats.unassignedDates.length > 0) {
+          message += `. ${stats.unassignedDates.length} zile fără personal disponibil`
+        }
+        
         // Show message if there were conflicts
         if (data.conflicts && data.conflicts.length > 0) {
           showToast('info', 'Program generat', data.message)
         } else {
-          showToast('success', 'Program generat', 'Programul a fost generat cu succes!')
+          showToast('success', 'Program generat', message)
         }
+        
+        // Log detailed stats for debugging
+        console.log('Generation statistics:', {
+          totalGenerated: stats.totalShiftsGenerated,
+          departmentStats: stats.departmentStats,
+          unassignedDates: stats.unassignedDates
+        })
       } else {
         const errorData = await response.json()
         showToast('error', 'Eroare', errorData.error || 'Eroare la generarea programului')
