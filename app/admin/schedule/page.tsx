@@ -296,13 +296,23 @@ export default function SchedulePage() {
       return
     }
     
+    // Filter existing shifts for this department only
+    const departmentShifts: Record<string, any> = {}
+    Object.entries(shifts).forEach(([date, shift]) => {
+      if (shift.department === selectedDepartment) {
+        departmentShifts[date] = shift
+      }
+    })
+    
+    console.log(`Existing shifts for ${selectedDepartment}:`, Object.keys(departmentShifts).length)
+    
     // Generate schedule for the selected department only
     const { shifts: generatedShifts, stats } = generateDepartmentSchedule(
       viewYear,
       viewMonth,
       departmentDoctors,
       selectedDepartment,
-      shifts
+      departmentShifts
     )
     
     if (generatedShifts.length === 0) {

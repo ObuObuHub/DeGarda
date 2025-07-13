@@ -123,8 +123,16 @@ export function generateDepartmentSchedule(
     };
   }
   
+  console.log(`Department ${normalizedDept}: ${departmentDoctors.length} doctors available`)
+  console.log(`Existing shifts for ${normalizedDept}:`, Object.keys(existingShifts).length)
+  
   // Generate shifts for this department
   const result = generateMonthlyScheduleWithStats(year, month, departmentDoctors, existingShifts);
+  
+  console.log(`Generated ${result.shifts.length} new shifts for ${normalizedDept}`)
+  console.log(`Days in month: ${new Date(year, month + 1, 0).getDate()}`)
+  console.log(`Existing shifts: ${Object.keys(existingShifts).length}`)
+  console.log(`Total coverage: ${Object.keys(existingShifts).length + result.shifts.length} days`)
   
   // Add department to each shift
   const shiftsWithDept = result.shifts.map(shift => ({
