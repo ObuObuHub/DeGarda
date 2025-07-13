@@ -57,18 +57,22 @@ export async function DELETE(request: NextRequest) {
     const lastDay = lastDayDate.getDate();
     const endDate = `${year}-${String(sqlMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-    // Clear all shift assignments for the month
-    await sql`
-      UPDATE shifts 
-      SET staff_id = NULL, status = 'open'
+    // Log the deletion range for safety
+    console.log(`Deleting shifts for hospital ${hospitalId} from ${startDate} to ${endDate}`)
+    
+    // Delete all shifts for the month
+    const result = await sql`
+      DELETE FROM shifts 
       WHERE date >= ${startDate} 
         AND date <= ${endDate}
         AND hospital_id = ${hospitalId}
+      RETURNING id
     `
 
     return NextResponse.json({ 
       success: true,
-      message: 'All shifts cleared for the month'
+      message: `${result.length} shifts deleted for the month`,
+      deletedCount: result.length
     })
   } catch (error: any) {
     console.error('Clear shifts error:', error)
