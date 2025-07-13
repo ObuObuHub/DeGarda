@@ -197,6 +197,7 @@ export async function POST(request: NextRequest) {
             RETURNING *
           `
         } else {
+          console.error('Shift insert error:', error)
           throw error
         }
       }

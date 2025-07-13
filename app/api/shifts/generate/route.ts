@@ -96,7 +96,13 @@ export async function POST(request: NextRequest) {
             RETURNING *
           `
         } else {
-          throw error
+          console.error(`Failed to insert shift for ${date}:`, error.message)
+          conflicts.push({
+            date,
+            doctorName,
+            message: `Eroare la salvare: ${error.message}`
+          })
+          continue
         }
       }
       results.push(result[0])
