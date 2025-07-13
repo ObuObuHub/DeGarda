@@ -9,9 +9,9 @@ export async function GET(request: NextRequest) {
     const department = searchParams.get('department') || 'Urgențe'
     const hospitalId = searchParams.get('hospitalId') || '6'
     
-    // Calculate date range for the month
-    const startDate = `${year}-${String(parseInt(month) + 1).padStart(2, '0')}-01`
-    const endDate = `${year}-${String(parseInt(month) + 1).padStart(2, '0')}-31`
+    // Calculate date range for the month (month param is already 1-indexed from URL)
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    const endDate = `${year}-${String(month).padStart(2, '0')}-31`
     
     // Get all shifts for this department and month
     const shifts = await sql`
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       query: {
         year,
-        month: parseInt(month) + 1, // Display month (0-indexed to 1-indexed)
+        month: parseInt(month), // Display month as-is
         department,
         hospitalId,
         dateRange: { startDate, endDate }

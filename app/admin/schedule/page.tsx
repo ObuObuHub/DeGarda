@@ -66,14 +66,13 @@ export default function SchedulePage() {
     
     const filtered: Record<string, any> = {}
     Object.entries(shifts).forEach(([date, shift]) => {
-      // Find the doctor's department
-      const doctor = doctors.find(d => d.id === shift.doctorId?.toString())
-      if (doctor && doctor.department === selectedDepartment) {
+      // Check the shift's department field directly
+      if (shift.department === selectedDepartment) {
         filtered[date] = shift
       }
     })
     return filtered
-  }, [shifts, selectedDepartment, doctors])
+  }, [shifts, selectedDepartment])
 
   // Load shifts when month/year/hospital changes
   useEffect(() => {

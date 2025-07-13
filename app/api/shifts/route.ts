@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
             AND s.date <= ${endDate}
             AND s.hospital_id = ${hospitalId}
           ORDER BY s.date
-          LIMIT 100
+          LIMIT 500
         `
       : await sql`
           SELECT 
