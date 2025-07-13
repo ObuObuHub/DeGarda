@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const endDate = `${year}-${String(parseInt(month) + 1).padStart(2, '0')}-31`
 
     // Get shifts with staff info and reservations
-    // Note: department column might not exist yet in production
+    // Use indexed queries for better performance
     const shifts = hospitalId
       ? await sql`
           SELECT 
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
             AND s.date <= ${endDate}
             AND s.hospital_id = ${hospitalId}
           ORDER BY s.date
+          LIMIT 100
         `
       : await sql`
           SELECT 
@@ -65,6 +66,7 @@ export async function GET(request: NextRequest) {
           WHERE s.date >= ${startDate} 
             AND s.date <= ${endDate}
           ORDER BY s.date
+          LIMIT 500
         `
 
     // Convert to format expected by calendar

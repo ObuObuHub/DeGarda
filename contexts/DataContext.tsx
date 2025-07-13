@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { Staff, Shift, ShiftType, Notification } from '@/types'
 
 interface DataContextType {
@@ -58,6 +58,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
     return null
   })
+  
+  // Request deduplication
+  const pendingRequests = useRef<Map<string, Promise<any>>>(new Map())
 
   // Persist selected hospital to localStorage
   const setSelectedHospital = (hospitalId: string | null) => {
@@ -71,6 +74,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   }
 
+  // Track timeouts for cleanup
+  const notificationTimeoutsRef = useRef<Map<number, NodeJS.Timeout>>(new Map())
+
   // Add notification to local state
   const addNotification = useCallback((message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     const notification: Notification = {
@@ -83,10 +89,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
     setNotifications(prev => [notification, ...prev])
     
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
+    // Auto-remove after 5 seconds with proper cleanup
+    const timeoutId = setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== notification.id))
+      notificationTimeoutsRef.current.delete(notification.id)
     }, 5000)
+    
+    notificationTimeoutsRef.current.set(notification.id, timeoutId)
   }, [])
 
   // Load shifts
@@ -118,35 +127,63 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   }, [addNotification])
 
-  // Load staff
+  // Load staff with deduplication
   const loadStaff = useCallback(async () => {
-    try {
-      const response = await fetch('/api/staff')
-      if (!response.ok) throw new Error('Failed to fetch staff')
-      
-      const data = await response.json()
-      // API returns array directly, not wrapped in success object
-      setStaff(Array.isArray(data) ? data : (data.staff || []))
-    } catch (error) {
-      console.error('Error loading staff:', error)
-      addNotification('Failed to load staff', 'error')
+    const requestKey = 'loadStaff'
+    
+    // Check if request is already pending
+    if (pendingRequests.current.has(requestKey)) {
+      return pendingRequests.current.get(requestKey)
     }
+    
+    const promise = (async () => {
+      try {
+        const response = await fetch('/api/staff')
+        if (!response.ok) throw new Error('Failed to fetch staff')
+        
+        const data = await response.json()
+        // API returns array directly, not wrapped in success object
+        setStaff(Array.isArray(data) ? data : (data.staff || []))
+      } catch (error) {
+        console.error('Error loading staff:', error)
+        addNotification('Failed to load staff', 'error')
+      } finally {
+        pendingRequests.current.delete(requestKey)
+      }
+    })()
+    
+    pendingRequests.current.set(requestKey, promise)
+    return promise
   }, [addNotification])
 
-  // Load hospitals
+  // Load hospitals with deduplication
   const loadHospitals = useCallback(async () => {
-    try {
-      const response = await fetch('/api/hospitals')
-      if (!response.ok) throw new Error('Failed to fetch hospitals')
-      
-      const data = await response.json()
-      if (data.success) {
-        setHospitals(data.hospitals || [])
-      }
-    } catch (error) {
-      console.error('Error loading hospitals:', error)
-      addNotification('Failed to load hospitals', 'error')
+    const requestKey = 'loadHospitals'
+    
+    // Check if request is already pending
+    if (pendingRequests.current.has(requestKey)) {
+      return pendingRequests.current.get(requestKey)
     }
+    
+    const promise = (async () => {
+      try {
+        const response = await fetch('/api/hospitals')
+        if (!response.ok) throw new Error('Failed to fetch hospitals')
+        
+        const data = await response.json()
+        if (data.success) {
+          setHospitals(data.hospitals || [])
+        }
+      } catch (error) {
+        console.error('Error loading hospitals:', error)
+        addNotification('Failed to load hospitals', 'error')
+      } finally {
+        pendingRequests.current.delete(requestKey)
+      }
+    })()
+    
+    pendingRequests.current.set(requestKey, promise)
+    return promise
   }, [addNotification])
 
   // Load notifications
@@ -228,36 +265,80 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     await Promise.all(promises)
   }, [loadHospitals, loadStaff])
 
-  // Auto-refresh functionality
+  // Track last refresh time to prevent duplicate refreshes
+  const lastRefreshRef = useRef<Date>(new Date())
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Debounced refresh to prevent multiple simultaneous calls
+  const debouncedRefresh = useCallback(() => {
+    // Cancel any pending refresh
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current)
+    }
+
+    // Check if enough time has passed since last refresh (5 seconds minimum)
+    const timeSinceLastRefresh = Date.now() - lastRefreshRef.current.getTime()
+    if (timeSinceLastRefresh < 5000) {
+      return
+    }
+
+    refreshTimeoutRef.current = setTimeout(() => {
+      lastRefreshRef.current = new Date()
+      refreshData()
+    }, 1000) // 1 second debounce
+  }, [refreshData])
+
+  // Combined auto-refresh and visibility change handling
   useEffect(() => {
     if (!autoRefresh) return
 
-    const refreshInterval = setInterval(() => {
-      // Only refresh if document is visible
-      if (document.visibilityState === 'visible') {
-        refreshData()
-      }
-    }, 30000) // 30 seconds
+    let refreshInterval: NodeJS.Timeout
 
-    return () => clearInterval(refreshInterval)
-  }, [autoRefresh, refreshData])
+    const startRefreshInterval = () => {
+      refreshInterval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          debouncedRefresh()
+        }
+      }, 60000) // Increased to 60 seconds to reduce CPU usage
+    }
 
-  // Sync when document becomes visible
-  useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && autoRefresh) {
-        refreshData()
+        // Clear and restart interval when becoming visible
+        if (refreshInterval) clearInterval(refreshInterval)
+        debouncedRefresh()
+        startRefreshInterval()
+      } else if (document.visibilityState === 'hidden') {
+        // Stop polling when hidden
+        if (refreshInterval) clearInterval(refreshInterval)
       }
     }
 
+    // Start initial interval
+    startRefreshInterval()
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [autoRefresh, refreshData])
+
+    return () => {
+      if (refreshInterval) clearInterval(refreshInterval)
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [autoRefresh, debouncedRefresh])
 
   // Load initial data
   useEffect(() => {
     refreshData()
   }, [refreshData])
+
+  // Cleanup notification timeouts on unmount
+  useEffect(() => {
+    return () => {
+      // Clear all notification timeouts
+      notificationTimeoutsRef.current.forEach(timeout => clearTimeout(timeout))
+      notificationTimeoutsRef.current.clear()
+    }
+  }, [])
 
   const value: DataContextType = {
     // State

@@ -26,11 +26,36 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const hospitalId = searchParams.get('hospitalId')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = (page - 1) * limit
     
+    // Get total count for pagination
+    let countQuery = sql`
+      SELECT COUNT(*) as total
+      FROM staff
+      WHERE is_active = true
+    `
+    
+    if (hospitalId) {
+      countQuery = sql`
+        SELECT COUNT(*) as total
+        FROM staff
+        WHERE is_active = true AND hospital_id = ${parseInt(hospitalId)}
+      `
+    }
+    
+    const countResult = await countQuery
+    const totalCount = parseInt(countResult[0].total)
+    
+    // Get paginated results
     let query = sql`
       SELECT id, name, email, role, hospital_id, specialization, is_active, created_at
       FROM staff
       WHERE is_active = true
+      ORDER BY name
+      LIMIT ${limit}
+      OFFSET ${offset}
     `
     
     if (hospitalId) {
@@ -38,6 +63,9 @@ export async function GET(request: NextRequest) {
         SELECT id, name, email, role, hospital_id, specialization, is_active, created_at
         FROM staff
         WHERE is_active = true AND hospital_id = ${parseInt(hospitalId)}
+        ORDER BY name
+        LIMIT ${limit}
+        OFFSET ${offset}
       `
     }
     
@@ -75,7 +103,21 @@ export async function GET(request: NextRequest) {
       }
     })
     
-    return NextResponse.json(transformedStaff)
+    // For backward compatibility, return just the array if no pagination params
+    if (!searchParams.get('page') && !searchParams.get('limit')) {
+      return NextResponse.json(transformedStaff)
+    }
+    
+    // Return paginated response
+    return NextResponse.json({
+      data: transformedStaff,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    })
   } catch (error) {
     console.error('Error fetching staff:', error)
     return NextResponse.json(
