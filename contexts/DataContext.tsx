@@ -114,7 +114,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       if (!response.ok) throw new Error('Failed to fetch shifts')
       
       const data = await response.json()
+      console.log('Shifts API response:', data)
       if (data.success) {
+        console.log('Setting shifts in context:', data.shifts)
         setShifts(data.shifts || {})
         setIsOffline(false)
       }

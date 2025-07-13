@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       { 
         success: false, 
         error: 'Failed to fetch shifts',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: error.message || 'Unknown error'
       },
       { status: 500 }
     )
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
       { 
         success: false, 
         error: 'Failed to save shift',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: error.message || 'Unknown error'
       },
       { status: 500 }
     )
@@ -286,7 +286,7 @@ export async function DELETE(request: NextRequest) {
       { 
         success: false, 
         error: 'Failed to remove shift assignment',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: error.message || 'Unknown error'
       },
       { status: 500 }
     )

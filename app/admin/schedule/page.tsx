@@ -77,7 +77,11 @@ export default function SchedulePage() {
   // Load shifts when month/year/hospital changes
   useEffect(() => {
     if (selectedHospitalId) {
-      loadShifts(viewYear, viewMonth, selectedHospitalId)
+      console.log('Loading shifts for:', { viewYear, viewMonth, selectedHospitalId })
+      loadShifts(viewYear, viewMonth, selectedHospitalId).then(() => {
+        console.log('Loaded shifts:', shifts)
+        console.log('Filtered shifts for', selectedDepartment, ':', filteredShifts)
+      })
     }
   }, [viewYear, viewMonth, selectedHospitalId, loadShifts])
 
@@ -413,6 +417,23 @@ export default function SchedulePage() {
                 <span className="sm:hidden">Generează</span>
               </Button>
             )}
+            <Button 
+              onClick={() => {
+                console.log('=== DEBUG INFO ===')
+                console.log('Current month/year:', viewMonth, viewYear)
+                console.log('Selected department:', selectedDepartment)
+                console.log('Selected hospital:', selectedHospitalId)
+                console.log('All shifts:', shifts)
+                console.log('Filtered shifts:', filteredShifts)
+                console.log('Sample shift:', Object.entries(shifts)[0])
+                showToast('info', 'Debug', 'Check console for debug info')
+              }} 
+              variant="secondary"
+              size="sm"
+              className="text-sm"
+            >
+              Debug
+            </Button>
             <Button 
               onClick={handleClearSchedule} 
               variant="danger"
