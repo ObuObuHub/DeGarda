@@ -8,7 +8,12 @@ import { Calendar } from '@/components/Calendar'
 import { AssignShiftModal } from '@/components/AssignShiftModal'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { ShiftOptionsModal } from '@/components/ShiftOptionsModal'
-import { generateDepartmentSchedule, VALID_DEPARTMENTS, normalizeDepartment } from '@/lib/shiftGeneratorV2'
+import { 
+  generateDepartmentSchedule as generateDepartmentScheduleV3, 
+  VALID_DEPARTMENTS, 
+  normalizeDepartment,
+  ValidDepartment 
+} from '@/lib/shiftGeneratorV3'
 import { assignDepartmentsToDoctors } from '@/lib/assignDepartments'
 import { useHospital } from '@/contexts/HospitalContext'
 import { useData } from '@/contexts/DataContext'
@@ -309,12 +314,13 @@ export default function SchedulePage() {
     
     console.log(`Existing shifts for ${selectedDepartment}:`, Object.keys(departmentShifts).length)
     
-    // Generate schedule for the selected department only
-    const { shifts: generatedShifts, stats } = generateDepartmentSchedule(
+    // Generate schedule for the selected department only with hospital config
+    const { shifts: generatedShifts, stats } = generateDepartmentScheduleV3(
       viewYear,
       viewMonth,
       departmentDoctors,
-      selectedDepartment,
+      selectedDepartment as ValidDepartment,
+      selectedHospital?.name || '',
       departmentShifts
     )
     
