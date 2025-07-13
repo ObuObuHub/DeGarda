@@ -10,6 +10,7 @@ import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { ShiftOptionsModal } from '@/components/ShiftOptionsModal'
 import { DepartmentSelectModal } from '@/components/DepartmentSelectModal'
 import { generateAllDepartmentsSchedule, VALID_DEPARTMENTS, normalizeDepartment } from '@/lib/shiftGeneratorV2'
+import { assignDepartmentsToDoctors } from '@/lib/assignDepartments'
 import { useHospital } from '@/contexts/HospitalContext'
 import { useData } from '@/contexts/DataContext'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
@@ -284,27 +285,47 @@ export default function SchedulePage() {
       return
     }
 
+    // Debug: Log all doctors and their departments
+    console.log('All doctors:', doctors)
+    console.log('Staff data:', staff)
+
     // Filter only available doctors
     const availableDoctors = doctors.filter(d => d.isAvailable)
+    
+    console.log('Available doctors:', availableDoctors)
+    console.log('Available doctors by department:', availableDoctors.reduce((acc, d) => {
+      const dept = normalizeDepartment(d.department) || 'NO_DEPARTMENT'
+      acc[dept] = (acc[dept] || 0) + 1
+      return acc
+    }, {} as Record<string, number>))
     
     if (availableDoctors.length === 0) {
       showToast('error', 'Eroare', 'Nu există personal disponibil pentru generare')
       return
     }
     
+    // Assign departments to doctors who don't have them
+    const doctorsWithDepartments = assignDepartmentsToDoctors(availableDoctors)
+    
+    console.log('After department assignment:', doctorsWithDepartments.reduce((acc, d) => {
+      const dept = d.department || 'NO_DEPARTMENT'
+      acc[dept] = (acc[dept] || 0) + 1
+      return acc
+    }, {} as Record<string, number>))
+    
     // Generate schedule for all departments
     const { shifts: generatedShifts, stats } = generateAllDepartmentsSchedule(
       viewYear,
       viewMonth,
-      availableDoctors,
+      doctorsWithDepartments,
       shifts
     )
     
     if (generatedShifts.length === 0) {
       // Provide more detailed feedback
       const missingDoctors = VALID_DEPARTMENTS.filter(dept => {
-        const deptDoctors = availableDoctors.filter(d => 
-          normalizeDepartment(d.department) === dept
+        const deptDoctors = doctorsWithDepartments.filter(d => 
+          d.department === dept
         );
         return deptDoctors.length === 0;
       });

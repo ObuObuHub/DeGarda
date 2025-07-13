@@ -34,23 +34,47 @@ export const VALID_DEPARTMENTS = ['ATI', 'Urgențe', 'Laborator', 'Medicină Int
 
 // Validate and normalize department names
 export function normalizeDepartment(dept: string | undefined): string | undefined {
-  if (!dept) return undefined;
+  if (!dept || dept.trim() === '') return undefined;
   
   // Map common variations to standard names
   const departmentMap: Record<string, string> = {
     'ati': 'ATI',
     'urgente': 'Urgențe',
     'urgențe': 'Urgențe',
+    'urgență': 'Urgențe',
     'laborator': 'Laborator',
+    'lab': 'Laborator',
     'medicina interna': 'Medicină Internă',
     'medicină internă': 'Medicină Internă',
+    'medicina internă': 'Medicină Internă',
+    'interna': 'Medicină Internă',
+    'internă': 'Medicină Internă',
     'chirurgie': 'Chirurgie',
-    'medic': 'Medicină Internă', // Default department for generic doctors
-    'doctor': 'Medicină Internă',
+    'chir': 'Chirurgie',
+    // Role-based mappings - these are NOT departments but might be in specialization field
+    'medic': undefined, // Don't assign department based on role
+    'doctor': undefined,
+    'biolog': undefined,
+    'chimist': undefined,
+    'asistent': undefined,
   };
   
   const normalized = dept.toLowerCase().trim();
-  return departmentMap[normalized] || dept;
+  const mapped = departmentMap[normalized];
+  
+  // If we have an explicit mapping, use it
+  if (mapped !== undefined) {
+    return mapped || undefined;
+  }
+  
+  // Check if the original value is already a valid department
+  if (VALID_DEPARTMENTS.includes(dept)) {
+    return dept;
+  }
+  
+  // Otherwise return undefined - we don't know the department
+  console.warn(`Unknown department: "${dept}" - will not be assigned to any department`)
+  return undefined;
 }
 
 // Generate shifts for a specific department with better error handling
@@ -130,6 +154,11 @@ export function generateAllDepartmentsSchedule(
   doctors: Doctor[],
   existingShifts: Record<string, any> = {}
 ): { shifts: GeneratedShift[], stats: GenerationStats } {
+  console.log('=== SHIFT GENERATOR DEBUG ===')
+  console.log('Year:', year, 'Month:', month)
+  console.log('Total doctors received:', doctors.length)
+  console.log('Existing shifts:', Object.keys(existingShifts).length)
+  
   const allShifts: GeneratedShift[] = [];
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const overallStats: GenerationStats = {
@@ -146,7 +175,17 @@ export function generateAllDepartmentsSchedule(
     department: normalizeDepartment(d.department)
   }));
   
+  console.log('Doctors by department after normalization:')
+  const deptCount: Record<string, number> = {}
+  normalizedDoctors.forEach(d => {
+    const dept = d.department || 'UNDEFINED'
+    deptCount[dept] = (deptCount[dept] || 0) + 1
+  })
+  console.log(deptCount);
+  
   for (const dept of VALID_DEPARTMENTS) {
+    console.log(`\nProcessing department: ${dept}`)
+    
     // Filter existing shifts for this department only
     const deptExistingShifts: Record<string, any> = {};
     Object.entries(existingShifts).forEach(([date, shift]) => {
@@ -161,7 +200,10 @@ export function generateAllDepartmentsSchedule(
       }
     });
     
+    console.log(`Existing shifts for ${dept}:`, Object.keys(deptExistingShifts).length)
+    
     const deptResult = generateDepartmentSchedule(year, month, normalizedDoctors, dept, deptExistingShifts);
+    console.log(`Generated ${deptResult.shifts.length} shifts for ${dept}`)
     allShifts.push(...deptResult.shifts);
     
     // Merge stats
