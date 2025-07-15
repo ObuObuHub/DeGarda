@@ -286,12 +286,28 @@ export default function SchedulePage() {
   }
 
   const handleGenerateSchedule = async () => {
+    console.log('🚀 GENERATE BUTTON CLICKED!', {
+      selectedHospitalId,
+      selectedDepartment, 
+      selectedHospital: selectedHospital?.name,
+      staffCount: staff.length
+    })
+    
+    logger.debug('Schedule', 'Generate button clicked', {
+      selectedHospitalId,
+      selectedDepartment,
+      selectedHospital: selectedHospital?.name,
+      staffCount: staff.length
+    })
+    
     if (!selectedHospitalId) {
+      logger.warn('Schedule', 'Hospital not selected', { selectedHospitalId })
       showToast('error', 'Eroare', 'Selectați un spital')
       return
     }
     
     if (selectedDepartment === 'all') {
+      logger.warn('Schedule', 'Department not selected', { selectedDepartment })
       showToast('error', 'Eroare', 'Selectați un departament specific pentru generare')
       return
     }
@@ -300,12 +316,26 @@ export default function SchedulePage() {
     const departmentDoctors = doctors
       .filter(d => d.isAvailable && d.department === selectedDepartment)
     
+    logger.debug('Schedule', 'Doctor filtering results', {
+      totalDoctors: doctors.length,
+      selectedDepartment,
+      departmentDoctors: departmentDoctors.length,
+      doctorDepartments: doctors.map(d => ({ name: d.name, dept: d.department, available: d.isAvailable })),
+      availableDoctorsInDept: departmentDoctors.map(d => ({ name: d.name, dept: d.department }))
+    })
+    
     logger.shiftGeneration('Starting generation', { 
       department: selectedDepartment,
       availableDoctors: departmentDoctors.length
     }, { hospitalId: selectedHospitalId })
     
     if (departmentDoctors.length === 0) {
+      logger.error('Schedule', 'No doctors available for department', {
+        selectedDepartment,
+        totalDoctors: doctors.length,
+        availableDoctors: doctors.filter(d => d.isAvailable).length,
+        doctorDepartments: doctors.map(d => d.department)
+      })
       showToast('error', 'Eroare', `Nu există personal disponibil în departamentul ${selectedDepartment}`)
       return
     }
@@ -324,14 +354,38 @@ export default function SchedulePage() {
     }, { hospitalId: selectedHospitalId })
     
     // Generate schedule for the selected department only with hospital config
-    const { shifts: generatedShifts, stats } = generateDepartmentSchedule(
-      viewYear,
-      viewMonth,
-      departmentDoctors,
-      selectedDepartment as ValidDepartment,
-      selectedHospital?.name || '',
-      departmentShifts
-    )
+    let generatedShifts, stats
+    try {
+      logger.debug('Schedule', 'Calling generateDepartmentSchedule', {
+        viewYear,
+        viewMonth,
+        departmentDoctors: departmentDoctors.length,
+        selectedDepartment,
+        hospitalName: selectedHospital?.name || '',
+        departmentShifts: Object.keys(departmentShifts).length
+      })
+      
+      const result = generateDepartmentSchedule(
+        viewYear,
+        viewMonth,
+        departmentDoctors,
+        selectedDepartment as ValidDepartment,
+        selectedHospital?.name || '',
+        departmentShifts
+      )
+      
+      generatedShifts = result.shifts
+      stats = result.stats
+      
+      logger.debug('Schedule', 'Generation completed', {
+        generatedCount: generatedShifts.length,
+        unassignedDates: stats.unassignedDates.length
+      })
+    } catch (error) {
+      logger.error('Schedule', 'Shift generation failed', error, { hospitalId: selectedHospitalId })
+      showToast('error', 'Eroare', `Eroare la generarea programului: ${error instanceof Error ? error.message : 'Eroare necunoscută'}`)
+      return
+    }
     
     if (generatedShifts.length === 0) {
       showToast('info', 'Info', `Nu s-au generat gărzi noi pentru ${selectedDepartment} - luna este deja completă`)
@@ -339,6 +393,12 @@ export default function SchedulePage() {
     }
     
     try {
+      logger.debug('Schedule', 'Sending shifts to API', {
+        shiftsCount: generatedShifts.length,
+        hospitalId: selectedHospitalId,
+        sampleShift: generatedShifts[0]
+      })
+      
       // Save all generated shifts to database
       const response = await fetch('/api/shifts/generate', {
         method: 'POST',
@@ -378,6 +438,11 @@ export default function SchedulePage() {
         }, { hospitalId: selectedHospitalId })
       } else {
         const errorData = await response.json()
+        logger.error('Schedule', 'API returned error', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        }, { hospitalId: selectedHospitalId })
         showToast('error', 'Eroare', errorData.error || 'Eroare la generarea programului')
       }
     } catch (error) {

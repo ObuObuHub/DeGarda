@@ -10,7 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:init": "node scripts/init-db.js",
-    "db:migrate": "node scripts/migrate-data.js"
+    "db:migrate": "node scripts/migrate-data.js",
+    "migrate": "npx tsx scripts/migrate.ts"
   },
   "keywords": [],
   "author": "",

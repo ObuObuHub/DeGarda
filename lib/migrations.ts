@@ -47,7 +47,7 @@ export class MigrationRunner {
 
   async runMigrations(migrations: Migration[]) {
     await this.ensureMigrationTable()
-    const appliedVersions = await getAppliedMigrations()
+    const appliedVersions = await this.getAppliedMigrations()
     
     const pendingMigrations = migrations
       .filter(m => !appliedVersions.includes(m.version))
@@ -109,7 +109,7 @@ export const migrations: Migration[] = [
           name VARCHAR(255) NOT NULL,
           email VARCHAR(255) UNIQUE NOT NULL,
           password VARCHAR(255) NOT NULL,
-          role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'manager', 'staff')),
+          role VARCHAR(50) NOT NULL CHECK (role IN ('manager', 'staff')),
           type VARCHAR(50) DEFAULT 'medic' CHECK (type IN ('medic', 'biolog', 'chimist', 'asistent')),
           hospital_id INTEGER REFERENCES hospitals(id),
           specialization VARCHAR(100),
@@ -283,6 +283,33 @@ export const migrations: Migration[] = [
     },
     down: async () => {
       await sql`DROP TABLE IF EXISTS activities CASCADE`
+    }
+  },
+
+  {
+    version: 6,
+    name: 'add_access_codes_table',
+    up: async () => {
+      await sql`
+        CREATE TABLE IF NOT EXISTS access_codes (
+          id SERIAL PRIMARY KEY,
+          code_hash VARCHAR(255) NOT NULL,
+          hospital_id INTEGER NOT NULL REFERENCES hospitals(id),
+          role VARCHAR(50) NOT NULL CHECK (role IN ('staff', 'manager')),
+          staff_id INTEGER REFERENCES staff(id),
+          is_active BOOLEAN DEFAULT true,
+          expires_at TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `
+      await sql`CREATE INDEX IF NOT EXISTS idx_access_codes_hospital ON access_codes(hospital_id)`
+      await sql`CREATE INDEX IF NOT EXISTS idx_access_codes_role ON access_codes(role)`
+      await sql`CREATE INDEX IF NOT EXISTS idx_access_codes_active ON access_codes(is_active)`
+      await sql`CREATE INDEX IF NOT EXISTS idx_access_codes_expires ON access_codes(expires_at)`
+    },
+    down: async () => {
+      await sql`DROP TABLE IF EXISTS access_codes CASCADE`
     }
   }
 ]

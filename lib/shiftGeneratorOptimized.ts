@@ -279,18 +279,21 @@ export class OptimizedShiftGenerator {
       prioritizeWeekends?: boolean
     } = {}
   ): { shifts: GeneratedShift[], stats: GenerationStats } {
-    const { shiftType = '24h', prioritizeWeekends = true } = options
-    
-    return performanceMonitor.time(
-      'generateSchedule',
-      () => this.generateScheduleInternal(options),
-      { 
-        shiftType,
-        prioritizeWeekends,
+    try {
+      const timer = performanceMonitor.startTiming('generateSchedule', {
         doctorCount: this.doctors.size,
-        daysInMonth: this.daysInMonth
-      }
-    )
+        daysInMonth: this.daysInMonth,
+        ...options
+      })
+      
+      const result = this.generateScheduleInternal(options)
+      
+      performanceMonitor.endTiming(timer)
+      return result
+    } catch (error) {
+      logger.error('ShiftGeneratorOptimized', 'Schedule generation failed', error)
+      throw error
+    }
   }
   
   private generateScheduleInternal(

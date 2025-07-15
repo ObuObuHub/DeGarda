@@ -15,6 +15,7 @@ const navItems: NavItem[] = [
   { label: 'Program Gărzi', href: '/admin/schedule', icon: 'calendar' },
   { label: 'Personal', href: '/admin/staff', icon: 'users' },
   { label: 'Spitale', href: '/admin/hospitals', icon: 'hospital' },
+  { label: 'Coduri Acces', href: '/admin/access-codes', icon: 'key' },
   { label: 'Cereri Schimb', href: '/admin/swaps', icon: 'swap' },
   { label: 'Setări', href: '/admin/settings', icon: 'settings' },
 ]
