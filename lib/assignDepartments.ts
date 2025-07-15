@@ -1,7 +1,8 @@
 // Temporary utility to assign departments to doctors based on their names or other criteria
 // This is a workaround until proper department data is available
 
-import { VALID_DEPARTMENTS } from './shiftGeneratorV2'
+import { VALID_DEPARTMENTS } from './shiftGenerator'
+import { logger } from './logger'
 
 interface DoctorInput {
   id: string
@@ -16,8 +17,10 @@ export function assignDepartmentsToDoctors(doctors: DoctorInput[]): DoctorInput[
   const doctorsWithDept = doctors.filter(d => d.department && VALID_DEPARTMENTS.includes(d.department))
   const doctorsWithoutDept = doctors.filter(d => !d.department || !VALID_DEPARTMENTS.includes(d.department))
   
-  console.log(`Doctors with valid departments: ${doctorsWithDept.length}`)
-  console.log(`Doctors without valid departments: ${doctorsWithoutDept.length}`)
+  logger.debug('DepartmentAssignment', 'Doctor department analysis', {
+    withValidDept: doctorsWithDept.length,
+    withoutValidDept: doctorsWithoutDept.length
+  })
   
   if (doctorsWithoutDept.length === 0) {
     return doctors // All doctors have departments
@@ -64,7 +67,10 @@ export function assignDepartmentsToDoctors(doctors: DoctorInput[]): DoctorInput[
       department: inferredDept
     })
     
-    console.log(`Assigned ${doctor.name} to ${inferredDept}`)
+    logger.debug('DepartmentAssignment', 'Doctor assigned to department', {
+      doctor: doctor.name,
+      department: inferredDept
+    })
   }
   
   return assignedDoctors

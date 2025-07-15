@@ -9,11 +9,12 @@ import { AssignShiftModal } from '@/components/AssignShiftModal'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { ShiftOptionsModal } from '@/components/ShiftOptionsModal'
 import { 
-  generateDepartmentSchedule as generateDepartmentScheduleV3, 
+  generateDepartmentSchedule, 
   VALID_DEPARTMENTS, 
   normalizeDepartment,
   ValidDepartment 
-} from '@/lib/shiftGeneratorV3'
+} from '@/lib/shiftGenerator'
+import { logger } from '@/lib/logger'
 import { assignDepartmentsToDoctors } from '@/lib/assignDepartments'
 import { useHospital } from '@/contexts/HospitalContext'
 import { useData } from '@/contexts/DataContext'
@@ -82,10 +83,13 @@ export default function SchedulePage() {
   // Load shifts when month/year/hospital changes
   useEffect(() => {
     if (selectedHospitalId) {
-      console.log('Loading shifts for:', { viewYear, viewMonth, selectedHospitalId })
+      logger.debug('Schedule', 'Loading shifts', { viewYear, viewMonth, hospitalId: selectedHospitalId })
       loadShifts(viewYear, viewMonth, selectedHospitalId).then(() => {
-        console.log('Loaded shifts:', shifts)
-        console.log('Filtered shifts for', selectedDepartment, ':', filteredShifts)
+        logger.debug('Schedule', 'Shifts loaded', { 
+          shiftsCount: Object.keys(shifts).length,
+          filteredCount: Object.keys(filteredShifts).length,
+          department: selectedDepartment
+        })
       })
     }
   }, [viewYear, viewMonth, selectedHospitalId, loadShifts])
@@ -130,7 +134,7 @@ export default function SchedulePage() {
         showToast('success', 'Cerere trimisă', 'Cererea de schimb a fost trimisă cu succes!')
       }
     } catch (error) {
-      console.error('Failed to submit swap request:', error)
+      logger.error('Schedule', 'Failed to submit swap request', error, { hospitalId: selectedHospitalId })
     }
     
     setSwapModalData(null)
@@ -175,7 +179,7 @@ export default function SchedulePage() {
         showToast('error', 'Eroare', data.error || 'Eroare la ștergere')
       }
     } catch (error) {
-      console.error('Failed to delete shift:', error)
+      logger.error('Schedule', 'Failed to delete shift', error, { hospitalId: selectedHospitalId })
       showToast('error', 'Eroare', 'Eroare la ștergere')
     }
     
@@ -243,7 +247,7 @@ export default function SchedulePage() {
         showToast('error', 'Eroare', data.error || 'Eroare la rezervare')
       }
     } catch (error) {
-      console.error('Failed to reserve shift:', error)
+      logger.error('Schedule', 'Failed to reserve shift', error, { hospitalId: selectedHospitalId })
       showToast('error', 'Eroare', 'Eroare la rezervare')
     }
     
@@ -276,7 +280,7 @@ export default function SchedulePage() {
         showToast('error', 'Eroare', data.error || 'Eroare la ștergere')
       }
     } catch (error) {
-      console.error('Failed to clear schedule:', error)
+      logger.error('Schedule', 'Failed to clear schedule', error, { hospitalId: selectedHospitalId })
       showToast('error', 'Eroare', 'Eroare la ștergere')
     }
   }
@@ -296,8 +300,10 @@ export default function SchedulePage() {
     const departmentDoctors = doctors
       .filter(d => d.isAvailable && d.department === selectedDepartment)
     
-    console.log(`Generating for department: ${selectedDepartment}`)
-    console.log(`Available doctors in ${selectedDepartment}:`, departmentDoctors.length)
+    logger.shiftGeneration('Starting generation', { 
+      department: selectedDepartment,
+      availableDoctors: departmentDoctors.length
+    }, { hospitalId: selectedHospitalId })
     
     if (departmentDoctors.length === 0) {
       showToast('error', 'Eroare', `Nu există personal disponibil în departamentul ${selectedDepartment}`)
@@ -312,10 +318,13 @@ export default function SchedulePage() {
       }
     })
     
-    console.log(`Existing shifts for ${selectedDepartment}:`, Object.keys(departmentShifts).length)
+    logger.shiftGeneration('Existing shifts found', {
+      department: selectedDepartment,
+      existingShiftsCount: Object.keys(departmentShifts).length
+    }, { hospitalId: selectedHospitalId })
     
     // Generate schedule for the selected department only with hospital config
-    const { shifts: generatedShifts, stats } = generateDepartmentScheduleV3(
+    const { shifts: generatedShifts, stats } = generateDepartmentSchedule(
       viewYear,
       viewMonth,
       departmentDoctors,
@@ -342,7 +351,7 @@ export default function SchedulePage() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('Generation response:', data)
+        logger.shiftGeneration('Generation completed', data, { hospitalId: selectedHospitalId })
         
         // Sync data to get the latest shifts
         await syncData()
@@ -355,23 +364,24 @@ export default function SchedulePage() {
         
         // Show message if there were conflicts
         if (data.conflicts && data.conflicts.length > 0) {
-          console.log('Conflicts found:', data.conflicts)
-          showToast('warning', 'Program generat cu conflicte', `${data.message}. Verificați consolă pentru detalii.`)
+          logger.warn('Schedule', 'Generation conflicts found', data.conflicts, { hospitalId: selectedHospitalId })
+          showToast('warning', 'Program generat cu conflicte', `${data.message}. Verificați log-urile pentru detalii.`)
         } else {
           showToast('success', 'Program generat', `Salvat ${data.shifts?.length || 0} din ${generatedShifts.length} gărzi`)
         }
         
-        // Log detailed stats for debugging
-        console.log(`Generation statistics for ${selectedDepartment}:`, {
+        // Log detailed stats
+        logger.shiftGeneration('Generation statistics', {
+          department: selectedDepartment,
           totalGenerated: stats.totalShiftsGenerated,
           unassignedDates: stats.unassignedDates
-        })
+        }, { hospitalId: selectedHospitalId })
       } else {
         const errorData = await response.json()
         showToast('error', 'Eroare', errorData.error || 'Eroare la generarea programului')
       }
     } catch (error) {
-      console.error('Failed to generate schedule:', error)
+      logger.error('Schedule', 'Failed to generate schedule', error, { hospitalId: selectedHospitalId })
       showToast('error', 'Eroare', 'Eroare la generarea programului')
     }
   }
@@ -423,23 +433,6 @@ export default function SchedulePage() {
                 <span className="sm:hidden">Generează</span>
               </Button>
             )}
-            <Button 
-              onClick={() => {
-                console.log('=== DEBUG INFO ===')
-                console.log('Current month/year:', viewMonth, viewYear)
-                console.log('Selected department:', selectedDepartment)
-                console.log('Selected hospital:', selectedHospitalId)
-                console.log('All shifts:', shifts)
-                console.log('Filtered shifts:', filteredShifts)
-                console.log('Sample shift:', Object.entries(shifts)[0])
-                showToast('info', 'Debug', 'Check console for debug info')
-              }} 
-              variant="secondary"
-              size="sm"
-              className="text-sm"
-            >
-              Debug
-            </Button>
             <Button 
               onClick={handleClearSchedule} 
               variant="danger"
