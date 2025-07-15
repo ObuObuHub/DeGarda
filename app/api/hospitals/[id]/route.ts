@@ -74,10 +74,20 @@ export async function PATCH(
       WHERE hospital_id = ${hospitalId}
     `
     
+    // Count distinct departments for this hospital
+    const departmentCount = await sql`
+      SELECT COUNT(DISTINCT specialization) as count
+      FROM staff
+      WHERE hospital_id = ${hospitalId}
+      AND specialization IS NOT NULL
+      AND specialization != ''
+    `
+    
     return NextResponse.json({
       ...hospital,
       id: hospital.id.toString(),
-      staff: parseInt(staffCount[0].count)
+      staff: parseInt(staffCount[0].count),
+      departments: parseInt(departmentCount[0].count)
     })
   } catch (error) {
     console.error('Error updating hospital:', error)
@@ -180,11 +190,21 @@ export async function GET(
       WHERE hospital_id = ${hospitalId}
     `
     
+    // Count distinct departments for this hospital
+    const departmentCount = await sql`
+      SELECT COUNT(DISTINCT specialization) as count
+      FROM staff
+      WHERE hospital_id = ${hospitalId}
+      AND specialization IS NOT NULL
+      AND specialization != ''
+    `
+    
     return NextResponse.json({
       id: hospital.id.toString(),
       name: hospital.name,
       city: hospital.city,
       staff: parseInt(staffCount[0].count),
+      departments: parseInt(departmentCount[0].count),
       created_at: hospital.created_at
     })
   } catch (error) {

@@ -7,6 +7,7 @@ interface Hospital {
   name: string
   city: string
   staff?: number
+  departments?: number
 }
 
 interface HospitalContextType {

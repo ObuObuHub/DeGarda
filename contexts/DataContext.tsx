@@ -173,9 +173,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         if (!response.ok) throw new Error('Failed to fetch hospitals')
         
         const data = await response.json()
-        if (data.success) {
-          setHospitals(data.hospitals || [])
-        }
+        // API returns hospitals array directly, not wrapped in success object
+        setHospitals(Array.isArray(data) ? data : [])
       } catch (error) {
         console.error('Error loading hospitals:', error)
         addNotification('Failed to load hospitals', 'error')

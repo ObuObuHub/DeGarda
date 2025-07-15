@@ -203,7 +203,7 @@ export function HospitalSelector() {
                       {hospital.name}
                     </p>
                     <p className="text-xs text-label-tertiary">
-                      {hospital.city} • {hospital.departments} secții • {hospital.staff} personal
+                      {hospital.city} • {hospital.departments || 0} secții • {hospital.staff || 0} personal
                     </p>
                   </div>
                   {hospital.id === selectedHospitalId && (

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       ORDER BY name ASC
     `
     
-    // Add staff count for each hospital
+    // Add staff count and departments count for each hospital
     const hospitalsWithStats = await Promise.all(
       hospitals.map(async (hospital) => {
         const staffCount = await sql`
@@ -38,10 +38,20 @@ export async function GET(request: NextRequest) {
           WHERE hospital_id = ${hospital.id}
         `
         
+        // Count distinct departments for this hospital
+        const departmentCount = await sql`
+          SELECT COUNT(DISTINCT specialization) as count
+          FROM staff
+          WHERE hospital_id = ${hospital.id}
+          AND specialization IS NOT NULL
+          AND specialization != ''
+        `
+        
         return {
           ...hospital,
           id: hospital.id.toString(),
-          staff: parseInt(staffCount[0].count)
+          staff: parseInt(staffCount[0].count),
+          departments: parseInt(departmentCount[0].count)
         }
       })
     )
