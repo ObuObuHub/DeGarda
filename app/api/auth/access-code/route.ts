@@ -1,42 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { accessCodeManager } from '@/lib/accessCodes'
+import { staffPasswordManager } from '@/lib/staffPasswordManager'
 import { logger } from '@/lib/logger'
 import jwt from 'jsonwebtoken'
 import { cookies } from 'next/headers'
 
 // Input validation functions
-function validateAccessCode(accessCode: unknown): accessCode is string {
-  return typeof accessCode === 'string' && 
-         accessCode.length >= 3 && 
-         accessCode.length <= 20 &&
-         /^[a-zA-Z0-9]+$/.test(accessCode)
+function validateStaffPassword(password: unknown): password is string {
+  return typeof password === 'string' && 
+         password.length >= 3 && 
+         password.length <= 10 &&
+         /^[a-zA-Z0-9]+$/.test(password)
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { accessCode } = body
+    const { accessCode } = body // Keep accessCode name for backward compatibility
     
-    if (!validateAccessCode(accessCode)) {
+    if (!validateStaffPassword(accessCode)) {
       return NextResponse.json(
-        { success: false, error: 'Cod de acces invalid - doar litere și cifre, 3-20 caractere' },
+        { success: false, error: 'Parolă invalidă - doar litere și cifre, 3-10 caractere' },
         { status: 400 }
       )
     }
     
-    logger.apiRequest('POST', '/api/auth/access-code', { codeLength: accessCode.length })
+    logger.apiRequest('POST', '/api/auth/access-code', { passwordLength: accessCode.length })
     
-    // Authenticate with access code
-    const authResult = await accessCodeManager.authenticateWithCode(accessCode)
+    // Authenticate with staff password
+    const authResult = await staffPasswordManager.authenticateWithPassword(accessCode)
     
     if (!authResult.success || !authResult.user) {
-      logger.warn('Auth', 'Access code authentication failed', { 
+      logger.warn('Auth', 'Staff password authentication failed', { 
         error: authResult.error,
-        codePrefix: accessCode.substring(0, 4) + '***'
+        passwordPrefix: accessCode.substring(0, 2) + '***'
       })
       
       return NextResponse.json(
-        { success: false, error: authResult.error || 'Cod de acces invalid' },
+        { success: false, error: authResult.error || 'Parolă invalidă' },
         { status: 401 }
       )
     }
@@ -66,10 +66,12 @@ export async function POST(request: NextRequest) {
       maxAge: 7 * 24 * 60 * 60 // 7 days
     })
     
-    logger.info('Auth', 'Access code authentication successful', {
+    logger.info('Auth', 'Staff password authentication successful', {
       userId: user.id,
+      userName: user.name,
       role: user.role,
-      hospitalId: user.hospitalId
+      hospitalId: user.hospitalId,
+      hospitalName: user.hospitalName
     })
     
     return NextResponse.json({
@@ -86,7 +88,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    logger.error('Auth', 'Access code authentication error', error)
+    logger.error('Auth', 'Staff password authentication error', error)
     
     return NextResponse.json(
       { 

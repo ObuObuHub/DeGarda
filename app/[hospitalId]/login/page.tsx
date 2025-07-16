@@ -80,7 +80,7 @@ export default function HospitalLoginPage() {
           router.push('/staff/schedule')
         }
       } else {
-        setError(data.error || 'Cod de acces invalid')
+        setError(data.error || 'Parolă invalidă')
       }
     } catch (err) {
       setError('Eroare de conexiune')
@@ -130,10 +130,10 @@ export default function HospitalLoginPage() {
         <form onSubmit={handleLogin} className="space-y-6">
           <Input
             type="text"
-            label="Cod de Acces"
+            label="Parolă Personal"
             value={accessCode}
             onChange={(e) => setAccessCode(e.target.value)}
-            placeholder="Introdu codul de acces"
+            placeholder="Introdu parola ta (ex: AB3)"
             required
           />
 
