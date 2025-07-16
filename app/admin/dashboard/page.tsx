@@ -4,9 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { useHospital } from '@/contexts/HospitalContext'
-import { useData } from '@/contexts/DataContext'
-import { getClientUserRole } from '@/lib/clientAuth'
+import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 import { logger } from '@/lib/logger'
 
 interface DashboardStats {
@@ -36,11 +34,12 @@ interface UpcomingShift {
   type: string
 }
 
-export default function AdminDashboard() {
+interface AdminDashboardProps extends WithAuthProps {
+  // Additional props if needed
+}
+
+function AdminDashboard({ user, isLoading, error }: AdminDashboardProps) {
   const router = useRouter()
-  const { selectedHospital, selectedHospitalId } = useHospital()
-  const { shifts, staff, isLoading } = useData()
-  const [userRole, setUserRole] = useState<string | null>(null)
   const [stats, setStats] = useState<DashboardStats>({
     staff: 0,
     todayShifts: 0,
@@ -51,336 +50,285 @@ export default function AdminDashboard() {
     upcomingShifts: 0
   })
   const [upcomingShifts, setUpcomingShifts] = useState<UpcomingShift[]>([])
-  const [swaps, setSwaps] = useState<any[]>([])
+  const [isLoadingStats, setIsLoadingStats] = useState(true)
 
   useEffect(() => {
-    const role = getClientUserRole()
-    setUserRole(role)
-  }, [])
-
-  useEffect(() => {
-    if (selectedHospitalId && shifts && staff) {
-      calculateStats()
-      loadPendingSwaps()
+    if (user) {
+      fetchDashboardStats()
     }
-  }, [shifts, staff, selectedHospitalId])
+  }, [user])
 
-  const calculateStats = () => {
+  const fetchDashboardStats = async () => {
+    try {
+      setIsLoadingStats(true)
+      
+      // Fetch staff count
+      const staffResponse = await fetch('/api/staff')
+      const staffData = await staffResponse.json()
+      
+      // Fetch shifts stats
+      const shiftsResponse = await fetch('/api/shifts')
+      const shiftsData = await shiftsResponse.json()
+      
+      // Calculate stats
+      const staffCount = staffData.success ? staffData.staff?.length || 0 : 0
+      const todayShifts = calculateTodayShifts(shiftsData.shifts || [])
+      const weekShifts = calculateWeekShifts(shiftsData.shifts || [])
+      const monthShifts = calculateMonthShifts(shiftsData.shifts || [])
+      
+      setStats({
+        staff: staffCount,
+        todayShifts,
+        weekShifts,
+        monthShifts,
+        pendingSwaps: 0, // TODO: Implement
+        coverageGaps: 0, // TODO: Implement
+        upcomingShifts: 0 // TODO: Implement
+      })
+      
+    } catch (error) {
+      logger.error('AdminDashboard', 'Failed to fetch dashboard stats', error)
+    } finally {
+      setIsLoadingStats(false)
+    }
+  }
+
+  const calculateTodayShifts = (shifts: any[]) => {
+    const today = new Date().toISOString().split('T')[0]
+    return shifts.filter(shift => shift.date === today).length
+  }
+
+  const calculateWeekShifts = (shifts: any[]) => {
     const today = new Date()
-    const todayStr = today.toISOString().split('T')[0]
     const weekStart = new Date(today)
     weekStart.setDate(today.getDate() - today.getDay())
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekStart.getDate() + 6)
+    
+    return shifts.filter(shift => {
+      const shiftDate = new Date(shift.date)
+      return shiftDate >= weekStart && shiftDate <= weekEnd
+    }).length
+  }
+
+  const calculateMonthShifts = (shifts: any[]) => {
+    const today = new Date()
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-
-    // Filter shifts for this hospital
-    const hospitalShifts = Object.entries(shifts).filter(([date, shift]) => 
-      shift.hospitalId?.toString() === selectedHospitalId
-    )
-
-    const todayShifts = hospitalShifts.filter(([date]) => date === todayStr).length
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
     
-    const weekShifts = hospitalShifts.filter(([date]) => {
-      const shiftDate = new Date(date)
-      return shiftDate >= weekStart && shiftDate <= today
+    return shifts.filter(shift => {
+      const shiftDate = new Date(shift.date)
+      return shiftDate >= monthStart && shiftDate <= monthEnd
     }).length
-
-    const monthShifts = hospitalShifts.filter(([date]) => {
-      const shiftDate = new Date(date)
-      return shiftDate >= monthStart
-    }).length
-
-    // Calculate coverage gaps (open shifts)
-    const coverageGaps = hospitalShifts.filter(([date, shift]) => 
-      shift.status === 'open' || !shift.doctorId
-    ).length
-
-    // Get upcoming shifts (next 7 days)
-    const upcoming = hospitalShifts
-      .filter(([date, shift]) => {
-        const shiftDate = new Date(date)
-        const nextWeek = new Date(today)
-        nextWeek.setDate(today.getDate() + 7)
-        return shiftDate > today && shiftDate <= nextWeek && shift.doctorId
-      })
-      .map(([date, shift]) => ({
-        date,
-        doctorName: shift.doctorName || 'Unknown',
-        department: shift.department || 'General',
-        type: shift.type || '24h'
-      }))
-      .slice(0, 5)
-
-    setUpcomingShifts(upcoming)
-    setStats({
-      staff: staff.filter(s => s.hospitalId?.toString() === selectedHospitalId).length,
-      todayShifts,
-      weekShifts,
-      monthShifts,
-      pendingSwaps: swaps.length,
-      coverageGaps,
-      upcomingShifts: upcoming.length
-    })
-  }
-
-  const loadPendingSwaps = async () => {
-    if (!selectedHospitalId || userRole !== 'manager') return
-    
-    try {
-      const response = await fetch(`/api/swaps?status=pending&hospitalId=${selectedHospitalId}`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setSwaps(data.swaps || [])
-      }
-    } catch (error) {
-      logger.error('Dashboard', 'Failed to load pending swaps', error)
-    }
-  }
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    router.push('/')
   }
 
   const quickActions: QuickAction[] = [
     {
-      id: 'schedule',
-      title: 'Program Gărzi',
-      description: 'Vezi și gestionează programul',
-      icon: '📅',
-      color: 'blue',
-      onClick: () => router.push('/admin/schedule'),
-      roles: ['staff', 'manager']
+      id: 'staff-passwords',
+      title: 'Parole Personal',
+      description: 'Gestionează parolele personalului',
+      icon: '🔐',
+      color: 'bg-blue-500',
+      onClick: () => router.push('/admin/staff-passwords'),
+      roles: ['admin', 'manager']
     },
     {
-      id: 'management', 
-      title: 'Management',
-      description: 'Personal și coduri de acces',
+      id: 'shift-permissions',
+      title: 'Permisiuni Gărzi',
+      description: 'Acordă permisiuni de generare gărzi',
+      icon: '⚙️',
+      color: 'bg-green-500',
+      onClick: () => router.push('/admin/shift-permissions'),
+      roles: ['admin', 'manager']
+    },
+    {
+      id: 'staff-management',
+      title: 'Gestionare Personal',
+      description: 'Adaugă și gestionează personalul',
       icon: '👥',
-      color: 'purple',
-      onClick: () => router.push('/admin/management'),
-      roles: ['staff', 'manager']
+      color: 'bg-purple-500',
+      onClick: () => router.push('/admin/staff'),
+      roles: ['admin', 'manager']
     },
     {
-      id: 'swaps',
-      title: 'Cereri Schimb',
-      description: 'Aprobă sau respinge schimburi',
-      icon: '🔄',
-      color: 'orange', 
-      onClick: () => router.push('/admin/schedule?tab=swaps'),
-      roles: ['manager']
+      id: 'schedule-management',
+      title: 'Program Gărzi',
+      description: 'Vizualizează și gestionează programul',
+      icon: '📅',
+      color: 'bg-yellow-500',
+      onClick: () => router.push('/admin/schedule'),
+      roles: ['admin', 'manager']
+    },
+    {
+      id: 'hospitals',
+      title: 'Gestionare Spitale',
+      description: 'Configurează spitalele',
+      icon: '🏥',
+      color: 'bg-red-500',
+      onClick: () => router.push('/admin/hospitals'),
+      roles: ['admin']
+    },
+    {
+      id: 'settings',
+      title: 'Configurări',
+      description: 'Setări sistem',
+      icon: '⚙️',
+      color: 'bg-gray-500',
+      onClick: () => router.push('/admin/settings'),
+      roles: ['admin']
     }
   ]
 
-  const getColorClasses = (color: string) => {
-    const colors = {
-      blue: 'bg-system-blue/10 text-system-blue border-system-blue/20 hover:border-system-blue/40',
-      purple: 'bg-system-purple/10 text-system-purple border-system-purple/20 hover:border-system-purple/40',
-      green: 'bg-system-green/10 text-system-green border-system-green/20 hover:border-system-green/40',
-      orange: 'bg-system-orange/10 text-system-orange border-system-orange/20 hover:border-system-orange/40'
-    }
-    return colors[color as keyof typeof colors] || colors.blue
+  const handleLogout = () => {
+    localStorage.removeItem('authToken')
+    sessionStorage.clear()
+    router.push('/')
   }
 
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-label-secondary">Loading dashboard...</div>
-        </div>
-      </div>
-    )
-  }
+  const filteredActions = quickActions.filter(action => 
+    action.roles.includes(user?.role || '')
+  )
 
   return (
-    <div className="p-4 lg:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-label-primary">Dashboard</h1>
-            {selectedHospital && (
-              <p className="text-sm text-label-secondary mt-1">
-                {selectedHospital.name} • {selectedHospital.city}
-              </p>
-            )}
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Dashboard {user?.role === 'admin' ? 'Administrator' : 'Manager'}
+            </h1>
+            <p className="text-gray-600">
+              Bun venit, {user?.name}! {user?.role === 'admin' ? 'Acces complet sistem' : `${user?.hospitalName}`}
+            </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            Logout
+          <Button variant="ghost" onClick={handleLogout}>
+            Ieși
           </Button>
         </div>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          <Card className="p-4">
-            <div className="text-2xl font-bold text-system-blue">{stats.staff}</div>
-            <div className="text-xs text-label-secondary">Personal</div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Personal Total</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {isLoadingStats ? '...' : stats.staff}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-2xl">👥</span>
+              </div>
+            </div>
           </Card>
-          
-          <Card className="p-4">
-            <div className="text-2xl font-bold text-system-green">{stats.todayShifts}</div>
-            <div className="text-xs text-label-secondary">Gărzi Azi</div>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Gărzi Azi</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {isLoadingStats ? '...' : stats.todayShifts}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <span className="text-2xl">📅</span>
+              </div>
+            </div>
           </Card>
-          
-          <Card className="p-4">
-            <div className="text-2xl font-bold text-system-purple">{stats.weekShifts}</div>
-            <div className="text-xs text-label-secondary">Săptămâna</div>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Gărzi Săptămâna</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {isLoadingStats ? '...' : stats.weekShifts}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <span className="text-2xl">📊</span>
+              </div>
+            </div>
           </Card>
-          
-          <Card className="p-4">
-            <div className="text-2xl font-bold text-label-primary">{stats.monthShifts}</div>
-            <div className="text-xs text-label-secondary">Luna</div>
-          </Card>
-          
-          {userRole === 'manager' && (
-            <Card className="p-4">
-              <div className="text-2xl font-bold text-system-orange">{stats.pendingSwaps}</div>
-              <div className="text-xs text-label-secondary">Schimburi</div>
-            </Card>
-          )}
-          
-          <Card className="p-4">
-            <div className="text-2xl font-bold text-system-red">{stats.coverageGaps}</div>
-            <div className="text-xs text-label-secondary">Neacoperite</div>
-          </Card>
-          
-          <Card className="p-4">
-            <div className="text-2xl font-bold text-system-green">{stats.upcomingShifts}</div>
-            <div className="text-xs text-label-secondary">Următoare</div>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Gărzi Luna</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {isLoadingStats ? '...' : stats.monthShifts}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                <span className="text-2xl">📈</span>
+              </div>
+            </div>
           </Card>
         </div>
 
         {/* Quick Actions */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Acțiuni Rapide</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {quickActions
-              .filter(action => action.roles.includes(userRole || 'staff'))
-              .map((action) => (
-                <Card 
-                  key={action.id}
-                  hoverable 
-                  onClick={action.onClick}
-                  className={`p-6 border-2 transition-all ${getColorClasses(action.color)}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="text-3xl">{action.icon}</div>
-                    <div>
-                      <h3 className="font-semibold">{action.title}</h3>
-                      <p className="text-sm opacity-80">{action.description}</p>
-                    </div>
+        <Card className="p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            Acțiuni Rapide
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredActions.map((action) => (
+              <button
+                key={action.id}
+                onClick={action.onClick}
+                className="p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 ${action.color} rounded-lg flex items-center justify-center`}>
+                    <span className="text-white text-lg">{action.icon}</span>
                   </div>
-                </Card>
-              ))}
+                  <div>
+                    <h3 className="font-medium text-gray-900">{action.title}</h3>
+                    <p className="text-sm text-gray-600">{action.description}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
-        </div>
+        </Card>
 
-        {/* Two Column Layout */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Upcoming Shifts */}
-          <Card className="p-6">
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <span>📅</span>
-              Gărzi Următoare (7 zile)
-            </h3>
-            {upcomingShifts.length === 0 ? (
-              <p className="text-label-secondary text-sm py-4">Nu sunt gărzi programate</p>
-            ) : (
-              <div className="space-y-3">
-                {upcomingShifts.map((shift, index) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-background-secondary rounded-lg">
-                    <div>
-                      <div className="font-medium text-sm">{shift.doctorName}</div>
-                      <div className="text-xs text-label-secondary">{shift.department}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium">
-                        {new Date(shift.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
-                      </div>
-                      <div className="text-xs text-label-secondary">{shift.type}</div>
-                    </div>
-                  </div>
-                ))}
+        {/* Role-specific Information */}
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Informații {user?.role === 'admin' ? 'Administrator' : 'Manager'}
+          </h2>
+          <div className="space-y-4">
+            {user?.role === 'admin' && (
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-medium text-blue-900 mb-2">Acces Administrator</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Gestionare completă a ambelor spitale</li>
+                  <li>• Creare și gestionare manageri</li>
+                  <li>• Configurare sistem și setări globale</li>
+                  <li>• Acces la toate funcționalitățile</li>
+                </ul>
               </div>
             )}
-          </Card>
-
-          {/* Manager: Pending Swaps */}
-          {userRole === 'manager' && (
-            <Card className="p-6">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <span>🔄</span>
-                Cereri de Schimb în Așteptare
-              </h3>
-              {swaps.length === 0 ? (
-                <p className="text-label-secondary text-sm py-4">Nu există cereri în așteptare</p>
-              ) : (
-                <div className="space-y-3">
-                  {swaps.slice(0, 3).map((swap) => (
-                    <div key={swap.id} className="p-3 bg-background-secondary rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="font-medium text-sm">{swap.fromStaffName}</div>
-                          <div className="text-xs text-label-secondary">
-                            {new Date(swap.shiftDate).toLocaleDateString('ro-RO')}
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => router.push('/admin/schedule?tab=swaps')}
-                        >
-                          Revizuiește
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {swaps.length > 3 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => router.push('/admin/schedule?tab=swaps')}
-                      className="w-full"
-                    >
-                      Vezi toate ({swaps.length})
-                    </Button>
-                  )}
-                </div>
-              )}
-            </Card>
-          )}
-
-          {/* Staff: Coverage Status */}
-          {userRole === 'staff' && (
-            <Card className="p-6">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <span>📊</span>
-                Starea Acoperirii
-              </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Gărzi acoperite luna aceasta</span>
-                  <span className="font-semibold">
-                    {stats.monthShifts - stats.coverageGaps}/{stats.monthShifts}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-system-green h-2 rounded-full" 
-                    style={{ 
-                      width: `${stats.monthShifts ? ((stats.monthShifts - stats.coverageGaps) / stats.monthShifts) * 100 : 0}%` 
-                    }}
-                  ></div>
-                </div>
-                {stats.coverageGaps > 0 && (
-                  <div className="text-sm text-system-orange">
-                    {stats.coverageGaps} gărzi necesită acoperire
-                  </div>
-                )}
+            
+            {user?.role === 'manager' && (
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="font-medium text-green-900 mb-2">Acces Manager - {user?.hospitalName}</h3>
+                <ul className="text-sm text-green-800 space-y-1">
+                  <li>• Gestionare personal spital</li>
+                  <li>• Acordare permisiuni generare gărzi</li>
+                  <li>• Gestionare parole personal</li>
+                  <li>• Vizualizare și aprobare schimburi</li>
+                </ul>
               </div>
-            </Card>
-          )}
-        </div>
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   )
 }
+
+export default withAuth(AdminDashboard, {
+  allowedRoles: ['admin', 'manager'],
+  redirectTo: '/'
+})

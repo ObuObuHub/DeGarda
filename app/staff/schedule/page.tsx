@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Calendar } from '@/components/Calendar'
-import { useHospital } from '@/contexts/HospitalContext'
 import { useData } from '@/contexts/DataContext'
 import { showToast } from '@/components/Toast'
 import { logger } from '@/lib/logger'
+import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 
 interface Reservation {
   id: number
@@ -20,14 +20,14 @@ interface Reservation {
   created_at: string
 }
 
-export default function StaffSchedulePage() {
+interface StaffScheduleProps extends WithAuthProps {
+  // Additional props if needed
+}
+
+function StaffSchedulePage({ user, isLoading: authLoading, error: authError }: StaffScheduleProps) {
   const router = useRouter()
-  const { selectedHospitalId, selectedHospital } = useHospital()
   const { shifts, isLoading, loadShifts } = useData()
   
-  const [currentStaffId, setCurrentStaffId] = useState<string | null>(null)
-  const [currentStaffName, setCurrentStaffName] = useState<string | null>(null)
-  const [currentStaffDepartment, setCurrentStaffDepartment] = useState<string | null>(null)
   const [myReservations, setMyReservations] = useState<Reservation[]>([])
   const [isLoadingReservations, setIsLoadingReservations] = useState(false)
   const [canGenerateShifts, setCanGenerateShifts] = useState(false)
@@ -37,28 +37,12 @@ export default function StaffSchedulePage() {
   const [viewYear, setViewYear] = useState(currentDate.getFullYear())
 
   useEffect(() => {
-    // Get staff info from session
-    const staffId = sessionStorage.getItem('currentStaffId')
-    const staffName = sessionStorage.getItem('currentStaffName')
-    const staffDepartment = sessionStorage.getItem('currentStaffDepartment')
-    
-    if (!staffId || !selectedHospitalId) {
-      router.push('/staff')
-      return
-    }
-    
-    setCurrentStaffId(staffId)
-    setCurrentStaffName(staffName)
-    setCurrentStaffDepartment(staffDepartment)
-  }, [selectedHospitalId, router])
-
-  useEffect(() => {
-    if (selectedHospitalId && currentStaffId) {
-      loadShifts(viewYear, viewMonth, selectedHospitalId)
+    if (user && user.hospitalId) {
+      loadShifts(viewYear, viewMonth, user.hospitalId)
       loadMyReservations()
       checkShiftPermissions()
     }
-  }, [viewYear, viewMonth, selectedHospitalId, currentStaffId, loadShifts])
+  }, [viewYear, viewMonth, user, loadShifts])
 
   const checkShiftPermissions = async () => {
     try {
@@ -74,18 +58,18 @@ export default function StaffSchedulePage() {
   }
 
   const loadMyReservations = async () => {
-    if (!currentStaffId) return
+    if (!user?.userId) return
     
     setIsLoadingReservations(true)
     try {
-      const response = await fetch(`/api/reservations?staffId=${currentStaffId}&month=${viewMonth + 1}&year=${viewYear}`)
+      const response = await fetch(`/api/reservations?staffId=${user.userId}&month=${viewMonth + 1}&year=${viewYear}`)
       const data = await response.json()
       
       if (data.success) {
         setMyReservations(data.reservations || [])
       }
     } catch (error) {
-      logger.error('StaffSchedule', 'Failed to load reservations', error, { staffId: currentStaffId })
+      logger.error('StaffSchedule', 'Failed to load reservations', error, { staffId: user.userId })
       showToast('error', 'Eroare', 'Nu s-au putut încărca rezervările')
     } finally {
       setIsLoadingReservations(false)
@@ -93,13 +77,13 @@ export default function StaffSchedulePage() {
   }
 
   const handleDayClick = async (date: string) => {
-    if (!currentStaffId) return
+    if (!user?.userId) return
     
     const shift = shifts[date]
     
     // Check if this is already assigned
     if (shift && shift.doctorId) {
-      if (shift.doctorId === currentStaffId) {
+      if (shift.doctorId === user.userId.toString()) {
         // This is my shift, can request swap
         showToast('info', 'Garda ta', 'Poți solicita un schimb pentru această gardă')
       } else {
@@ -120,7 +104,7 @@ export default function StaffSchedulePage() {
     if (existingReservation) {
       // Cancel reservation
       try {
-        const response = await fetch(`/api/reservations?staffId=${currentStaffId}&shiftDate=${date}`, {
+        const response = await fetch(`/api/reservations?staffId=${user.userId}&shiftDate=${date}`, {
           method: 'DELETE'
         })
         
@@ -132,7 +116,7 @@ export default function StaffSchedulePage() {
           showToast('error', 'Eroare', data.error || 'Nu s-a putut anula rezervarea')
         }
       } catch (error) {
-        logger.error('StaffSchedule', 'Failed to cancel reservation', error, { staffId: currentStaffId, date })
+        logger.error('StaffSchedule', 'Failed to cancel reservation', error, { staffId: user.userId, date })
         showToast('error', 'Eroare', 'Nu s-a putut anula rezervarea')
       }
     } else {
@@ -142,9 +126,9 @@ export default function StaffSchedulePage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            staffId: currentStaffId,
+            staffId: user.userId,
             shiftDate: date,
-            department: currentStaffDepartment
+            department: 'LABORATOR' // Default department - could be dynamic
           })
         })
         
@@ -157,7 +141,7 @@ export default function StaffSchedulePage() {
           showToast('error', 'Eroare', data.error || 'Nu s-a putut crea rezervarea')
         }
       } catch (error) {
-        logger.error('StaffSchedule', 'Failed to create reservation', error, { staffId: currentStaffId, date })
+        logger.error('StaffSchedule', 'Failed to create reservation', error, { staffId: user.userId, date })
         showToast('error', 'Eroare', 'Nu s-a putut crea rezervarea')
       }
     }
@@ -182,10 +166,9 @@ export default function StaffSchedulePage() {
   }
 
   const handleLogout = () => {
-    sessionStorage.removeItem('currentStaffId')
-    sessionStorage.removeItem('currentStaffName')
-    sessionStorage.removeItem('currentStaffDepartment')
-    router.push('/staff')
+    localStorage.removeItem('authToken')
+    sessionStorage.clear()
+    router.push('/')
   }
 
   // Enhance shifts with reservation info
@@ -197,8 +180,8 @@ export default function StaffSchedulePage() {
         id: `reservation_${reservation.id}`,
         date,
         status: 'reserved',
-        reservedBy: currentStaffId,
-        reservedByName: currentStaffName,
+        reservedBy: user?.userId.toString() || '',
+        reservedByName: user?.name || '',
         doctorId: null,
         doctorName: null,
         department: reservation.department
@@ -216,7 +199,7 @@ export default function StaffSchedulePage() {
               Programul Meu
             </h1>
             <p className="text-label-secondary text-sm mt-1">
-              {currentStaffName} • {currentStaffDepartment} • {selectedHospital?.name}
+              {user?.name} • LABORATOR • {user?.hospitalName}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -287,7 +270,7 @@ export default function StaffSchedulePage() {
             <div>
               <p className="text-label-secondary">Gărzi atribuite</p>
               <p className="text-xl font-bold">
-                {Object.values(shifts).filter(s => s.doctorId === currentStaffId).length}
+                {Object.values(shifts).filter(s => s.doctorId === user?.userId.toString()).length}
               </p>
             </div>
             <div>
@@ -308,3 +291,8 @@ export default function StaffSchedulePage() {
     </div>
   )
 }
+
+export default withAuth(StaffSchedulePage, {
+  allowedRoles: ['staff'],
+  redirectTo: '/'
+})

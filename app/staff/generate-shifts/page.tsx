@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { logger } from '@/lib/logger'
+import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 
 interface Permission {
   id: number
@@ -15,10 +16,13 @@ interface Permission {
   granted_by_name: string
 }
 
-export default function GenerateShiftsPage() {
+interface GenerateShiftsProps extends WithAuthProps {
+  // Additional props if needed
+}
+
+function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: GenerateShiftsProps) {
   const router = useRouter()
   const [permissions, setPermissions] = useState<Permission[]>([])
-  const [staffDepartment, setStaffDepartment] = useState<string | null>(null)
   const [canGenerateShifts, setCanGenerateShifts] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -31,8 +35,10 @@ export default function GenerateShiftsPage() {
   const [selectedDepartment, setSelectedDepartment] = useState('')
 
   useEffect(() => {
-    checkPermissions()
-  }, [])
+    if (user) {
+      checkPermissions()
+    }
+  }, [user])
 
   const checkPermissions = async () => {
     setIsCheckingPermissions(true)
@@ -43,7 +49,6 @@ export default function GenerateShiftsPage() {
 
       if (response.ok) {
         setPermissions(data.permissions || [])
-        setStaffDepartment(data.staffDepartment)
         setCanGenerateShifts(data.canGenerateShifts)
         
         // Set default department if available
@@ -118,7 +123,7 @@ export default function GenerateShiftsPage() {
               Acces Restricționat
             </h1>
             <p className="text-gray-600 mb-6">
-              Nu ai permisiunea de a genera gărzi pentru departamentul tău ({staffDepartment}).
+              Nu ai permisiunea de a genera gărzi pentru departamentul tău (LABORATOR).
             </p>
             <p className="text-sm text-gray-500 mb-6">
               Contactează managerul pentru a obține permisiunea de generare a gărzilor.
@@ -256,3 +261,8 @@ export default function GenerateShiftsPage() {
     </div>
   )
 }
+
+export default withAuth(GenerateShiftsPage, {
+  allowedRoles: ['staff'],
+  redirectTo: '/'
+})

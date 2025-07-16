@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import { HospitalProvider } from '@/contexts/HospitalContext'
 import { DataProvider } from '@/contexts/DataContext'
 import { ToastContainer } from '@/components/Toast'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import '@/styles/globals.css'
 
 const inter = Inter({ 
@@ -30,12 +31,14 @@ export default function RootLayout({
   return (
     <html lang="ro" className={inter.variable}>
       <body className="min-h-screen bg-background-secondary">
-        <DataProvider>
-          <HospitalProvider>
-            {children}
-            <ToastContainer />
-          </HospitalProvider>
-        </DataProvider>
+        <ErrorBoundary>
+          <DataProvider>
+            <HospitalProvider>
+              {children}
+              <ToastContainer />
+            </HospitalProvider>
+          </DataProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )
