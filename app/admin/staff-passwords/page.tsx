@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { logger } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
+import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 
 interface StaffPassword {
   id: string
@@ -19,7 +20,11 @@ interface StaffPassword {
   createdAt: string
 }
 
-export default function StaffPasswordsPage() {
+interface StaffPasswordsProps extends WithAuthProps {
+  // Additional props if needed
+}
+
+function StaffPasswordsPage({ user, isLoading: authLoading, error: authError }: StaffPasswordsProps) {
   const router = useRouter()
   const [staffPasswords, setStaffPasswords] = useState<StaffPassword[]>([])
   const [hospitals, setHospitals] = useState<any[]>([])
@@ -27,12 +32,23 @@ export default function StaffPasswordsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
-    checkAuth()
-    fetchHospitals()
-  }, [])
+    if (user) {
+      // Check if user has admin/manager role
+      if (user.role !== 'manager' && user.role !== 'admin') {
+        router.push('/staff/schedule')
+        return
+      }
+
+      // Set hospital for regular managers
+      if (user.role === 'manager') {
+        setSelectedHospital(user.hospitalId.toString())
+      }
+      
+      fetchHospitals()
+    }
+  }, [user, router])
 
   useEffect(() => {
     if (selectedHospital) {
@@ -40,44 +56,11 @@ export default function StaffPasswordsPage() {
     }
   }, [selectedHospital])
 
-  const checkAuth = async () => {
-    try {
-      const token = localStorage.getItem('authToken')
-      if (!token) {
-        router.push('/login')
-        return
-      }
-
-      const response = await fetch('/api/auth/verify', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      if (!response.ok) {
-        router.push('/login')
-        return
-      }
-
-      const data = await response.json()
-      setUserRole(data.role)
-      
-      if (data.role !== 'manager' && data.role !== 'admin') {
-        router.push('/staff/schedule')
-        return
-      }
-
-      // Set hospital for regular managers
-      if (data.role === 'manager') {
-        setSelectedHospital(data.hospitalId.toString())
-      }
-    } catch (error) {
-      logger.error('StaffPasswordsPage', 'Auth check failed', error)
-      router.push('/login')
-    }
-  }
-
   const fetchHospitals = async () => {
     try {
-      const response = await fetch('/api/hospitals')
+      const response = await fetch('/api/hospitals', {
+        credentials: 'include' // Include cookies for authentication
+      })
       if (response.ok) {
         const data = await response.json()
         setHospitals(data)
@@ -98,7 +81,9 @@ export default function StaffPasswordsPage() {
     setError('')
 
     try {
-      const response = await fetch(`/api/admin/staff-passwords?hospitalId=${selectedHospital}`)
+      const response = await fetch(`/api/admin/staff-passwords?hospitalId=${selectedHospital}`, {
+        credentials: 'include' // Include cookies for authentication
+      })
       const data = await response.json()
 
       if (response.ok) {
@@ -123,6 +108,7 @@ export default function StaffPasswordsPage() {
       const response = await fetch('/api/admin/staff-passwords', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           action: 'regenerate',
           staffId,
@@ -162,7 +148,7 @@ export default function StaffPasswordsPage() {
         </div>
 
         {/* Hospital Selection */}
-        {userRole === 'admin' && (
+        {user?.role === 'admin' && (
           <Card className="mb-6 p-6">
             <div className="flex items-center space-x-4">
               <label className="text-sm font-medium text-gray-700">
@@ -310,3 +296,5 @@ export default function StaffPasswordsPage() {
     </div>
   )
 }
+
+export default withAuth(StaffPasswordsPage)

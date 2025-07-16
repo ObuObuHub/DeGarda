@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { logger } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
+import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 
 interface StaffMember {
   id: number
@@ -28,7 +29,11 @@ interface Hospital {
   departments: string[]
 }
 
-export default function ShiftPermissionsPage() {
+interface ShiftPermissionsProps extends WithAuthProps {
+  // Additional props if needed
+}
+
+function ShiftPermissionsPage({ user, isLoading: authLoading, error: authError }: ShiftPermissionsProps) {
   const router = useRouter()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [hospitals, setHospitals] = useState<Hospital[]>([])
@@ -36,12 +41,23 @@ export default function ShiftPermissionsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
-    checkAuth()
-    fetchHospitals()
-  }, [])
+    if (user) {
+      // Check if user has admin/manager role
+      if (user.role !== 'manager' && user.role !== 'admin') {
+        router.push('/staff/schedule')
+        return
+      }
+
+      // Set hospital for regular managers
+      if (user.role === 'manager') {
+        setSelectedHospital(user.hospitalId.toString())
+      }
+      
+      fetchHospitals()
+    }
+  }, [user, router])
 
   useEffect(() => {
     if (selectedHospital) {
@@ -49,44 +65,11 @@ export default function ShiftPermissionsPage() {
     }
   }, [selectedHospital])
 
-  const checkAuth = async () => {
-    try {
-      const token = localStorage.getItem('authToken')
-      if (!token) {
-        router.push('/login')
-        return
-      }
-
-      const response = await fetch('/api/auth/verify', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      if (!response.ok) {
-        router.push('/login')
-        return
-      }
-
-      const data = await response.json()
-      setUserRole(data.role)
-      
-      if (data.role !== 'manager' && data.role !== 'admin') {
-        router.push('/staff/schedule')
-        return
-      }
-
-      // Set hospital for regular managers
-      if (data.role === 'manager') {
-        setSelectedHospital(data.hospitalId.toString())
-      }
-    } catch (error) {
-      logger.error('ShiftPermissionsPage', 'Auth check failed', error)
-      router.push('/login')
-    }
-  }
-
   const fetchHospitals = async () => {
     try {
-      const response = await fetch('/api/hospitals')
+      const response = await fetch('/api/hospitals', {
+        credentials: 'include'
+      })
       if (response.ok) {
         const data = await response.json()
         const hospitalsWithDepartments = data.map((h: any) => ({
@@ -128,7 +111,9 @@ export default function ShiftPermissionsPage() {
     setError('')
 
     try {
-      const response = await fetch(`/api/admin/shift-permissions?hospitalId=${selectedHospital}`)
+      const response = await fetch(`/api/admin/shift-permissions?hospitalId=${selectedHospital}`, {
+        credentials: 'include'
+      })
       const data = await response.json()
 
       if (response.ok) {
@@ -153,6 +138,7 @@ export default function ShiftPermissionsPage() {
       const response = await fetch('/api/admin/shift-permissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'grant',
           staffId,
@@ -186,6 +172,7 @@ export default function ShiftPermissionsPage() {
       const response = await fetch('/api/admin/shift-permissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'revoke',
           staffId,
@@ -227,7 +214,7 @@ export default function ShiftPermissionsPage() {
         </div>
 
         {/* Hospital Selection */}
-        {userRole === 'admin' && (
+        {user?.role === 'admin' && (
           <Card className="mb-6 p-6">
             <div className="flex items-center space-x-4">
               <label className="text-sm font-medium text-gray-700">
@@ -372,3 +359,5 @@ export default function ShiftPermissionsPage() {
     </div>
   )
 }
+
+export default withAuth(ShiftPermissionsPage)

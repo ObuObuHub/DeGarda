@@ -29,8 +29,8 @@ export default function DirectLoginPage() {
       const data = await res.json()
 
       if (data.success) {
-        // Store auth token
-        localStorage.setItem('authToken', data.token || 'authenticated')
+        // Authentication successful - token is now stored in HTTP-only cookie
+        // No need to store token in localStorage anymore for security
         
         // Route based on user role
         if (data.user?.role === 'admin') {

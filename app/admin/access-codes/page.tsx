@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { logger } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
+import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 
 interface AccessCode {
   id: string
@@ -29,7 +30,11 @@ interface StaffWithCode {
   codeCreated: string | null
 }
 
-export default function AccessCodesPage() {
+interface AccessCodesProps extends WithAuthProps {
+  // Additional props if needed
+}
+
+function AccessCodesPage({ user, isLoading: authLoading, error: authError }: AccessCodesProps) {
   const router = useRouter()
   const [accessCodes, setAccessCodes] = useState<AccessCode[]>([])
   const [staffList, setStaffList] = useState<StaffWithCode[]>([])
@@ -40,7 +45,6 @@ export default function AccessCodesPage() {
   const [success, setSuccess] = useState('')
   const [newCode, setNewCode] = useState('')
   const [isMigrated, setIsMigrated] = useState(false)
-  const [userRole, setUserRole] = useState<string | null>(null)
   
   // Form state
   const [generateForm, setGenerateForm] = useState({
@@ -49,39 +53,31 @@ export default function AccessCodesPage() {
   })
 
   useEffect(() => {
-    // Check user role - only managers can access this page
-    const token = localStorage.getItem('authToken')
-    if (token) {
-      try {
-        const decoded = JSON.parse(atob(token.split('.')[1]))
-        setUserRole(decoded.role)
-        if (decoded.role !== 'manager') {
-          router.push('/admin/dashboard')
-          return
-        }
-      } catch (error) {
-        console.error('Failed to decode token:', error)
+    if (user) {
+      // Check user role - only managers can access this page
+      if (user.role !== 'manager') {
         router.push('/admin/dashboard')
         return
       }
-    } else {
-      router.push('/admin/dashboard')
-      return
+      
+      loadHospitals()
+      checkDatabaseSetup()
     }
-    
-    loadHospitals()
-    checkDatabaseSetup()
-  }, [])
+  }, [user, router])
 
   const checkDatabaseSetup = async () => {
     try {
       // Check if we can load access codes (table exists)
-      const response = await fetch('/api/admin/access-codes?hospitalId=1')
+      const response = await fetch('/api/admin/access-codes?hospitalId=1', {
+        credentials: 'include'
+      })
       if (response.ok) {
         setIsMigrated(true)
       } else {
         // Try to check if table exists by querying staff codes
-        const staffResponse = await fetch('/api/admin/staff-access-codes?hospitalId=1')
+        const staffResponse = await fetch('/api/admin/staff-access-codes?hospitalId=1', {
+          credentials: 'include'
+        })
         if (staffResponse.ok) {
           setIsMigrated(true)
         }
@@ -94,7 +90,9 @@ export default function AccessCodesPage() {
 
   const loadHospitals = async () => {
     try {
-      const response = await fetch('/api/hospitals')
+      const response = await fetch('/api/hospitals', {
+        credentials: 'include'
+      })
       const data = await response.json()
       setHospitals(data)
       if (data.length > 0) {
@@ -115,6 +113,7 @@ export default function AccessCodesPage() {
       const response = await fetch('/api/admin/access-codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'migrate' })
       })
       
@@ -141,7 +140,9 @@ export default function AccessCodesPage() {
     setError('')
     
     try {
-      const response = await fetch(`/api/admin/access-codes?hospitalId=${selectedHospital}`)
+      const response = await fetch(`/api/admin/access-codes?hospitalId=${selectedHospital}`, {
+        credentials: 'include'
+      })
       const data = await response.json()
       
       if (data.success) {
@@ -164,7 +165,9 @@ export default function AccessCodesPage() {
     setError('')
     
     try {
-      const response = await fetch(`/api/admin/staff-access-codes?hospitalId=${selectedHospital}`)
+      const response = await fetch(`/api/admin/staff-access-codes?hospitalId=${selectedHospital}`, {
+        credentials: 'include'
+      })
       const data = await response.json()
       
       if (data.success) {
@@ -205,6 +208,7 @@ export default function AccessCodesPage() {
       const response = await fetch('/api/admin/access-codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'generate',
           hospitalId: selectedHospital,
@@ -241,6 +245,7 @@ export default function AccessCodesPage() {
       const response = await fetch('/api/admin/access-codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'revoke',
           accessCode: code
@@ -274,6 +279,7 @@ export default function AccessCodesPage() {
       const response = await fetch('/api/admin/access-codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'bulk-generate' })
       })
       
@@ -301,7 +307,7 @@ export default function AccessCodesPage() {
   }, [selectedHospital, isMigrated])
 
   // Show loading while checking role
-  if (userRole === null) {
+  if (!user) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -600,3 +606,5 @@ export default function AccessCodesPage() {
     </div>
   )
 }
+
+export default withAuth(AccessCodesPage)

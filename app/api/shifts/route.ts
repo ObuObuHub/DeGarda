@@ -3,6 +3,7 @@ import { sql } from '@/lib/db'
 import { notifyShiftAssignment } from '@/lib/notifications'
 import { logActivity } from '@/lib/activity-logger'
 import { logger } from '@/lib/logger'
+import { withHospitalAuth } from '@/lib/hospitalMiddleware'
 
 // Input validation functions
 function validateYear(year: unknown): year is string {
@@ -40,25 +41,38 @@ function validateDepartment(department: unknown): department is string {
 
 // GET shifts for a specific month/year and hospital
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const year = searchParams.get('year')
-    const month = searchParams.get('month')
-    const hospitalId = searchParams.get('hospitalId')
+  return withHospitalAuth(request, async (authUser) => {
+    try {
+      const { searchParams } = new URL(request.url)
+      const year = searchParams.get('year')
+      const month = searchParams.get('month')
+      const hospitalId = searchParams.get('hospitalId')
 
-    if (!validateYear(year) || !validateMonth(month)) {
-      return NextResponse.json(
-        { success: false, error: 'Valid year and month are required' },
-        { status: 400 }
-      )
-    }
+      if (!validateYear(year) || !validateMonth(month)) {
+        return NextResponse.json(
+          { success: false, error: 'Valid year and month are required' },
+          { status: 400 }
+        )
+      }
 
-    if (hospitalId && !validateHospitalId(hospitalId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid hospital ID format' },
-        { status: 400 }
-      )
-    }
+      // Enforce hospital isolation - user can only access their own hospital data
+      const userHospitalId = authUser.hospitalId.toString()
+      if (hospitalId && hospitalId !== userHospitalId) {
+        return NextResponse.json(
+          { success: false, error: 'Access denied - hospital isolation violation' },
+          { status: 403 }
+        )
+      }
+
+      // Use authenticated user's hospital ID if none provided
+      const targetHospitalId = hospitalId || userHospitalId
+
+      if (!validateHospitalId(targetHospitalId)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid hospital ID format' },
+          { status: 400 }
+        )
+      }
 
     // Calculate date range for the month
     // Frontend sends 0-indexed months (0-11), but SQL needs 1-indexed (1-12)
@@ -73,54 +87,31 @@ export async function GET(request: NextRequest) {
     const lastDay = lastDayDate.getDate();
     const endDate = `${year}-${String(sqlMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-    // Get shifts with staff info and reservations
-    // Use indexed queries for better performance
-    const shifts = hospitalId
-      ? await sql`
-          SELECT 
-            s.id,
-            s.date,
-            s.type,
-            s.staff_id,
-            s.hospital_id,
-            s.status,
-            s.department,
-            st.name as staff_name,
-            st.specialization as staff_department,
-            sr.staff_id as reserved_by,
-            rst.name as reserved_by_name
-          FROM shifts s
-          LEFT JOIN staff st ON s.staff_id = st.id
-          LEFT JOIN shift_reservations sr ON s.id = sr.shift_id
-          LEFT JOIN staff rst ON sr.staff_id = rst.id
-          WHERE s.date >= ${startDate} 
-            AND s.date <= ${endDate}
-            AND s.hospital_id = ${hospitalId}
-          ORDER BY s.date
-          LIMIT 500
-        `
-      : await sql`
-          SELECT 
-            s.id,
-            s.date,
-            s.type,
-            s.staff_id,
-            s.hospital_id,
-            s.status,
-            s.department,
-            st.name as staff_name,
-            st.specialization as staff_department,
-            sr.staff_id as reserved_by,
-            rst.name as reserved_by_name
-          FROM shifts s
-          LEFT JOIN staff st ON s.staff_id = st.id
-          LEFT JOIN shift_reservations sr ON s.id = sr.shift_id
-          LEFT JOIN staff rst ON sr.staff_id = rst.id
-          WHERE s.date >= ${startDate} 
-            AND s.date <= ${endDate}
-          ORDER BY s.date
-          LIMIT 500
-        `
+      // Get shifts with staff info and reservations
+      // Always filter by hospital_id for security
+      const shifts = await sql`
+        SELECT 
+          s.id,
+          s.date,
+          s.type,
+          s.staff_id,
+          s.hospital_id,
+          s.status,
+          s.department,
+          st.name as staff_name,
+          st.specialization as staff_department,
+          sr.staff_id as reserved_by,
+          rst.name as reserved_by_name
+        FROM shifts s
+        LEFT JOIN staff st ON s.staff_id = st.id
+        LEFT JOIN shift_reservations sr ON s.id = sr.shift_id
+        LEFT JOIN staff rst ON sr.staff_id = rst.id
+        WHERE s.date >= ${startDate} 
+          AND s.date <= ${endDate}
+          AND s.hospital_id = ${targetHospitalId}
+        ORDER BY s.date
+        LIMIT 500
+      `
 
     // Convert to format expected by calendar
     const shiftMap: Record<string, {
@@ -149,44 +140,77 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ success: true, shifts: shiftMap })
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    logger.error('Shifts', 'Get shifts error', error)
-    
-    // Check for database connection errors
-    if (errorMessage.includes('Cannot convert argument to a ByteString')) {
+      return NextResponse.json({ success: true, shifts: shiftMap })
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Shifts', 'Get shifts error', error)
+      
+      // Check for database connection errors
+      if (errorMessage.includes('Cannot convert argument to a ByteString')) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Database connection error. Please check your database configuration.' 
+          },
+          { status: 500 }
+        )
+      }
+      
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Database connection error. Please check your database configuration.' 
+          error: 'Failed to fetch shifts',
+          details: errorMessage
         },
         { status: 500 }
       )
     }
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch shifts',
-        details: errorMessage
-      },
-      { status: 500 }
-    )
-  }
+  })
 }
 
 // POST to create or update a shift
 export async function POST(request: NextRequest) {
-  try {
-    const { date, staffId, hospitalId, type = '24h', department } = await request.json()
+  return withHospitalAuth(request, async (authUser) => {
+    try {
+      const { date, staffId, hospitalId, type = '24h', department } = await request.json()
 
-    if (!date || !hospitalId) {
-      return NextResponse.json(
-        { success: false, error: 'Date and hospitalId are required' },
-        { status: 400 }
-      )
-    }
+      if (!date) {
+        return NextResponse.json(
+          { success: false, error: 'Date is required' },
+          { status: 400 }
+        )
+      }
+
+      // Enforce hospital isolation - user can only create shifts for their own hospital
+      const userHospitalId = authUser.hospitalId.toString()
+      if (hospitalId && hospitalId !== userHospitalId) {
+        return NextResponse.json(
+          { success: false, error: 'Access denied - hospital isolation violation' },
+          { status: 403 }
+        )
+      }
+
+      // Use authenticated user's hospital ID
+      const targetHospitalId = hospitalId || userHospitalId
+
+      // Verify staff belongs to the same hospital if provided
+      if (staffId) {
+        const staffCheck = await sql`
+          SELECT hospital_id FROM staff WHERE id = ${staffId}
+        `
+        if (staffCheck.length === 0) {
+          return NextResponse.json(
+            { success: false, error: 'Staff member not found' },
+            { status: 400 }
+          )
+        }
+        if (staffCheck[0].hospital_id.toString() !== targetHospitalId) {
+          return NextResponse.json(
+            { success: false, error: 'Staff member does not belong to your hospital' },
+            { status: 403 }
+          )
+        }
+      }
 
     // Set shift times based on type
     let startTime = '08:00'
@@ -206,8 +230,9 @@ export async function POST(request: NextRequest) {
         SELECT * FROM shifts 
         WHERE staff_id = ${staffId} 
           AND date = ${date}
+          AND hospital_id = ${targetHospitalId}
           AND id != COALESCE(
-            (SELECT id FROM shifts WHERE date = ${date} AND type = ${type} AND hospital_id = ${hospitalId}),
+            (SELECT id FROM shifts WHERE date = ${date} AND type = ${type} AND hospital_id = ${targetHospitalId}),
             0
           )
       `
@@ -241,7 +266,7 @@ export async function POST(request: NextRequest) {
       try {
         result = await sql`
           INSERT INTO shifts (date, type, start_time, end_time, staff_id, hospital_id, department, status)
-          VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${staffId}, ${hospitalId}, ${shiftDepartment}, 'assigned')
+          VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${staffId}, ${targetHospitalId}, ${shiftDepartment}, 'assigned')
           ON CONFLICT (date, type, hospital_id, department) 
           DO UPDATE SET 
             staff_id = ${staffId},
@@ -253,7 +278,7 @@ export async function POST(request: NextRequest) {
           // Fallback to old schema without department
           result = await sql`
             INSERT INTO shifts (date, type, start_time, end_time, staff_id, hospital_id, status)
-            VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${staffId}, ${hospitalId}, 'assigned')
+            VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${staffId}, ${targetHospitalId}, 'assigned')
             ON CONFLICT (date, type, hospital_id) 
             DO UPDATE SET 
               staff_id = ${staffId},
@@ -291,7 +316,7 @@ export async function POST(request: NextRequest) {
         
         result = await sql`
           INSERT INTO shifts (date, type, start_time, end_time, hospital_id, department, status)
-          VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${hospitalId}, ${department}, 'open')
+          VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${targetHospitalId}, ${department}, 'open')
           ON CONFLICT (date, type, hospital_id, department) 
           DO UPDATE SET 
             staff_id = NULL,
@@ -303,7 +328,7 @@ export async function POST(request: NextRequest) {
           // Fallback to old schema without department
           result = await sql`
             INSERT INTO shifts (date, type, start_time, end_time, hospital_id, status)
-            VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${hospitalId}, 'open')
+            VALUES (${date}, ${type}, ${startTime}, ${endTime}, ${targetHospitalId}, 'open')
             ON CONFLICT (date, type, hospital_id) 
             DO UPDATE SET 
               staff_id = NULL,
@@ -316,60 +341,82 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json({ success: true, shift: result[0] })
     }
-  } catch (error: any) {
-    console.error('Create/update shift error:', error)
-    console.error('Request data:', { date, staffId, hospitalId, type, department })
-    
-    // Provide more specific error messages
-    let errorMessage = 'Failed to save shift'
-    if (error.code === '23505') {
-      errorMessage = 'A shift already exists for this date, type, and department'
-    } else if (error.code === '23503') {
-      errorMessage = 'Invalid staff or hospital reference'
+    } catch (error: any) {
+      logger.error('Shifts', 'Create/update shift error', error)
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to save shift'
+      if (error.code === '23505') {
+        errorMessage = 'A shift already exists for this date, type, and department'
+      } else if (error.code === '23503') {
+        errorMessage = 'Invalid staff or hospital reference'
+      }
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: errorMessage,
+          details: error.message || 'Unknown error',
+          code: error.code
+        },
+        { status: 500 }
+      )
     }
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: errorMessage,
-        details: error.message || 'Unknown error',
-        code: error.code
-      },
-      { status: 500 }
-    )
-  }
+  })
 }
 
 // DELETE to remove a shift assignment
 export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const shiftId = searchParams.get('id')
+  return withHospitalAuth(request, async (authUser) => {
+    try {
+      const { searchParams } = new URL(request.url)
+      const shiftId = searchParams.get('id')
 
-    if (!shiftId) {
+      if (!shiftId) {
+        return NextResponse.json(
+          { success: false, error: 'Shift ID is required' },
+          { status: 400 }
+        )
+      }
+
+      // Verify shift belongs to user's hospital before deletion
+      const shiftCheck = await sql`
+        SELECT hospital_id FROM shifts WHERE id = ${shiftId}
+      `
+      
+      if (shiftCheck.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Shift not found' },
+          { status: 404 }
+        )
+      }
+
+      if (shiftCheck[0].hospital_id !== authUser.hospitalId) {
+        return NextResponse.json(
+          { success: false, error: 'Access denied - hospital isolation violation' },
+          { status: 403 }
+        )
+      }
+
+      // Make shift open instead of deleting
+      await sql`
+        UPDATE shifts 
+        SET staff_id = NULL, status = 'open'
+        WHERE id = ${shiftId}
+          AND hospital_id = ${authUser.hospitalId}
+      `
+
+      return NextResponse.json({ success: true })
+    } catch (error: any) {
+      logger.error('Shifts', 'Delete shift error', error)
       return NextResponse.json(
-        { success: false, error: 'Shift ID is required' },
-        { status: 400 }
+        { 
+          success: false, 
+          error: 'Failed to remove shift assignment',
+          details: error.message || 'Unknown error'
+        },
+        { status: 500 }
       )
     }
-
-    // Make shift open instead of deleting
-    await sql`
-      UPDATE shifts 
-      SET staff_id = NULL, status = 'open'
-      WHERE id = ${shiftId}
-    `
-
-    return NextResponse.json({ success: true })
-  } catch (error: any) {
-    console.error('Delete shift error:', error)
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to remove shift assignment',
-        details: error.message || 'Unknown error'
-      },
-      { status: 500 }
-    )
-  }
+  })
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
+import { logger } from '@/lib/logger'
 
 // Verify user is admin or manager
 async function verifyAdminOrManager(request: NextRequest) {
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(hospitalsWithStats)
   } catch (error) {
-    console.error('Error fetching hospitals:', error)
+    logger.error('HospitalsAPI', 'Error fetching hospitals', error)
     return NextResponse.json(
       { error: 'Failed to fetch hospitals' },
       { status: 500 }
@@ -67,14 +68,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Auth disabled temporarily
-  // const isAuthorized = await verifyAdminOrManager(request)
-  // if (!isAuthorized) {
-  //   return NextResponse.json(
-  //     { error: 'Unauthorized' },
-  //     { status: 401 }
-  //   )
-  // }
+  // Verify admin or manager authentication
+  const isAuthorized = await verifyAdminOrManager(request)
+  if (!isAuthorized) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Admin or Manager access required' },
+      { status: 401 }
+    )
+  }
   
   try {
     const body = await request.json()
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
       staff: 0
     })
   } catch (error) {
-    console.error('Error creating hospital:', error)
+    logger.error('HospitalsAPI', 'Error creating hospital', error)
     return NextResponse.json(
       { error: 'Failed to create hospital' },
       { status: 500 }

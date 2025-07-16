@@ -165,8 +165,19 @@ function StaffSchedulePage({ user, isLoading: authLoading, error: authError }: S
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken')
+  const handleLogout = async () => {
+    // Clear HTTP-only cookie via logout API
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      })
+    } catch (error) {
+      // Continue with logout even if API call fails
+    }
+    
+    // Clear any remaining localStorage/sessionStorage
+    localStorage.clear()
     sessionStorage.clear()
     router.push('/')
   }

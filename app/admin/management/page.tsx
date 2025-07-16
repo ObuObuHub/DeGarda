@@ -10,6 +10,7 @@ import { logger } from '@/lib/logger'
 import { validateClientRole, getClientUserRole } from '@/lib/clientAuth'
 import { hasPermission } from '@/lib/roleBasedAccess'
 import { useHospital } from '@/contexts/HospitalContext'
+import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 
 interface StaffMember {
   id: string
@@ -32,11 +33,14 @@ interface StaffWithCode {
   codeCreated: string | null
 }
 
-export default function ManagementPage() {
+interface ManagementProps extends WithAuthProps {
+  // Additional props if needed
+}
+
+function ManagementPage({ user, isLoading: authLoading, error: authError }: ManagementProps) {
   const router = useRouter()
   const { selectedHospitalId, selectedHospital } = useHospital()
   
-  const [userRole, setUserRole] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'staff' | 'codes' | 'settings'>('staff')
   
   // Staff management state
@@ -56,32 +60,21 @@ export default function ManagementPage() {
   })
 
   useEffect(() => {
-    // Check user role - redirect if not authorized
-    const token = localStorage.getItem('authToken')
-    if (token) {
-      try {
-        const decoded = JSON.parse(atob(token.split('.')[1]))
-        setUserRole(decoded.role)
-        
-        // Only staff and managers can access management
-        if (!['staff', 'manager'].includes(decoded.role)) {
-          router.push('/admin/dashboard')
-          return
-        }
-      } catch (error) {
-        console.error('Failed to decode token:', error)
+    if (user) {
+      // Only staff and managers can access management
+      if (!['staff', 'manager'].includes(user.role)) {
         router.push('/admin/dashboard')
         return
       }
-    }
-    
-    if (selectedHospitalId) {
-      loadStaffList()
-      if (userRole === 'manager') {
-        loadStaffWithCodes()
+      
+      if (selectedHospitalId) {
+        loadStaffList()
+        if (user.role === 'manager') {
+          loadStaffWithCodes()
+        }
       }
     }
-  }, [selectedHospitalId, userRole])
+  }, [user, selectedHospitalId, router])
 
   const loadStaffList = async () => {
     if (!selectedHospitalId) return
@@ -90,7 +83,9 @@ export default function ManagementPage() {
     setError('')
     
     try {
-      const response = await fetch(`/api/staff?hospitalId=${selectedHospitalId}`)
+      const response = await fetch(`/api/staff?hospitalId=${selectedHospitalId}`, {
+        credentials: 'include'
+      })
       const data = await response.json()
       
       if (response.ok) {
@@ -110,7 +105,9 @@ export default function ManagementPage() {
     if (!selectedHospitalId) return
     
     try {
-      const response = await fetch(`/api/admin/staff-access-codes?hospitalId=${selectedHospitalId}`)
+      const response = await fetch(`/api/admin/staff-access-codes?hospitalId=${selectedHospitalId}`, {
+        credentials: 'include'
+      })
       const data = await response.json()
       
       if (response.ok) {
@@ -138,6 +135,7 @@ export default function ManagementPage() {
       const response = await fetch('/api/staff', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           ...newStaff,
           hospitalId: selectedHospitalId
@@ -151,7 +149,7 @@ export default function ManagementPage() {
         setNewStaff({ name: '', email: '', type: 'medic', specialization: '' })
         setShowAddStaffModal(false)
         loadStaffList()
-        if (userRole === 'manager') {
+        if (user?.role === 'manager') {
           loadStaffWithCodes()
         }
       } else {
@@ -186,6 +184,7 @@ export default function ManagementPage() {
       const response = await fetch('/api/admin/access-codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'bulk-generate' })
       })
       
@@ -206,7 +205,7 @@ export default function ManagementPage() {
   }
 
   // Show loading while checking role
-  if (userRole === null) {
+  if (!user) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -252,7 +251,7 @@ export default function ManagementPage() {
         >
           Staff Management
         </button>
-        {userRole === 'manager' && (
+        {user?.role === 'manager' && (
           <button
             onClick={() => setActiveTab('codes')}
             className={`px-4 py-2 font-medium text-sm ${
@@ -282,7 +281,7 @@ export default function ManagementPage() {
               >
                 Refresh
               </Button>
-              {hasPermission(userRole as any, 'staff', 'create') && (
+              {hasPermission(user?.role as any, 'staff', 'create') && (
                 <Button
                   onClick={() => setShowAddStaffModal(true)}
                   disabled={isLoading}
@@ -339,7 +338,7 @@ export default function ManagementPage() {
       )}
 
       {/* Access Codes Tab (Manager Only) */}
-      {activeTab === 'codes' && userRole === 'manager' && (
+      {activeTab === 'codes' && user?.role === 'manager' && (
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-label-primary">
@@ -522,3 +521,5 @@ export default function ManagementPage() {
     </div>
   )
 }
+
+export default withAuth(ManagementPage)

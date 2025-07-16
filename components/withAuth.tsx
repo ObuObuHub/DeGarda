@@ -45,17 +45,12 @@ function withAuth<P extends object>(
         setIsLoading(true)
         setError(null)
 
-        const token = localStorage.getItem('authToken')
-        if (!token) {
-          handleAuthError('No token found')
-          return
-        }
-
+        // Token is now in HTTP-only cookie, so we just verify directly
         const response = await fetch('/api/auth/verify', {
           headers: { 
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          credentials: 'include' // Include cookies in request
         })
 
         if (!response.ok) {
@@ -75,12 +70,12 @@ function withAuth<P extends object>(
         }
 
         const userData: AuthUser = {
-          userId: data.userId,
-          name: data.name,
-          email: data.email,
-          role: data.role,
-          hospitalId: data.hospitalId,
-          hospitalName: data.hospitalName
+          userId: data.user.userId,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          hospitalId: data.user.hospitalId,
+          hospitalName: data.user.hospitalName
         }
 
         // Check role requirements
@@ -108,8 +103,8 @@ function withAuth<P extends object>(
       setError(errorMessage)
       setUser(null)
       
-      // Clear invalid token
-      localStorage.removeItem('authToken')
+      // Clear any remaining localStorage/sessionStorage
+      localStorage.clear()
       sessionStorage.clear()
       
       // Redirect to login or specified page

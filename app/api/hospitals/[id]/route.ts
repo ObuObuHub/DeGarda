@@ -25,14 +25,14 @@ export async function PATCH(
   props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
-  // Auth disabled temporarily
-  // const isAuthorized = await verifyAdminOrManager(request)
-  // if (!isAuthorized) {
-  //   return NextResponse.json(
-  //     { error: 'Unauthorized' },
-  //     { status: 401 }
-  //   )
-  // }
+  // Verify admin or manager authentication
+  const isAuthorized = await verifyAdminOrManager(request)
+  if (!isAuthorized) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Admin or Manager access required' },
+      { status: 401 }
+    )
+  }
   
   try {
     const body = await request.json()
@@ -103,14 +103,14 @@ export async function DELETE(
   props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
-  // Auth disabled temporarily
-  // const isAuthorized = await verifyAdminOrManager(request)
-  // if (!isAuthorized) {
-  //   return NextResponse.json(
-  //     { error: 'Unauthorized' },
-  //     { status: 401 }
-  //   )
-  // }
+  // Verify admin or manager authentication
+  const isAuthorized = await verifyAdminOrManager(request)
+  if (!isAuthorized) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Admin or Manager access required' },
+      { status: 401 }
+    )
+  }
   
   try {
     const hospitalId = parseInt(params.id)

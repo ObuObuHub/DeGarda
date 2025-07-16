@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
+import { logger } from '@/lib/logger'
 
 // Verify user is admin or manager
 async function verifyAdminOrManager() {
@@ -23,14 +24,14 @@ async function verifyAdminOrManager() {
 // DELETE all shifts for a specific month/year and hospital
 export async function DELETE(request: NextRequest) {
   try {
-    // Auth disabled temporarily
-    // const isAuthorized = await verifyAdminOrManager()
-    // if (!isAuthorized) {
-    //   return NextResponse.json(
-    //     { success: false, error: 'Unauthorized' },
-    //     { status: 401 }
-    //   )
-    // }
+    // Verify admin or manager authentication
+    const isAuthorized = await verifyAdminOrManager()
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Admin or Manager access required' },
+        { status: 401 }
+      )
+    }
 
     const { searchParams } = new URL(request.url)
     const year = searchParams.get('year')
@@ -58,7 +59,11 @@ export async function DELETE(request: NextRequest) {
     const endDate = `${year}-${String(sqlMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
     // Log the deletion range for safety
-    console.log(`Deleting shifts for hospital ${hospitalId} from ${startDate} to ${endDate}`)
+    logger.info('ShiftsClear', `Deleting shifts for hospital ${hospitalId} from ${startDate} to ${endDate}`, {
+      hospitalId,
+      startDate,
+      endDate
+    })
     
     // Delete all shifts for the month
     const result = await sql`
@@ -75,7 +80,7 @@ export async function DELETE(request: NextRequest) {
       deletedCount: result.length
     })
   } catch (error: any) {
-    console.error('Clear shifts error:', error)
+    logger.error('ShiftsClear', 'Clear shifts error', error)
     return NextResponse.json(
       { 
         success: false, 

@@ -3,8 +3,36 @@ import { migrationRunner, migrations } from '@/lib/migrations'
 import { seeder } from '@/lib/seeders'
 import { logger } from '@/lib/logger'
 
+// Admin-only database management endpoint
+// This should only be accessible to system administrators
 export async function POST(request: NextRequest) {
   try {
+    // Check for admin API key in environment
+    const adminApiKey = process.env.ADMIN_API_KEY
+    if (!adminApiKey) {
+      logger.error('DatabaseManage', 'Admin API key not configured')
+      return NextResponse.json({
+        error: 'Database management is not configured'
+      }, { status: 503 })
+    }
+
+    // Verify admin API key
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      logger.warn('DatabaseManage', 'Missing or invalid authorization header')
+      return NextResponse.json({
+        error: 'Admin authentication required'
+      }, { status: 401 })
+    }
+
+    const providedKey = authHeader.slice(7) // Remove 'Bearer ' prefix
+    if (providedKey !== adminApiKey) {
+      logger.warn('DatabaseManage', 'Invalid admin API key attempt')
+      return NextResponse.json({
+        error: 'Invalid admin credentials'
+      }, { status: 401 })
+    }
+
     const { action } = await request.json()
 
     switch (action) {
@@ -54,8 +82,34 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Check for admin API key in environment
+    const adminApiKey = process.env.ADMIN_API_KEY
+    if (!adminApiKey) {
+      logger.error('DatabaseManage', 'Admin API key not configured')
+      return NextResponse.json({
+        error: 'Database management is not configured'
+      }, { status: 503 })
+    }
+
+    // Verify admin API key
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      logger.warn('DatabaseManage', 'Missing or invalid authorization header')
+      return NextResponse.json({
+        error: 'Admin authentication required'
+      }, { status: 401 })
+    }
+
+    const providedKey = authHeader.slice(7) // Remove 'Bearer ' prefix
+    if (providedKey !== adminApiKey) {
+      logger.warn('DatabaseManage', 'Invalid admin API key attempt')
+      return NextResponse.json({
+        error: 'Invalid admin credentials'
+      }, { status: 401 })
+    }
+
     // Get database status
     const { sql } = await import('@/lib/db')
     
