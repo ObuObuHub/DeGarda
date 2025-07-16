@@ -17,7 +17,8 @@ export default function StaffSchedulePage() {
   const [currentStaffId, setCurrentStaffId] = useState<string | null>(null)
   const [currentStaffName, setCurrentStaffName] = useState<string | null>(null)
   const [currentStaffDepartment, setCurrentStaffDepartment] = useState<string | null>(null)
-  const [myReservations, setMyReservations] = useState<string[]>([])
+  const [myReservations, setMyReservations] = useState<any[]>([])
+  const [isLoadingReservations, setIsLoadingReservations] = useState(false)
   
   const currentDate = new Date()
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth())
@@ -40,24 +41,28 @@ export default function StaffSchedulePage() {
   }, [selectedHospitalId, router])
 
   useEffect(() => {
-    if (selectedHospitalId) {
+    if (selectedHospitalId && currentStaffId) {
       loadShifts(viewYear, viewMonth, selectedHospitalId)
       loadMyReservations()
     }
-  }, [viewYear, viewMonth, selectedHospitalId, loadShifts])
+  }, [viewYear, viewMonth, selectedHospitalId, currentStaffId, loadShifts])
 
   const loadMyReservations = async () => {
     if (!currentStaffId) return
     
+    setIsLoadingReservations(true)
     try {
-      // For now, we'll track reservations in localStorage
-      // In production, this would be an API call
-      const stored = localStorage.getItem(`reservations_${currentStaffId}`)
-      if (stored) {
-        setMyReservations(JSON.parse(stored))
+      const response = await fetch(`/api/reservations?staffId=${currentStaffId}&month=${viewMonth + 1}&year=${viewYear}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setMyReservations(data.reservations || [])
       }
     } catch (error) {
       console.error('Failed to load reservations:', error)
+      showToast('error', 'Eroare', 'Nu s-au putut încărca rezervările')
+    } finally {
+      setIsLoadingReservations(false)
     }
   }
 
@@ -78,25 +83,57 @@ export default function StaffSchedulePage() {
     }
     
     // Check if I already have 3 reservations this month
-    const monthReservations = myReservations.filter(r => r.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`))
-    if (monthReservations.length >= 3) {
+    if (myReservations.length >= 3) {
       showToast('error', 'Limită atinsă', 'Poți rezerva maxim 3 gărzi pe lună')
       return
     }
     
     // Check if already reserved
-    if (myReservations.includes(date)) {
+    const existingReservation = myReservations.find(r => r.shift_date === date)
+    
+    if (existingReservation) {
       // Cancel reservation
-      const newReservations = myReservations.filter(r => r !== date)
-      setMyReservations(newReservations)
-      localStorage.setItem(`reservations_${currentStaffId}`, JSON.stringify(newReservations))
-      showToast('success', 'Rezervare anulată', 'Rezervarea a fost anulată')
+      try {
+        const response = await fetch(`/api/reservations?staffId=${currentStaffId}&shiftDate=${date}`, {
+          method: 'DELETE'
+        })
+        
+        if (response.ok) {
+          await loadMyReservations() // Reload reservations
+          showToast('success', 'Rezervare anulată', 'Rezervarea a fost anulată')
+        } else {
+          const data = await response.json()
+          showToast('error', 'Eroare', data.error || 'Nu s-a putut anula rezervarea')
+        }
+      } catch (error) {
+        console.error('Failed to cancel reservation:', error)
+        showToast('error', 'Eroare', 'Nu s-a putut anula rezervarea')
+      }
     } else {
       // Make reservation
-      const newReservations = [...myReservations, date]
-      setMyReservations(newReservations)
-      localStorage.setItem(`reservations_${currentStaffId}`, JSON.stringify(newReservations))
-      showToast('success', 'Rezervare confirmată', 'Garda a fost rezervată pentru tine')
+      try {
+        const response = await fetch('/api/reservations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            staffId: currentStaffId,
+            shiftDate: date,
+            department: currentStaffDepartment
+          })
+        })
+        
+        const data = await response.json()
+        
+        if (data.success) {
+          await loadMyReservations() // Reload reservations
+          showToast('success', 'Rezervare confirmată', 'Garda a fost rezervată pentru tine')
+        } else {
+          showToast('error', 'Eroare', data.error || 'Nu s-a putut crea rezervarea')
+        }
+      } catch (error) {
+        console.error('Failed to create reservation:', error)
+        showToast('error', 'Eroare', 'Nu s-a putut crea rezervarea')
+      }
     }
   }
 
@@ -127,16 +164,18 @@ export default function StaffSchedulePage() {
 
   // Enhance shifts with reservation info
   const enhancedShifts = { ...shifts }
-  myReservations.forEach(date => {
+  myReservations.forEach(reservation => {
+    const date = reservation.shift_date
     if (!enhancedShifts[date]) {
       enhancedShifts[date] = {
-        id: `reservation_${date}`,
+        id: `reservation_${reservation.id}`,
         date,
         status: 'reserved',
         reservedBy: currentStaffId,
         reservedByName: currentStaffName,
         doctorId: null,
-        doctorName: null
+        doctorName: null,
+        department: reservation.department
       }
     }
   })
@@ -217,13 +256,13 @@ export default function StaffSchedulePage() {
             <div>
               <p className="text-label-secondary">Rezervări active</p>
               <p className="text-xl font-bold text-system-blue">
-                {myReservations.filter(r => r.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`)).length}
+                {myReservations.length}
               </p>
             </div>
             <div>
               <p className="text-label-secondary">Rezervări disponibile</p>
               <p className="text-xl font-bold text-system-green">
-                {3 - myReservations.filter(r => r.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`)).length}
+                {3 - myReservations.length}
               </p>
             </div>
           </div>

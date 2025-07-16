@@ -101,15 +101,25 @@ export default function SchedulePage() {
     }
   }, [viewYear, viewMonth, selectedHospitalId, loadShifts])
 
-  // Load user role and swaps
+  // Load user role and handle URL tab parameter
   useEffect(() => {
     const role = getClientUserRole()
     setUserRole(role)
     
-    if (selectedHospitalId && activeTab === 'swaps') {
+    // Check for tab parameter in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const tabParam = urlParams.get('tab')
+    if (tabParam === 'swaps' && role === 'manager') {
+      setActiveTab('swaps')
+    }
+  }, [])
+
+  // Load swaps when needed
+  useEffect(() => {
+    if (selectedHospitalId && activeTab === 'swaps' && userRole === 'manager') {
       loadSwaps()
     }
-  }, [selectedHospitalId, activeTab, swapTab])
+  }, [selectedHospitalId, activeTab, swapTab, userRole])
 
   const loadSwaps = async () => {
     if (!selectedHospitalId) return
@@ -127,22 +137,57 @@ export default function SchedulePage() {
   }
 
   const handleSwapAction = async (swapId: string, action: 'approved' | 'rejected') => {
+    // Verify manager role
+    if (userRole !== 'manager') {
+      showToast('error', 'Acces refuzat', 'Doar managerii pot aproba schimburile')
+      return
+    }
+
     try {
+      // Get current user ID from token for audit trail
+      const token = localStorage.getItem('authToken')
+      let reviewedBy = null
+      if (token) {
+        try {
+          const decoded = JSON.parse(atob(token.split('.')[1]))
+          reviewedBy = decoded.userId
+        } catch (e) {
+          console.warn('Could not decode token for reviewer ID')
+        }
+      }
+
       const response = await fetch(`/api/swaps/${swapId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: action })
+        body: JSON.stringify({ 
+          status: action,
+          reviewedBy: reviewedBy
+        })
       })
 
       if (response.ok) {
-        showToast('success', 'Success', `Swap request ${action}`)
+        const actionText = action === 'approved' ? 'aprobată' : 'respinsă'
+        showToast('success', 'Succes', `Cererea de schimb a fost ${actionText}`)
         loadSwaps()
+        
+        // Log the action
+        logger.info('Schedule', 'Swap request processed', {
+          swapId,
+          action,
+          reviewedBy,
+          hospitalId: selectedHospitalId
+        })
       } else {
-        showToast('error', 'Error', `Failed to ${action} swap request`)
+        const data = await response.json()
+        showToast('error', 'Eroare', data.error || `Nu s-a putut ${action === 'approved' ? 'aproba' : 'respinge'} cererea`)
       }
     } catch (error) {
-      logger.error('Schedule', 'Failed to update swap', error)
-      showToast('error', 'Error', 'Failed to update swap request')
+      logger.error('Schedule', 'Failed to update swap', error, { 
+        swapId, 
+        action, 
+        hospitalId: selectedHospitalId 
+      })
+      showToast('error', 'Eroare', 'Nu s-a putut procesa cererea de schimb')
     }
   }
 

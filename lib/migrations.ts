@@ -311,6 +311,47 @@ export const migrations: Migration[] = [
     down: async () => {
       await sql`DROP TABLE IF EXISTS access_codes CASCADE`
     }
+  },
+
+  {
+    version: 7,
+    name: 'fix_shift_reservations_table',
+    up: async () => {
+      // Drop the old shift_reservations table that incorrectly referenced shift_id
+      await sql`DROP TABLE IF EXISTS shift_reservations CASCADE`
+      
+      // Create new shift_reservations table for staff reservation requests
+      await sql`
+        CREATE TABLE IF NOT EXISTS shift_reservations (
+          id SERIAL PRIMARY KEY,
+          staff_id INTEGER NOT NULL REFERENCES staff(id),
+          hospital_id INTEGER NOT NULL REFERENCES hospitals(id),
+          shift_date DATE NOT NULL,
+          department VARCHAR(255),
+          status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'fulfilled')),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(staff_id, shift_date)
+        )
+      `
+      
+      await sql`CREATE INDEX IF NOT EXISTS idx_reservations_staff_hospital ON shift_reservations(staff_id, hospital_id)`
+      await sql`CREATE INDEX IF NOT EXISTS idx_reservations_date ON shift_reservations(shift_date)`
+      await sql`CREATE INDEX IF NOT EXISTS idx_reservations_status ON shift_reservations(status)`
+    },
+    down: async () => {
+      await sql`DROP TABLE IF EXISTS shift_reservations CASCADE`
+      
+      // Restore old table structure
+      await sql`
+        CREATE TABLE IF NOT EXISTS shift_reservations (
+          id SERIAL PRIMARY KEY,
+          shift_id INTEGER NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+          staff_id INTEGER NOT NULL REFERENCES staff(id),
+          reserved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(shift_id, staff_id)
+        )
+      `
+    }
   }
 ]
 
