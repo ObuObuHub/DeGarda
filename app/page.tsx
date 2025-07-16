@@ -36,9 +36,9 @@ export default function HospitalSelectionPage() {
   }
 
   const handleSelectHospital = (hospitalId: string) => {
-    // Store hospital selection and go directly to dashboard
+    // Store hospital selection and go to login
     localStorage.setItem('selectedHospitalId', hospitalId)
-    router.push('/admin/dashboard')
+    router.push(`/${hospitalId}/login`)
   }
 
   return (
@@ -93,7 +93,7 @@ export default function HospitalSelectionPage() {
                       fullWidth
                       onClick={() => {
                         localStorage.setItem('selectedHospitalId', hospital.id)
-                        router.push('/staff')
+                        router.push(`/${hospital.id}/login?type=staff`)
                       }}
                     >
                       Portal Personal Medical

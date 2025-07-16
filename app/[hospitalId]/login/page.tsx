@@ -17,19 +17,22 @@ export default function HospitalLoginPage() {
   const params = useParams()
   const hospitalId = params.hospitalId as string
   
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [accessCode, setAccessCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [hospital, setHospital] = useState<Hospital | null>(null)
 
   useEffect(() => {
-    // Check if hospital was selected
-    const selectedHospitalId = sessionStorage.getItem('selectedHospitalId')
+    // Check if hospital was selected (check both localStorage and sessionStorage)
+    const selectedHospitalId = localStorage.getItem('selectedHospitalId') || sessionStorage.getItem('selectedHospitalId')
     if (!selectedHospitalId || selectedHospitalId !== hospitalId) {
       router.push('/')
       return
     }
+    
+    // Ensure both storages have the value
+    localStorage.setItem('selectedHospitalId', hospitalId)
+    sessionStorage.setItem('selectedHospitalId', hospitalId)
 
     fetchHospital()
   }, [hospitalId, router])
@@ -55,27 +58,32 @@ export default function HospitalLoginPage() {
     setError('')
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/access-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email, 
-          password,
-          hospitalId 
+          accessCode
         })
       })
 
       const data = await res.json()
 
       if (data.success) {
-        // Store hospital ID in cookie/session for future use
+        // Store auth token and user info
+        localStorage.setItem('authToken', data.token || 'authenticated')
         localStorage.setItem('selectedHospitalId', hospitalId)
-        router.push('/admin/dashboard')
+        
+        // Route based on user role
+        if (data.user?.role === 'manager' || data.user?.role === 'admin') {
+          router.push('/admin/dashboard')
+        } else {
+          router.push('/staff/schedule')
+        }
       } else {
-        setError(data.error || 'Login failed')
+        setError(data.error || 'Cod de acces invalid')
       }
     } catch (err) {
-      setError('Connection error')
+      setError('Eroare de conexiune')
     } finally {
       setIsLoading(false)
     }
@@ -121,20 +129,11 @@ export default function HospitalLoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-6">
           <Input
-            type="email"
-            label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="doctor@spital.ro"
-            required
-          />
-
-          <Input
-            type="password"
-            label="Parolă"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Introdu parola"
+            type="text"
+            label="Cod de Acces"
+            value={accessCode}
+            onChange={(e) => setAccessCode(e.target.value)}
+            placeholder="Introdu codul de acces"
             required
           />
 
@@ -145,7 +144,7 @@ export default function HospitalLoginPage() {
           <Button 
             type="submit"
             fullWidth
-            disabled={isLoading}
+            disabled={isLoading || !accessCode.trim()}
           >
             {isLoading ? 'Se conectează...' : 'Conectare'}
           </Button>
