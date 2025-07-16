@@ -3,22 +3,14 @@
 import { useRouter, usePathname } from 'next/navigation'
 import { Icon } from '@/components/ui/Icon'
 import { useHospital } from '@/contexts/HospitalContext'
+import { useEffect, useState } from 'react'
+import { getAllowedNavItems, UserRole } from '@/lib/roleBasedAccess'
 
 interface NavItem {
   label: string
   href: string
   icon: string
 }
-
-const navItems: NavItem[] = [
-  { label: 'Panou Principal', href: '/admin/dashboard', icon: 'dashboard' },
-  { label: 'Program Gărzi', href: '/admin/schedule', icon: 'calendar' },
-  { label: 'Personal', href: '/admin/staff', icon: 'users' },
-  { label: 'Spitale', href: '/admin/hospitals', icon: 'hospital' },
-  { label: 'Coduri Acces', href: '/admin/access-codes', icon: 'key' },
-  { label: 'Cereri Schimb', href: '/admin/swaps', icon: 'swap' },
-  { label: 'Setări', href: '/admin/settings', icon: 'settings' },
-]
 
 interface SidebarProps {
   onClose?: () => void
@@ -28,6 +20,26 @@ export function Sidebar({ onClose }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { selectedHospital } = useHospital()
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [navItems, setNavItems] = useState<NavItem[]>([])
+
+  useEffect(() => {
+    // Get user role from auth token
+    const token = localStorage.getItem('authToken')
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split('.')[1]))
+        const role = decoded.role as UserRole
+        setUserRole(role)
+        
+        // Get allowed navigation items for this role
+        const allowedItems = getAllowedNavItems(role)
+        setNavItems(allowedItems)
+      } catch (error) {
+        console.error('Failed to decode token:', error)
+      }
+    }
+  }, [])
 
   return (
     <aside className="w-64 bg-white border-r border-separator h-full flex flex-col">

@@ -40,8 +40,7 @@ export class AccessCodeManager {
   async generateAccessCode(
     hospitalId: number, 
     role: 'staff' | 'manager',
-    staffId?: number,
-    expiresInDays: number = 30
+    staffId?: number
   ): Promise<string> {
     try {
       // Generate simple codes based on role
@@ -62,21 +61,17 @@ export class AccessCodeManager {
       // Hash the code for database storage
       const hashedCode = await bcrypt.hash(accessCode, 10)
       
-      // Set expiration
-      const expiresAt = new Date()
-      expiresAt.setDate(expiresAt.getDate() + expiresInDays)
-      
-      // Store in database
+      // Store in database with no expiration (permanent codes)
       await sql`
         INSERT INTO access_codes (code_hash, hospital_id, role, staff_id, expires_at, is_active)
-        VALUES (${hashedCode}, ${hospitalId}, ${role}, ${staffId || null}, ${expiresAt.toISOString()}, true)
+        VALUES (${hashedCode}, ${hospitalId}, ${role}, ${staffId || null}, NULL, true)
       `
       
-      logger.info('AccessCodes', 'Access code generated', {
+      logger.info('AccessCodes', 'Permanent access code generated', {
         hospitalId,
         role,
         staffId,
-        expiresInDays
+        code: accessCode.substring(0, 2) + '***'
       })
       
       return accessCode
@@ -243,6 +238,73 @@ export class AccessCodeManager {
       
     } catch (error) {
       logger.error('AccessCodes', 'Failed to list codes', error)
+      return []
+    }
+  }
+  
+  /**
+   * Get all access codes for a hospital (for managers to see actual codes)
+   */
+  async getHospitalAccessCodes(hospitalId: number): Promise<Array<{
+    staffId: number,
+    staffName: string,
+    accessCode: string,
+    createdAt: string
+  }>> {
+    try {
+      // Get all staff with access codes for this hospital
+      const staffWithCodes = await sql`
+        SELECT 
+          s.id as staff_id,
+          s.name as staff_name,
+          ac.code_hash,
+          ac.created_at
+        FROM staff s
+        JOIN access_codes ac ON s.id = ac.staff_id
+        WHERE s.hospital_id = ${hospitalId}
+        AND s.is_active = true
+        AND ac.is_active = true
+        ORDER BY s.name
+      `
+      
+      // We need to find the actual codes by testing common patterns
+      // This is a brute force approach for simple codes
+      const result = []
+      
+      for (const staff of staffWithCodes) {
+        let foundCode = null
+        
+        // Test simple patterns: 2 letters + 1 number
+        for (let a = 97; a <= 122; a++) { // a-z
+          for (let b = 97; b <= 122; b++) { // a-z
+            for (let n = 0; n <= 9; n++) { // 0-9
+              const testCode = String.fromCharCode(a) + String.fromCharCode(b) + n
+              
+              const isMatch = await bcrypt.compare(testCode, staff.code_hash)
+              if (isMatch) {
+                foundCode = testCode
+                break
+              }
+            }
+            if (foundCode) break
+          }
+          if (foundCode) break
+        }
+        
+        if (foundCode) {
+          result.push({
+            staffId: staff.staff_id,
+            staffName: staff.staff_name,
+            accessCode: foundCode,
+            createdAt: new Date(staff.created_at).toLocaleDateString()
+          })
+        }
+      }
+      
+      return result
+      
+    } catch (error) {
+      logger.error('AccessCodes', 'Failed to get hospital access codes', error)
       return []
     }
   }

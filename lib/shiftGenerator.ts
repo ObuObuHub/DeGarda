@@ -326,30 +326,67 @@ export function generateDepartmentSchedule(
   }
   
   // Generate shifts using optimized algorithm
-  const result = generateMonthlyScheduleOptimized(
-    year,
-    month,
-    departmentDoctors,
-    existingShifts,
-    { shiftType }
-  )
+  try {
+    const result = generateMonthlyScheduleOptimized(
+      year,
+      month,
+      departmentDoctors,
+      existingShifts,
+      { shiftType }
+    )
+    
+    console.log('✅ Optimized generation successful:', {
+      inputDoctors: departmentDoctors.length,
+      outputShifts: result.shifts.length,
+      stats: result.stats
+    })
+    
+    return {
+      shifts: result.shifts.map(shift => ({
+        ...shift,
+        department,
+        type: shiftType
+      })),
+      stats: {
+        ...result.stats,
+        departmentStats: {
+          [department]: {
+            shiftsNeeded: result.stats.totalShiftsNeeded,
+            shiftsGenerated: result.stats.totalShiftsGenerated,
+            unassignedDates: result.stats.unassignedDates
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('❌ Optimized generation failed, falling back to basic algorithm:', error)
+    
+    // Fallback to basic algorithm
+    const result = generateMonthlySchedule(
+      year,
+      month,
+      departmentDoctors,
+      existingShifts,
+      { shiftType }
+    )
   
-  // Add department to each shift
-  const shiftsWithDept = result.shifts.map(shift => ({
-    ...shift,
-    department,
-    type: shiftType
-  }))
-  
-  return {
-    shifts: shiftsWithDept,
-    stats: {
-      ...result.stats,
-      departmentStats: {
-        [department]: {
-          shiftsNeeded: result.stats.totalShiftsNeeded,
-          shiftsGenerated: result.stats.totalShiftsGenerated,
-          unassignedDates: result.stats.unassignedDates
+    // Add department to each shift
+    const shiftsWithDept = result.shifts.map(shift => ({
+      ...shift,
+      department,
+      type: shiftType
+    }))
+    
+    return {
+      shifts: shiftsWithDept,
+      stats: {
+        ...result.stats,
+        departmentStats: {
+          [department]: {
+            shiftsNeeded: result.stats.totalShiftsNeeded,
+            shiftsGenerated: result.stats.totalShiftsGenerated,
+            unassignedDates: result.stats.unassignedDates
+          }
         }
       }
     }

@@ -8,6 +8,7 @@ import { Calendar } from '@/components/Calendar'
 import { AssignShiftModal } from '@/components/AssignShiftModal'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { ShiftOptionsModal } from '@/components/ShiftOptionsModal'
+import { getClientUserRole } from '@/lib/clientAuth'
 import { 
   generateDepartmentSchedule, 
   VALID_DEPARTMENTS, 
@@ -41,6 +42,12 @@ export default function SchedulePage() {
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all')
   const [pendingShiftDepartment, setPendingShiftDepartment] = useState<string | null>(null)
+  
+  // Swap management state
+  const [activeTab, setActiveTab] = useState<'schedule' | 'swaps'>('schedule')
+  const [swapTab, setSwapTab] = useState<'pending' | 'approved' | 'rejected'>('pending')
+  const [swaps, setSwaps] = useState<any[]>([])
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   const currentDate = new Date()
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth())
@@ -93,6 +100,51 @@ export default function SchedulePage() {
       })
     }
   }, [viewYear, viewMonth, selectedHospitalId, loadShifts])
+
+  // Load user role and swaps
+  useEffect(() => {
+    const role = getClientUserRole()
+    setUserRole(role)
+    
+    if (selectedHospitalId && activeTab === 'swaps') {
+      loadSwaps()
+    }
+  }, [selectedHospitalId, activeTab, swapTab])
+
+  const loadSwaps = async () => {
+    if (!selectedHospitalId) return
+    
+    try {
+      const response = await fetch(`/api/swaps?status=${swapTab}&hospitalId=${selectedHospitalId}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setSwaps(data.swaps || [])
+      }
+    } catch (error) {
+      logger.error('Schedule', 'Failed to load swaps', error)
+    }
+  }
+
+  const handleSwapAction = async (swapId: string, action: 'approved' | 'rejected') => {
+    try {
+      const response = await fetch(`/api/swaps/${swapId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: action })
+      })
+
+      if (response.ok) {
+        showToast('success', 'Success', `Swap request ${action}`)
+        loadSwaps()
+      } else {
+        showToast('error', 'Error', `Failed to ${action} swap request`)
+      }
+    } catch (error) {
+      logger.error('Schedule', 'Failed to update swap', error)
+      showToast('error', 'Error', 'Failed to update swap request')
+    }
+  }
 
   const handleDayClick = (date: string) => {
     setSelectedDate(date)
@@ -455,64 +507,93 @@ export default function SchedulePage() {
     <div className="p-4 lg:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <div>
             <h1 className="text-xl lg:text-2xl font-bold text-label-primary">
-              Program Gărzi
+              Program Gărzi & Schimburi
             </h1>
             <p className="text-label-secondary text-sm mt-1">
-              {selectedHospital?.name || 'Gestionează programul gărzilor'}
+              {selectedHospital?.name || 'Gestionează programul gărzilor și schimburile'}
             </p>
           </div>
-          <div className="flex gap-2">
-            <select
-              className="px-3 py-2 bg-background-secondary border border-transparent rounded-ios text-sm"
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
+          
+          {/* Tab Navigation */}
+          <div className="flex border-b border-separator">
+            <button
+              onClick={() => setActiveTab('schedule')}
+              className={`px-4 py-2 font-medium text-sm ${
+                activeTab === 'schedule'
+                  ? 'text-system-blue border-b-2 border-system-blue'
+                  : 'text-label-secondary hover:text-label-primary'
+              }`}
             >
-              <option value="all">Toate departamentele</option>
-              <option value="ATI">ATI</option>
-              <option value="Urgențe">Urgențe</option>
-              <option value="Laborator">Laborator</option>
-              <option value="Medicină Internă">Medicină Internă</option>
-              <option value="Chirurgie">Chirurgie</option>
-            </select>
-            <Button 
-              variant="secondary" 
-              onClick={handleExportExcel} 
-              icon="download"
-              size="sm"
-              className="text-sm"
-            >
-              <span className="hidden sm:inline">Export Excel</span>
-              <span className="sm:hidden">Export</span>
-            </Button>
-            {selectedDepartment !== 'all' && (
+              Calendar
+            </button>
+            {userRole === 'manager' && (
+              <button
+                onClick={() => setActiveTab('swaps')}
+                className={`px-4 py-2 font-medium text-sm ${
+                  activeTab === 'swaps'
+                    ? 'text-system-blue border-b-2 border-system-blue'
+                    : 'text-label-secondary hover:text-label-primary'
+                }`}
+              >
+                Schimburi
+              </button>
+            )}
+          </div>
+        </div>
+        {/* Schedule Tab Content */}
+        {activeTab === 'schedule' && (
+          <>
+            <div className="flex gap-2 mb-4">
+              <select
+                className="px-3 py-2 bg-background-secondary border border-transparent rounded-ios text-sm"
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+              >
+                <option value="all">Toate departamentele</option>
+                <option value="ATI">ATI</option>
+                <option value="Urgențe">Urgențe</option>
+                <option value="Laborator">Laborator</option>
+                <option value="Medicină Internă">Medicină Internă</option>
+                <option value="Chirurgie">Chirurgie</option>
+              </select>
               <Button 
-                onClick={handleGenerateSchedule} 
-                icon="sparkles"
+                variant="secondary" 
+                onClick={handleExportExcel} 
+                icon="download"
                 size="sm"
                 className="text-sm"
               >
-                <span className="hidden sm:inline">Generează Program</span>
-                <span className="sm:hidden">Generează</span>
+                <span className="hidden sm:inline">Export Excel</span>
+                <span className="sm:hidden">Export</span>
               </Button>
-            )}
-            <Button 
-              onClick={handleClearSchedule} 
-              variant="danger"
-              icon="trash"
-              size="sm"
-              className="text-sm"
-            >
-              <span className="hidden sm:inline">Șterge</span>
-              <span className="sm:hidden">Șterge</span>
-            </Button>
-          </div>
-        </div>
+              {selectedDepartment !== 'all' && (
+                <Button 
+                  onClick={handleGenerateSchedule} 
+                  icon="sparkles"
+                  size="sm"
+                  className="text-sm"
+                >
+                  <span className="hidden sm:inline">Generează Program</span>
+                  <span className="sm:hidden">Generează</span>
+                </Button>
+              )}
+              <Button 
+                onClick={handleClearSchedule} 
+                variant="danger"
+                icon="trash"
+                size="sm"
+                className="text-sm"
+              >
+                <span className="hidden sm:inline">Șterge</span>
+                <span className="sm:hidden">Șterge</span>
+              </Button>
+            </div>
 
-        {/* Calendar */}
-        <Card className="p-6">
+            {/* Calendar */}
+            <Card className="p-6">
               {/* Month Navigation */}
               <div className="flex justify-between items-center mb-6">
                 <Button variant="ghost" size="sm" onClick={handlePrevMonth} icon="chevronLeft">
@@ -547,56 +628,169 @@ export default function SchedulePage() {
                   doctors={doctors}
                 />
               )}
-        </Card>
-      </div>
+            </Card>
+          </>
+        )}
 
-      <ShiftOptionsModal
-        isOpen={showOptionsModal}
-        onClose={() => {
-          setShowOptionsModal(false)
-          setSelectedDate(null)
-        }}
-        date={selectedDate || ''}
-        onAssign={() => {
-          setShowOptionsModal(false)
-          setShowAssignModal(true)
-        }}
-        onReserve={handleReserveShift}
-        onDelete={handleDeleteShift}
-        hasShift={selectedDate ? !!shifts[selectedDate]?.doctorId : false}
-      />
+        {/* Swap Management Tab (Manager Only) */}
+        {activeTab === 'swaps' && userRole === 'manager' && (
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-label-primary">
+                Cereri de Schimb
+              </h2>
+              
+              {/* Swap Status Tabs */}
+              <div className="flex border-b border-separator">
+                <button
+                  onClick={() => setSwapTab('pending')}
+                  className={`px-4 py-2 font-medium text-sm ${
+                    swapTab === 'pending'
+                      ? 'text-system-blue border-b-2 border-system-blue'
+                      : 'text-label-secondary hover:text-label-primary'
+                  }`}
+                >
+                  În Așteptare
+                </button>
+                <button
+                  onClick={() => setSwapTab('approved')}
+                  className={`px-4 py-2 font-medium text-sm ${
+                    swapTab === 'approved'
+                      ? 'text-system-blue border-b-2 border-system-blue'
+                      : 'text-label-secondary hover:text-label-primary'
+                  }`}
+                >
+                  Aprobate
+                </button>
+                <button
+                  onClick={() => setSwapTab('rejected')}
+                  className={`px-4 py-2 font-medium text-sm ${
+                    swapTab === 'rejected'
+                      ? 'text-system-blue border-b-2 border-system-blue'
+                      : 'text-label-secondary hover:text-label-primary'
+                  }`}
+                >
+                  Respinse
+                </button>
+              </div>
+            </div>
 
+            {isLoading ? (
+              <div className="text-center py-8 text-label-tertiary">
+                Se încarcă schimburile...
+              </div>
+            ) : swaps.length === 0 ? (
+              <div className="text-center py-8 text-label-tertiary">
+                Nu există cereri de schimb {swapTab === 'pending' ? 'în așteptare' : swapTab === 'approved' ? 'aprobate' : 'respinse'}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {swaps.map((swap) => (
+                  <div key={swap.id} className="border border-separator rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-medium text-label-primary">
+                            {swap.fromStaffName} → {swap.toStaffName || 'Disponibil'}
+                          </span>
+                          <span className={`px-2 py-1 text-xs rounded ${
+                            swap.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                            swap.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {swap.status === 'pending' ? 'În așteptare' : 
+                             swap.status === 'approved' ? 'Aprobat' : 'Respins'}
+                          </span>
+                        </div>
+                        
+                        <div className="text-sm text-label-secondary mb-2">
+                          <strong>Data:</strong> {new Date(swap.shiftDate).toLocaleDateString('ro-RO')}
+                        </div>
+                        
+                        {swap.reason && (
+                          <div className="text-sm text-label-secondary mb-2">
+                            <strong>Motiv:</strong> {swap.reason}
+                          </div>
+                        )}
+                        
+                        <div className="text-xs text-label-tertiary">
+                          Creat: {new Date(swap.createdAt).toLocaleDateString('ro-RO')}
+                        </div>
+                      </div>
+                      
+                      {swap.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleSwapAction(swap.id, 'approved')}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            Aprobare
+                          </Button>
+                          <Button
+                            onClick={() => handleSwapAction(swap.id, 'rejected')}
+                            size="sm"
+                            variant="danger"
+                          >
+                            Respinge
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
 
-      <AssignShiftModal
-        isOpen={showAssignModal}
-        onClose={() => {
-          setShowAssignModal(false)
-          setSelectedDate(null)
-          setPendingShiftDepartment(null)
-        }}
-        date={selectedDate || ''}
-        doctors={doctors.map(d => ({
-          ...d,
-          isAvailable: d.isAvailable && !d.unavailableDates.includes(selectedDate || '')
-        }))}
-        onAssign={handleAssignDoctor}
-        selectedDepartment={pendingShiftDepartment || (selectedDepartment === 'all' ? undefined : selectedDepartment)}
-        shiftDepartment={selectedDate && shifts[selectedDate]?.department}
-      />
-
-      {swapModalData && (
-        <SwapRequestModal
-          isOpen={!!swapModalData}
-          onClose={() => setSwapModalData(null)}
-          shift={{
-            date: swapModalData.date,
-            doctorId: swapModalData.shift.doctorId,
-            doctorName: swapModalData.shift.doctorName,
-            shiftId: swapModalData.shift.id
+        <ShiftOptionsModal
+          isOpen={showOptionsModal}
+          onClose={() => {
+            setShowOptionsModal(false)
+            setSelectedDate(null)
           }}
-          onSubmit={submitSwapRequest}
+          date={selectedDate || ''}
+          onAssign={() => {
+            setShowOptionsModal(false)
+            setShowAssignModal(true)
+          }}
+          onReserve={handleReserveShift}
+          onDelete={handleDeleteShift}
+          hasShift={selectedDate ? !!shifts[selectedDate]?.doctorId : false}
         />
-      )}
+
+        <AssignShiftModal
+          isOpen={showAssignModal}
+          onClose={() => {
+            setShowAssignModal(false)
+            setSelectedDate(null)
+            setPendingShiftDepartment(null)
+          }}
+          date={selectedDate || ''}
+          doctors={doctors.map(d => ({
+            ...d,
+            isAvailable: d.isAvailable && !d.unavailableDates.includes(selectedDate || '')
+          }))}
+          onAssign={handleAssignDoctor}
+          selectedDepartment={pendingShiftDepartment || (selectedDepartment === 'all' ? undefined : selectedDepartment)}
+          shiftDepartment={selectedDate && shifts[selectedDate]?.department}
+        />
+
+        {swapModalData && (
+          <SwapRequestModal
+            isOpen={!!swapModalData}
+            onClose={() => setSwapModalData(null)}
+            shift={{
+              date: swapModalData.date,
+              doctorId: swapModalData.shift.doctorId,
+              doctorName: swapModalData.shift.doctorName,
+              shiftId: swapModalData.shift.id
+            }}
+            onSubmit={submitSwapRequest}
+          />
+        )}
+      </div>
     </div>
   )
 }

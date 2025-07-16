@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { logger } from '@/lib/logger'
+import { useRouter } from 'next/navigation'
 
 interface AccessCode {
   id: string
@@ -16,8 +17,22 @@ interface AccessCode {
   createdAt: string
 }
 
+interface StaffWithCode {
+  id: number
+  name: string
+  email: string | null
+  role: string
+  specialization: string
+  hospitalId: number
+  hasAccessCode: boolean
+  accessCode?: string
+  codeCreated: string | null
+}
+
 export default function AccessCodesPage() {
+  const router = useRouter()
   const [accessCodes, setAccessCodes] = useState<AccessCode[]>([])
+  const [staffList, setStaffList] = useState<StaffWithCode[]>([])
   const [hospitals, setHospitals] = useState<any[]>([])
   const [selectedHospital, setSelectedHospital] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -25,17 +40,57 @@ export default function AccessCodesPage() {
   const [success, setSuccess] = useState('')
   const [newCode, setNewCode] = useState('')
   const [isMigrated, setIsMigrated] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
   
   // Form state
   const [generateForm, setGenerateForm] = useState({
     role: 'staff',
-    staffId: '',
-    expiresInDays: 30
+    staffId: ''
   })
 
   useEffect(() => {
+    // Check user role - only managers can access this page
+    const token = localStorage.getItem('authToken')
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split('.')[1]))
+        setUserRole(decoded.role)
+        if (decoded.role !== 'manager') {
+          router.push('/admin/dashboard')
+          return
+        }
+      } catch (error) {
+        console.error('Failed to decode token:', error)
+        router.push('/admin/dashboard')
+        return
+      }
+    } else {
+      router.push('/admin/dashboard')
+      return
+    }
+    
     loadHospitals()
+    checkDatabaseSetup()
   }, [])
+
+  const checkDatabaseSetup = async () => {
+    try {
+      // Check if we can load access codes (table exists)
+      const response = await fetch('/api/admin/access-codes?hospitalId=1')
+      if (response.ok) {
+        setIsMigrated(true)
+      } else {
+        // Try to check if table exists by querying staff codes
+        const staffResponse = await fetch('/api/admin/staff-access-codes?hospitalId=1')
+        if (staffResponse.ok) {
+          setIsMigrated(true)
+        }
+      }
+    } catch (error) {
+      logger.error('AccessCodes', 'Database check failed', error)
+      setIsMigrated(false)
+    }
+  }
 
   const loadHospitals = async () => {
     try {
@@ -102,6 +157,39 @@ export default function AccessCodesPage() {
     }
   }
 
+  const loadStaffWithCodes = async () => {
+    if (!selectedHospital) return
+    
+    setIsLoading(true)
+    setError('')
+    
+    try {
+      const response = await fetch(`/api/admin/staff-access-codes?hospitalId=${selectedHospital}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setStaffList(data.staff)
+      } else {
+        setError(data.error || 'Failed to load staff')
+      }
+    } catch (error) {
+      logger.error('AccessCodes', 'Failed to load staff with codes', error)
+      setError('Failed to load staff')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setSuccess(`Copied "${text}" to clipboard!`)
+      setTimeout(() => setSuccess(''), 2000)
+    } catch (error) {
+      setError('Failed to copy to clipboard')
+    }
+  }
+
   const generateAccessCode = async () => {
     if (!selectedHospital) {
       setError('Please select a hospital')
@@ -121,8 +209,7 @@ export default function AccessCodesPage() {
           action: 'generate',
           hospitalId: selectedHospital,
           role: generateForm.role,
-          staffId: generateForm.staffId || undefined,
-          expiresInDays: generateForm.expiresInDays
+          staffId: generateForm.staffId || undefined
         })
       })
       
@@ -176,11 +263,53 @@ export default function AccessCodesPage() {
     }
   }
 
+  const bulkGenerateAccessCodes = async () => {
+    if (!confirm('Generate access codes for ALL staff members who don\'t have them? This will create permanent codes.')) return
+    
+    setIsLoading(true)
+    setError('')
+    setSuccess('')
+    
+    try {
+      const response = await fetch('/api/admin/access-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bulk-generate' })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setSuccess(`${data.message}! All staff now have access codes.`)
+        loadAccessCodes() // Refresh the list
+      } else {
+        setError(data.error || 'Failed to bulk generate codes')
+      }
+    } catch (error) {
+      logger.error('AccessCodes', 'Failed to bulk generate codes', error)
+      setError('Failed to bulk generate access codes')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (selectedHospital && isMigrated) {
       loadAccessCodes()
+      loadStaffWithCodes()
     }
   }, [selectedHospital, isMigrated])
+
+  // Show loading while checking role
+  if (userRole === null) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-label-secondary">Checking permissions...</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -255,7 +384,7 @@ export default function AccessCodesPage() {
                 Generate New Access Code
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-label-secondary mb-2">
                     Role
@@ -281,17 +410,12 @@ export default function AccessCodesPage() {
                     placeholder="Leave blank for generic role code"
                   />
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-label-secondary mb-2">
-                    Expires in Days
-                  </label>
-                  <Input
-                    type="number"
-                    value={generateForm.expiresInDays}
-                    onChange={(e) => setGenerateForm(prev => ({ ...prev, expiresInDays: parseInt(e.target.value) || 30 }))}
-                  />
-                </div>
+              </div>
+              
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                <p className="text-sm text-blue-700">
+                  ✅ All access codes are permanent (no expiry date) - keeping it simple!
+                </p>
               </div>
               
               <Button
@@ -364,6 +488,109 @@ export default function AccessCodesPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* Staff Login Status */}
+          {selectedHospital && (
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-label-primary">
+                  Staff Login Credentials
+                </h2>
+                <Button
+                  onClick={loadStaffWithCodes}
+                  disabled={isLoading}
+                  variant="secondary"
+                >
+                  Refresh
+                </Button>
+              </div>
+              
+              {staffList.length === 0 ? (
+                <p className="text-label-secondary">No staff found.</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 rounded-lg font-medium text-sm text-label-secondary">
+                    <div>Staff Member</div>
+                    <div>Specialization</div>
+                    <div>Login Status</div>
+                    <div>Access Code</div>
+                  </div>
+                  
+                  {staffList.map((staff) => (
+                    <div
+                      key={staff.id}
+                      className="grid grid-cols-4 gap-4 p-4 border border-separator rounded-lg items-center"
+                    >
+                      <div>
+                        <div className="font-medium text-label-primary">{staff.name}</div>
+                        {staff.email && (
+                          <div className="text-xs text-label-secondary">{staff.email}</div>
+                        )}
+                      </div>
+                      
+                      <div className="text-sm text-label-secondary">
+                        {staff.specialization}
+                      </div>
+                      
+                      <div>
+                        <span className={`px-2 py-1 text-xs rounded ${
+                          staff.hasAccessCode 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {staff.hasAccessCode ? '✅ Can Login' : '❌ No Access'}
+                        </span>
+                        {staff.codeCreated && (
+                          <div className="text-xs text-label-tertiary mt-1">
+                            Created: {staff.codeCreated}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div>
+                        {staff.hasAccessCode ? (
+                          <div className="text-center">
+                            <div className="text-xs text-label-secondary mb-1">Access Code</div>
+                            {staff.accessCode ? (
+                              <div className="flex items-center gap-2">
+                                <div className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                                  {staff.accessCode}
+                                </div>
+                                <Button
+                                  onClick={() => copyToClipboard(staff.accessCode)}
+                                  size="sm"
+                                  variant="secondary"
+                                  className="text-xs px-2 py-1"
+                                >
+                                  Copy
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-blue-600">🔐 Private</div>
+                            )}
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={() => setGenerateForm({...generateForm, staffId: staff.id.toString()})}
+                            size="sm"
+                            variant="secondary"
+                          >
+                            Generate Code
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="text-sm text-blue-700">
+                      <strong>Summary:</strong> {staffList.filter(s => s.hasAccessCode).length} of {staffList.length} staff members have login access
+                    </div>
+                  </div>
                 </div>
               )}
             </Card>

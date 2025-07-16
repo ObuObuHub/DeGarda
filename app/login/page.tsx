@@ -44,7 +44,7 @@ export default function LoginPage() {
         // Redirect based on role
         switch (data.user.role) {
           case 'staff':
-            router.push('/staff/dashboard')
+            router.push('/staff')
             break
           case 'manager':
             router.push('/admin/dashboard')
@@ -89,8 +89,8 @@ export default function LoginPage() {
                 id="accessCode"
                 type="text"
                 value={accessCode}
-                onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                placeholder="ex: gt5 sau a7k9m3"
+                onChange={(e) => setAccessCode(e.target.value.toLowerCase())}
+                placeholder="ex: cn1 sau dm85kn"
                 className="w-full text-center font-mono"
                 disabled={isLoading}
                 autoFocus
@@ -121,8 +121,8 @@ export default function LoginPage() {
                 Tipuri de cod de acces:
               </p>
               <div className="space-y-1 text-xs text-label-tertiary">
-                <p><span className="font-mono">gt5, md2, pk7</span> - Personal medical</p>
-                <p><span className="font-mono">a7k9m3, x2p8q1</span> - Manager departament</p>
+                <p><span className="font-mono">cn1, md2, pk7</span> - Personal medical</p>
+                <p><span className="font-mono">dm85kn, x2p8q1</span> - Manager departament</p>
               </div>
             </div>
           </div>
