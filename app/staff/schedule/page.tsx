@@ -30,6 +30,7 @@ export default function StaffSchedulePage() {
   const [currentStaffDepartment, setCurrentStaffDepartment] = useState<string | null>(null)
   const [myReservations, setMyReservations] = useState<Reservation[]>([])
   const [isLoadingReservations, setIsLoadingReservations] = useState(false)
+  const [canGenerateShifts, setCanGenerateShifts] = useState(false)
   
   const currentDate = new Date()
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth())
@@ -55,8 +56,22 @@ export default function StaffSchedulePage() {
     if (selectedHospitalId && currentStaffId) {
       loadShifts(viewYear, viewMonth, selectedHospitalId)
       loadMyReservations()
+      checkShiftPermissions()
     }
   }, [viewYear, viewMonth, selectedHospitalId, currentStaffId, loadShifts])
+
+  const checkShiftPermissions = async () => {
+    try {
+      const response = await fetch('/api/staff/shift-permissions')
+      const data = await response.json()
+      
+      if (response.ok) {
+        setCanGenerateShifts(data.canGenerateShifts || false)
+      }
+    } catch (error) {
+      logger.error('StaffSchedule', 'Failed to check shift permissions', error)
+    }
+  }
 
   const loadMyReservations = async () => {
     if (!currentStaffId) return
@@ -204,9 +219,20 @@ export default function StaffSchedulePage() {
               {currentStaffName} • {currentStaffDepartment} • {selectedHospital?.name}
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            Ieși
-          </Button>
+          <div className="flex items-center gap-2">
+            {canGenerateShifts && (
+              <Button 
+                variant="primary" 
+                size="sm"
+                onClick={() => router.push('/staff/generate-shifts')}
+              >
+                Generează Gărzi
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Ieși
+            </Button>
+          </div>
         </div>
 
         {/* Info Card */}
