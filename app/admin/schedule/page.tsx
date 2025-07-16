@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -23,6 +23,30 @@ import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import { exportScheduleToExcel } from '@/lib/exportUtils'
 import { showToast } from '@/components/Toast'
 
+interface SwapRequest {
+  id: number
+  fromStaffId: number
+  toStaffId?: number
+  shiftId: number
+  reason: string
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+  fromStaffName: string
+  toStaffName?: string
+  shiftDate: string
+  createdAt: string
+}
+
+interface Shift {
+  id: string | number
+  date: string
+  doctorId?: string | number | null
+  doctorName?: string | null
+  department?: string
+  status?: 'open' | 'assigned' | 'reserved'
+  type?: string
+  reservedBy?: string
+  reservedByName?: string
+}
 
 export default function SchedulePage() {
   const router = useRouter()
@@ -37,7 +61,7 @@ export default function SchedulePage() {
   } = useData()
   
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [swapModalData, setSwapModalData] = useState<{ date: string; shift: any } | null>(null)
+  const [swapModalData, setSwapModalData] = useState<{ date: string; shift: Shift } | null>(null)
   const [showOptionsModal, setShowOptionsModal] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all')
@@ -46,7 +70,7 @@ export default function SchedulePage() {
   // Swap management state
   const [activeTab, setActiveTab] = useState<'schedule' | 'swaps'>('schedule')
   const [swapTab, setSwapTab] = useState<'pending' | 'approved' | 'rejected'>('pending')
-  const [swaps, setSwaps] = useState<any[]>([])
+  const [swaps, setSwaps] = useState<SwapRequest[]>([])
   const [userRole, setUserRole] = useState<string | null>(null)
 
   const currentDate = new Date()
@@ -77,7 +101,7 @@ export default function SchedulePage() {
   const filteredShifts = useMemo(() => {
     if (selectedDepartment === 'all') return shifts
     
-    const filtered: Record<string, any> = {}
+    const filtered: Record<string, Shift> = {}
     Object.entries(shifts).forEach(([date, shift]) => {
       // Check the shift's department field directly
       if (shift.department === selectedDepartment) {
@@ -99,7 +123,7 @@ export default function SchedulePage() {
         })
       })
     }
-  }, [viewYear, viewMonth, selectedHospitalId, loadShifts])
+  }, [viewYear, viewMonth, selectedHospitalId, loadShifts, shifts, filteredShifts, selectedDepartment])
 
   // Load user role and handle URL tab parameter
   useEffect(() => {
@@ -119,9 +143,9 @@ export default function SchedulePage() {
     if (selectedHospitalId && activeTab === 'swaps' && userRole === 'manager') {
       loadSwaps()
     }
-  }, [selectedHospitalId, activeTab, swapTab, userRole])
+  }, [selectedHospitalId, activeTab, swapTab, userRole, loadSwaps])
 
-  const loadSwaps = async () => {
+  const loadSwaps = useCallback(async () => {
     if (!selectedHospitalId) return
     
     try {
@@ -134,7 +158,7 @@ export default function SchedulePage() {
     } catch (error) {
       logger.error('Schedule', 'Failed to load swaps', error)
     }
-  }
+  }, [selectedHospitalId, swapTab])
 
   const handleSwapAction = async (swapId: string, action: 'approved' | 'rejected') => {
     // Verify manager role
@@ -152,7 +176,7 @@ export default function SchedulePage() {
           const decoded = JSON.parse(atob(token.split('.')[1]))
           reviewedBy = decoded.userId
         } catch (e) {
-          console.warn('Could not decode token for reviewer ID')
+          logger.warn('Schedule', 'Could not decode token for reviewer ID', e)
         }
       }
 
@@ -208,7 +232,7 @@ export default function SchedulePage() {
   }
   
 
-  const handleSwapRequest = (date: string, shift: any) => {
+  const handleSwapRequest = (date: string, shift: Shift) => {
     setSwapModalData({ date, shift: { ...shift, shiftId: shift.id } })
   }
 
@@ -304,7 +328,13 @@ export default function SchedulePage() {
 
   const handleExportExcel = () => {
     // Convert shifts to the format expected by exportScheduleToExcel
-    const formattedShifts: Record<string, any> = {}
+    const formattedShifts: Record<string, {
+      date: string
+      doctorId: string | number | null
+      doctorName: string | null
+      type: string
+      status: string
+    }> = {}
     Object.entries(shifts).forEach(([date, shift]) => {
       formattedShifts[date] = {
         date: shift.date || date,
@@ -383,13 +413,6 @@ export default function SchedulePage() {
   }
 
   const handleGenerateSchedule = async () => {
-    console.log('🚀 GENERATE BUTTON CLICKED!', {
-      selectedHospitalId,
-      selectedDepartment, 
-      selectedHospital: selectedHospital?.name,
-      staffCount: staff.length
-    })
-    
     logger.debug('Schedule', 'Generate button clicked', {
       selectedHospitalId,
       selectedDepartment,
@@ -438,7 +461,7 @@ export default function SchedulePage() {
     }
     
     // Filter existing shifts for this department only
-    const departmentShifts: Record<string, any> = {}
+    const departmentShifts: Record<string, Shift> = {}
     Object.entries(shifts).forEach(([date, shift]) => {
       if (shift.department === selectedDepartment) {
         departmentShifts[date] = shift

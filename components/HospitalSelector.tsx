@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useHospital } from '@/contexts/HospitalContext'
 import { Icon } from '@/components/ui/Icon'
+import { logger } from '@/lib/logger'
 
 interface Hospital {
   id: string
@@ -22,12 +23,7 @@ export function HospitalSelector() {
   
   const selectedHospital = hospitals.find(h => h.id === selectedHospitalId)
 
-  // Fetch hospitals from API
-  useEffect(() => {
-    fetchHospitals()
-  }, [])
-
-  const fetchHospitals = async () => {
+  const fetchHospitals = useCallback(async () => {
     try {
       const response = await fetch('/api/hospitals')
       if (response.ok) {
@@ -39,11 +35,16 @@ export function HospitalSelector() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch hospitals:', error)
+      logger.error('HospitalSelector', 'Failed to fetch hospitals', error)
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [selectedHospitalId, setSelectedHospitalId])
+
+  // Fetch hospitals from API
+  useEffect(() => {
+    fetchHospitals()
+  }, [fetchHospitals])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

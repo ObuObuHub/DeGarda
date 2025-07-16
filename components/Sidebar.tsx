@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon'
 import { useHospital } from '@/contexts/HospitalContext'
 import { useEffect, useState } from 'react'
 import { getAllowedNavItems, UserRole } from '@/lib/roleBasedAccess'
+import { logger } from '@/lib/logger'
 
 interface NavItem {
   label: string
@@ -36,7 +37,7 @@ export function Sidebar({ onClose }: SidebarProps) {
         const allowedItems = getAllowedNavItems(role)
         setNavItems(allowedItems)
       } catch (error) {
-        console.error('Failed to decode token:', error)
+        logger.error('Sidebar', 'Failed to decode token', error)
       }
     }
   }, [])

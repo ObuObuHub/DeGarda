@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -8,6 +8,17 @@ import { Calendar } from '@/components/Calendar'
 import { useHospital } from '@/contexts/HospitalContext'
 import { useData } from '@/contexts/DataContext'
 import { showToast } from '@/components/Toast'
+import { logger } from '@/lib/logger'
+
+interface Reservation {
+  id: number
+  staff_id: number
+  hospital_id: number
+  shift_date: string
+  department: string
+  status: 'active' | 'cancelled' | 'fulfilled'
+  created_at: string
+}
 
 export default function StaffSchedulePage() {
   const router = useRouter()
@@ -17,7 +28,7 @@ export default function StaffSchedulePage() {
   const [currentStaffId, setCurrentStaffId] = useState<string | null>(null)
   const [currentStaffName, setCurrentStaffName] = useState<string | null>(null)
   const [currentStaffDepartment, setCurrentStaffDepartment] = useState<string | null>(null)
-  const [myReservations, setMyReservations] = useState<any[]>([])
+  const [myReservations, setMyReservations] = useState<Reservation[]>([])
   const [isLoadingReservations, setIsLoadingReservations] = useState(false)
   
   const currentDate = new Date()
@@ -45,9 +56,9 @@ export default function StaffSchedulePage() {
       loadShifts(viewYear, viewMonth, selectedHospitalId)
       loadMyReservations()
     }
-  }, [viewYear, viewMonth, selectedHospitalId, currentStaffId, loadShifts])
+  }, [viewYear, viewMonth, selectedHospitalId, currentStaffId, loadShifts, loadMyReservations])
 
-  const loadMyReservations = async () => {
+  const loadMyReservations = useCallback(async () => {
     if (!currentStaffId) return
     
     setIsLoadingReservations(true)
@@ -59,12 +70,12 @@ export default function StaffSchedulePage() {
         setMyReservations(data.reservations || [])
       }
     } catch (error) {
-      console.error('Failed to load reservations:', error)
+      logger.error('StaffSchedule', 'Failed to load reservations', error, { staffId: currentStaffId })
       showToast('error', 'Eroare', 'Nu s-au putut încărca rezervările')
     } finally {
       setIsLoadingReservations(false)
     }
-  }
+  }, [currentStaffId, viewMonth, viewYear])
 
   const handleDayClick = async (date: string) => {
     if (!currentStaffId) return
@@ -106,7 +117,7 @@ export default function StaffSchedulePage() {
           showToast('error', 'Eroare', data.error || 'Nu s-a putut anula rezervarea')
         }
       } catch (error) {
-        console.error('Failed to cancel reservation:', error)
+        logger.error('StaffSchedule', 'Failed to cancel reservation', error, { staffId: currentStaffId, date })
         showToast('error', 'Eroare', 'Nu s-a putut anula rezervarea')
       }
     } else {
@@ -131,7 +142,7 @@ export default function StaffSchedulePage() {
           showToast('error', 'Eroare', data.error || 'Nu s-a putut crea rezervarea')
         }
       } catch (error) {
-        console.error('Failed to create reservation:', error)
+        logger.error('StaffSchedule', 'Failed to create reservation', error, { staffId: currentStaffId, date })
         showToast('error', 'Eroare', 'Nu s-a putut crea rezervarea')
       }
     }

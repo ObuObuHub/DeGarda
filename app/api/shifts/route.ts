@@ -2,6 +2,41 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { notifyShiftAssignment } from '@/lib/notifications'
 import { logActivity } from '@/lib/activity-logger'
+import { logger } from '@/lib/logger'
+
+// Input validation functions
+function validateYear(year: unknown): year is string {
+  const yearNum = parseInt(year as string)
+  return typeof year === 'string' && !isNaN(yearNum) && yearNum >= 2020 && yearNum <= 2030
+}
+
+function validateMonth(month: unknown): month is string {
+  const monthNum = parseInt(month as string)
+  return typeof month === 'string' && !isNaN(monthNum) && monthNum >= 0 && monthNum <= 11
+}
+
+function validateHospitalId(hospitalId: unknown): hospitalId is string {
+  return typeof hospitalId === 'string' && /^\d+$/.test(hospitalId) && parseInt(hospitalId) > 0
+}
+
+function validateDate(date: unknown): date is string {
+  if (typeof date !== 'string') return false
+  const dateObj = new Date(date)
+  return !isNaN(dateObj.getTime()) && date.match(/^\d{4}-\d{2}-\d{2}$/)
+}
+
+function validateStaffId(staffId: unknown): staffId is string {
+  return typeof staffId === 'string' && /^\d+$/.test(staffId) && parseInt(staffId) > 0
+}
+
+function validateShiftType(type: unknown): type is string {
+  return typeof type === 'string' && ['24h', 'day', 'night'].includes(type)
+}
+
+function validateDepartment(department: unknown): department is string {
+  const validDepartments = ['ATI', 'Urgențe', 'Laborator', 'Medicină Internă', 'Chirurgie', 'General']
+  return typeof department === 'string' && validDepartments.includes(department)
+}
 
 // GET shifts for a specific month/year and hospital
 export async function GET(request: NextRequest) {
@@ -11,9 +46,16 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get('month')
     const hospitalId = searchParams.get('hospitalId')
 
-    if (!year || !month) {
+    if (!validateYear(year) || !validateMonth(month)) {
       return NextResponse.json(
-        { success: false, error: 'Year and month are required' },
+        { success: false, error: 'Valid year and month are required' },
+        { status: 400 }
+      )
+    }
+
+    if (hospitalId && !validateHospitalId(hospitalId)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid hospital ID format' },
         { status: 400 }
       )
     }
@@ -81,7 +123,17 @@ export async function GET(request: NextRequest) {
         `
 
     // Convert to format expected by calendar
-    const shiftMap: Record<string, any> = {}
+    const shiftMap: Record<string, {
+      id: string
+      doctorId: string | null
+      doctorName: string | null
+      department: string | null
+      type: string
+      status: string
+      hospitalId: string
+      reservedBy: string | null
+      reservedByName: string | null
+    }> = {}
     shifts.forEach(shift => {
       const dateStr = new Date(shift.date).toISOString().split('T')[0]
       shiftMap[dateStr] = {
@@ -98,11 +150,12 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({ success: true, shifts: shiftMap })
-  } catch (error: any) {
-    console.error('Get shifts error:', error)
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    logger.error('Shifts', 'Get shifts error', error)
     
     // Check for database connection errors
-    if (error.message?.includes('Cannot convert argument to a ByteString')) {
+    if (errorMessage.includes('Cannot convert argument to a ByteString')) {
       return NextResponse.json(
         { 
           success: false, 
@@ -116,7 +169,7 @@ export async function GET(request: NextRequest) {
       { 
         success: false, 
         error: 'Failed to fetch shifts',
-        details: error.message || 'Unknown error'
+        details: errorMessage
       },
       { status: 500 }
     )

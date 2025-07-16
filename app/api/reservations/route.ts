@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     try {
       let query
-      let params: any[] = [authUser.hospitalId]
+      let params: (string | number)[] = [authUser.hospitalId]
 
       if (staffId) {
         // Get reservations for specific staff member
@@ -85,16 +85,47 @@ export async function GET(request: NextRequest) {
   })
 }
 
+// Input validation functions
+function validateStaffId(staffId: unknown): staffId is string {
+  return typeof staffId === 'string' && /^\d+$/.test(staffId) && parseInt(staffId) > 0
+}
+
+function validateShiftDate(shiftDate: unknown): shiftDate is string {
+  if (typeof shiftDate !== 'string') return false
+  const date = new Date(shiftDate)
+  return !isNaN(date.getTime()) && date >= new Date()
+}
+
+function validateDepartment(department: unknown): department is string {
+  const validDepartments = ['ATI', 'Urgențe', 'Laborator', 'Medicină Internă', 'Chirurgie', 'General']
+  return typeof department === 'string' && validDepartments.includes(department)
+}
+
 export async function POST(request: NextRequest) {
   return withHospitalAuth(request, async (authUser) => {
     try {
       const body = await request.json()
       const { staffId, shiftDate, department } = body
 
-      if (!staffId || !shiftDate) {
+      // Comprehensive input validation
+      if (!validateStaffId(staffId)) {
         return NextResponse.json({
           success: false,
-          error: 'Missing required fields'
+          error: 'Invalid staff ID format'
+        }, { status: 400 })
+      }
+
+      if (!validateShiftDate(shiftDate)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid shift date - must be a valid future date'
+        }, { status: 400 })
+      }
+
+      if (department && !validateDepartment(department)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid department'
         }, { status: 400 })
       }
 

@@ -4,13 +4,22 @@ import { logger } from '@/lib/logger'
 import jwt from 'jsonwebtoken'
 import { cookies } from 'next/headers'
 
+// Input validation functions
+function validateAccessCode(accessCode: unknown): accessCode is string {
+  return typeof accessCode === 'string' && 
+         accessCode.length >= 3 && 
+         accessCode.length <= 20 &&
+         /^[a-zA-Z0-9]+$/.test(accessCode)
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { accessCode } = await request.json()
+    const body = await request.json()
+    const { accessCode } = body
     
-    if (!accessCode) {
+    if (!validateAccessCode(accessCode)) {
       return NextResponse.json(
-        { success: false, error: 'Cod de acces necesar' },
+        { success: false, error: 'Cod de acces invalid - doar litere și cifre, 3-20 caractere' },
         { status: 400 }
       )
     }

@@ -15,7 +15,7 @@ interface LogEntry {
   level: LogLevel
   module: string
   message: string
-  data?: any
+  data?: Record<string, unknown> | string | number | boolean | null
   userId?: string
   hospitalId?: string
 }

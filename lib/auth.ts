@@ -1,7 +1,16 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key'
+// Ensure JWT_SECRET is properly configured in production
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET environment variable is required in production')
+  }
+  console.warn('⚠️  Using development JWT secret. This is insecure for production!')
+}
+
+const jwtSecret = JWT_SECRET || 'dev-secret-key-unsafe-for-production'
 
 export interface TokenPayload {
   id: number
@@ -11,11 +20,15 @@ export interface TokenPayload {
 }
 
 export function generateToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
+  return jwt.sign(payload, jwtSecret, { expiresIn: '7d' })
 }
 
-export function verifyToken(token: string): TokenPayload {
-  return jwt.verify(token, JWT_SECRET) as TokenPayload
+export function verifyToken(token: string): TokenPayload | null {
+  try {
+    return jwt.verify(token, jwtSecret) as TokenPayload
+  } catch (error) {
+    return null
+  }
 }
 
 export async function hashPassword(password: string): Promise<string> {

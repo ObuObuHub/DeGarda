@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import jwt from 'jsonwebtoken'
+import { verifyToken, TokenPayload } from './auth'
 import { logger } from './logger'
 
 export interface AuthUser {
@@ -35,7 +35,11 @@ export async function verifyHospitalAuth(request: NextRequest): Promise<Hospital
       return { success: false, error: 'No authentication token' }
     }
     
-    const decoded = jwt.verify(token.value, process.env.JWT_SECRET!) as any
+    const decoded = verifyToken(token.value)
+    
+    if (!decoded) {
+      return { success: false, error: 'Invalid authentication token' }
+    }
     
     if (!decoded.hospitalId) {
       return { success: false, error: 'No hospital ID in token' }
@@ -44,8 +48,8 @@ export async function verifyHospitalAuth(request: NextRequest): Promise<Hospital
     return {
       success: true,
       user: {
-        userId: decoded.userId,
-        name: decoded.name,
+        userId: decoded.id,
+        name: decoded.email, // Using email as name for now
         email: decoded.email,
         role: decoded.role,
         hospitalId: decoded.hospitalId,
