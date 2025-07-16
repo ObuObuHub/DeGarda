@@ -1,6 +1,5 @@
 import { ShiftType } from '@/types'
 import { logger } from './logger'
-import { generateMonthlyScheduleOptimized } from './shiftGeneratorOptimized'
 
 // Types
 export interface Doctor {

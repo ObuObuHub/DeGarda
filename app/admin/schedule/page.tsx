@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -143,9 +143,9 @@ export default function SchedulePage() {
     if (selectedHospitalId && activeTab === 'swaps' && userRole === 'manager') {
       loadSwaps()
     }
-  }, [selectedHospitalId, activeTab, swapTab, userRole, loadSwaps])
+  }, [selectedHospitalId, activeTab, swapTab, userRole])
 
-  const loadSwaps = useCallback(async () => {
+  const loadSwaps = async () => {
     if (!selectedHospitalId) return
     
     try {
@@ -158,7 +158,7 @@ export default function SchedulePage() {
     } catch (error) {
       logger.error('Schedule', 'Failed to load swaps', error)
     }
-  }, [selectedHospitalId, swapTab])
+  }
 
   const handleSwapAction = async (swapId: string, action: 'approved' | 'rejected') => {
     // Verify manager role

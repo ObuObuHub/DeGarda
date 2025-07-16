@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -56,9 +56,9 @@ export default function StaffSchedulePage() {
       loadShifts(viewYear, viewMonth, selectedHospitalId)
       loadMyReservations()
     }
-  }, [viewYear, viewMonth, selectedHospitalId, currentStaffId, loadShifts, loadMyReservations])
+  }, [viewYear, viewMonth, selectedHospitalId, currentStaffId, loadShifts])
 
-  const loadMyReservations = useCallback(async () => {
+  const loadMyReservations = async () => {
     if (!currentStaffId) return
     
     setIsLoadingReservations(true)
@@ -75,7 +75,7 @@ export default function StaffSchedulePage() {
     } finally {
       setIsLoadingReservations(false)
     }
-  }, [currentStaffId, viewMonth, viewYear])
+  }
 
   const handleDayClick = async (date: string) => {
     if (!currentStaffId) return

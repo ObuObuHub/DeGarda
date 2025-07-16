@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Shift } from '@/types'
 
@@ -27,8 +27,6 @@ export const Calendar: React.FC<CalendarProps> = ({
   onSwapRequest,
   doctors = []
 }) => {
-  const [focusedDay, setFocusedDay] = useState<number | null>(null)
-  const calendarRef = useRef<HTMLDivElement>(null)
   const daysInMonth = useMemo(() => {
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
@@ -50,56 +48,12 @@ export const Calendar: React.FC<CalendarProps> = ({
     return days
   }, [year, month])
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!focusedDay) return
-
-    const totalDays = new Date(year, month + 1, 0).getDate()
-    let newFocusedDay = focusedDay
-
-    switch (e.key) {
-      case 'ArrowLeft':
-        e.preventDefault()
-        newFocusedDay = Math.max(1, focusedDay - 1)
-        break
-      case 'ArrowRight':
-        e.preventDefault()
-        newFocusedDay = Math.min(totalDays, focusedDay + 1)
-        break
-      case 'ArrowUp':
-        e.preventDefault()
-        newFocusedDay = Math.max(1, focusedDay - 7)
-        break
-      case 'ArrowDown':
-        e.preventDefault()
-        newFocusedDay = Math.min(totalDays, focusedDay + 7)
-        break
-      case 'Enter':
-      case ' ':
-        e.preventDefault()
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(focusedDay).padStart(2, '0')}`
-        const shift = shifts[dateStr]
-        if (shift && onSwapRequest) {
-          onSwapRequest(dateStr, shift)
-        } else if (onDayClick) {
-          onDayClick(dateStr)
-        }
-        break
-      case 'Escape':
-        e.preventDefault()
-        setFocusedDay(null)
-        break
-    }
-
-    if (newFocusedDay !== focusedDay) {
-      setFocusedDay(newFocusedDay)
-    }
-  }, [focusedDay, year, month, shifts, onDayClick, onSwapRequest])
-
   const getShiftForDay = (day: number | null) => {
     if (!day) return null
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     return shifts[dateStr]
   }
+
 
   const getDayIndicator = (day: number | null) => {
     if (!day) return null

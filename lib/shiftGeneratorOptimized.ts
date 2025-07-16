@@ -11,21 +11,16 @@ import { ShiftType } from '@/types'
 import { logger } from './logger'
 import { performanceMonitor } from './performanceMonitor'
 
-// Re-export types from original for compatibility
-export {
-  Doctor,
-  GeneratedShift,
-  GenerationStats,
-  HospitalConfig,
-  ValidDepartment,
-  VALID_DEPARTMENTS,
-  normalizeDepartment,
-  getHospitalConfig,
-  isDepartmentEnabledForHospital,
-  getShiftTypeForDepartment,
-  generateDepartmentSchedule,
-  calculateFairness
+// Import types to avoid circular dependency
+import type { 
+  Doctor, 
+  GeneratedShift, 
+  GenerationStats, 
+  HospitalConfig 
 } from './shiftGenerator'
+
+// Re-export types for compatibility  
+export type { Doctor, GeneratedShift, GenerationStats, HospitalConfig }
 
 // Performance-optimized interfaces
 interface OptimizedDoctor {
@@ -375,5 +370,5 @@ export function generateMonthlyScheduleOptimized(
   return generator.generateSchedule(options)
 }
 
-// Re-export types for compatibility
-export type { Doctor, GeneratedShift, GenerationStats, ValidDepartment, HospitalConfig } from './shiftGenerator'
+// Additional type definitions
+export type ValidDepartment = 'ATI' | 'Urgențe' | 'Laborator' | 'Medicină Internă' | 'Chirurgie' | 'General'
