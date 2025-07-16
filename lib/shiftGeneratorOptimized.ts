@@ -376,4 +376,4 @@ export function generateMonthlyScheduleOptimized(
 }
 
 // Re-export types for compatibility
-export type { Doctor, GeneratedShift, GenerationStats, ValidDepartment } from './shiftGenerator'
+export type { Doctor, GeneratedShift, GenerationStats, ValidDepartment, HospitalConfig } from './shiftGenerator'

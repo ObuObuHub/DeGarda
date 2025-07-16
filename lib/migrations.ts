@@ -211,15 +211,23 @@ export const migrations: Migration[] = [
     version: 3,
     name: 'update_shift_constraints',
     up: async () => {
-      // Drop old constraints
+      // Drop old constraints if they exist
       await sql`ALTER TABLE shifts DROP CONSTRAINT IF EXISTS shifts_date_type_hospital_id_key`
       await sql`ALTER TABLE shifts DROP CONSTRAINT IF EXISTS shifts_date_hospital_id_key`
       
-      // Add new constraint that includes department
+      // Add new constraint that includes department (only if it doesn't exist)
       await sql`
-        ALTER TABLE shifts
-        ADD CONSTRAINT shifts_date_type_hospital_id_department_key 
-        UNIQUE (date, type, hospital_id, department)
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints 
+            WHERE constraint_name = 'shifts_date_type_hospital_id_department_key'
+          ) THEN
+            ALTER TABLE shifts
+            ADD CONSTRAINT shifts_date_type_hospital_id_department_key 
+            UNIQUE (date, type, hospital_id, department);
+          END IF;
+        END $$;
       `
     },
     down: async () => {
@@ -240,7 +248,7 @@ export const migrations: Migration[] = [
       await sql`CREATE INDEX IF NOT EXISTS idx_shifts_hospital ON shifts(hospital_id)`
       await sql`CREATE INDEX IF NOT EXISTS idx_shifts_staff ON shifts(staff_id)`
       await sql`CREATE INDEX IF NOT EXISTS idx_shifts_department ON shifts(department)`
-      await sql`CREATE INDEX IF NOT EXISTS idx_reservations_staff ON shift_reservations(staff_id)`
+      // Skip shift_reservations indexes as table will be recreated in migration 7
       await sql`CREATE INDEX IF NOT EXISTS idx_swaps_from_staff ON shift_swaps(from_staff_id)`
       await sql`CREATE INDEX IF NOT EXISTS idx_swaps_status ON shift_swaps(status)`
       await sql`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`
