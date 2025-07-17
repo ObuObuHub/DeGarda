@@ -38,11 +38,7 @@ export const PERMISSIONS = {
   SHIFT_ASSIGN: { resource: 'shift', action: 'assign' },
   SHIFT_CANCEL: { resource: 'shift', action: 'cancel' },
   
-  // Access codes
-  ACCESS_CODES_VIEW: { resource: 'access_codes', action: 'view' },
-  ACCESS_CODES_CREATE: { resource: 'access_codes', action: 'create' },
-  ACCESS_CODES_REVOKE: { resource: 'access_codes', action: 'revoke' },
-  ACCESS_CODES_BULK_GENERATE: { resource: 'access_codes', action: 'bulk_generate' },
+  // Removed access codes - wrong auth model
   
   // Hospital management
   HOSPITAL_VIEW: { resource: 'hospital', action: 'view' },
@@ -56,18 +52,13 @@ export const PERMISSIONS = {
   SWAP_APPROVE: { resource: 'swap', action: 'approve' },
   SWAP_REJECT: { resource: 'swap', action: 'reject' },
   
-  // Settings
-  SETTINGS_VIEW: { resource: 'settings', action: 'view' },
-  SETTINGS_UPDATE: { resource: 'settings', action: 'update' },
+  // Removed settings - over-engineering
   
   // Database management
   DATABASE_MANAGE: { resource: 'database', action: 'manage' },
   DATABASE_MIGRATE: { resource: 'database', action: 'migrate' },
   
-  // Notifications
-  NOTIFICATIONS_VIEW: { resource: 'notifications', action: 'view' },
-  NOTIFICATIONS_CREATE: { resource: 'notifications', action: 'create' },
-  NOTIFICATIONS_DELETE: { resource: 'notifications', action: 'delete' }
+  // Removed notifications - unused system
 } as const
 
 // Define role hierarchies and permissions
@@ -79,8 +70,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       PERMISSIONS.SHIFT_VIEW,
       PERMISSIONS.SHIFT_RESERVE,
       PERMISSIONS.SWAP_VIEW,
-      PERMISSIONS.SWAP_CREATE,
-      PERMISSIONS.NOTIFICATIONS_VIEW
+      PERMISSIONS.SWAP_CREATE
     ]
   },
   
@@ -102,22 +92,9 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       PERMISSIONS.SHIFT_ASSIGN,
       PERMISSIONS.SHIFT_CANCEL,
       
-      // Access codes (manager-only feature)
-      PERMISSIONS.ACCESS_CODES_VIEW,
-      PERMISSIONS.ACCESS_CODES_CREATE,
-      PERMISSIONS.ACCESS_CODES_REVOKE,
-      PERMISSIONS.ACCESS_CODES_BULK_GENERATE,
-      
       // Swap management
       PERMISSIONS.SWAP_APPROVE,
-      PERMISSIONS.SWAP_REJECT,
-      
-      // Notifications
-      PERMISSIONS.NOTIFICATIONS_CREATE,
-      PERMISSIONS.NOTIFICATIONS_DELETE,
-      
-      // Settings (limited)
-      PERMISSIONS.SETTINGS_VIEW
+      PERMISSIONS.SWAP_REJECT
     ]
   },
   
@@ -137,8 +114,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       // Schedule management (full)
       PERMISSIONS.SCHEDULE_DELETE,
       
-      // Settings (full)
-      PERMISSIONS.SETTINGS_UPDATE,
+      // Removed settings - over-engineering
       
       // Database management
       PERMISSIONS.DATABASE_MANAGE,
@@ -202,12 +178,10 @@ export function hasPermission(
 export function canAccessRoute(userRole: UserRole, route: string): boolean {
   const routePermissions: Record<string, Permission[]> = {
     '/admin/dashboard': [PERMISSIONS.SCHEDULE_VIEW],
-    '/admin/staff': [PERMISSIONS.STAFF_VIEW],
     '/admin/schedule': [PERMISSIONS.SCHEDULE_VIEW],
-    '/admin/hospitals': [PERMISSIONS.HOSPITAL_VIEW],
-    '/admin/access-codes': [PERMISSIONS.ACCESS_CODES_VIEW],
+    '/admin/management': [PERMISSIONS.STAFF_VIEW],
     '/admin/swaps': [PERMISSIONS.SWAP_VIEW],
-    '/admin/settings': [PERMISSIONS.SETTINGS_VIEW],
+    '/admin/shift-permissions': [PERMISSIONS.STAFF_VIEW],
     '/staff': [PERMISSIONS.SCHEDULE_VIEW],
     '/staff/schedule': [PERMISSIONS.SCHEDULE_VIEW]
   }
@@ -279,12 +253,9 @@ export function checkAPIPermission(
       PUT: [PERMISSIONS.STAFF_UPDATE],
       DELETE: [PERMISSIONS.STAFF_DELETE]
     },
-    '/api/admin/access-codes': {
-      GET: [PERMISSIONS.ACCESS_CODES_VIEW],
-      POST: [PERMISSIONS.ACCESS_CODES_CREATE]
-    },
-    '/api/admin/staff-access-codes': {
-      GET: [PERMISSIONS.ACCESS_CODES_VIEW]
+    '/api/admin/shift-permissions': {
+      GET: [PERMISSIONS.STAFF_VIEW],
+      POST: [PERMISSIONS.STAFF_UPDATE]
     },
     '/api/hospitals': {
       GET: [PERMISSIONS.HOSPITAL_VIEW],
