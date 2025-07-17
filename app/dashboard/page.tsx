@@ -4,11 +4,14 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 import { logger } from '@/lib/logger'
 import { hasPermission } from '@/lib/roleBasedAccess'
 import { Calendar } from '@/components/Calendar'
 import { useData } from '@/contexts/DataContext'
+import { apiClient } from '@/lib/apiClient'
+import { showToast } from '@/components/Toast'
 
 interface DashboardStats {
   staff: number
@@ -67,6 +70,17 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
   const [isLoadingStats, setIsLoadingStats] = useState(true)
   const [canGenerateShifts, setCanGenerateShifts] = useState(false)
   
+  // Staff quick actions state
+  const [quickReserveDate, setQuickReserveDate] = useState('')
+  const [quickReserveDept, setQuickReserveDept] = useState('LABORATOR')
+  const [isQuickReserving, setIsQuickReserving] = useState(false)
+  const [showQuickReserve, setShowQuickReserve] = useState(false)
+  const [mySwaps, setMySwaps] = useState<SwapRequest[]>([])
+  
+  // Manager interface state
+  const [activeTab, setActiveTab] = useState<'approvals' | 'schedule'>('approvals')
+  const [allReservations, setAllReservations] = useState<Reservation[]>([])
+  
   const currentDate = new Date()
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth())
   const [viewYear, setViewYear] = useState(currentDate.getFullYear())
@@ -81,6 +95,7 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
       if (isStaff) {
         loadMyReservations()
         checkShiftPermissions()
+        loadMySwaps()
       }
     }
   }, [viewYear, viewMonth, user, loadShifts])
@@ -115,6 +130,15 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
         
         if (swapsData.success && swapsData.swaps) {
           setPendingSwaps(swapsData.swaps)
+        }
+        
+        // Load all reservations for managers
+        const reservationsResponse = await fetch(`/api/reservations?hospitalId=${user?.hospitalId}`, {
+          credentials: 'include'
+        })
+        const reservationsData = await reservationsResponse.json()
+        if (reservationsData.success) {
+          setAllReservations(reservationsData.reservations || [])
         }
       }
       
@@ -154,6 +178,67 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
       }
     } catch (error) {
       logger.error('UnifiedDashboard', 'Failed to load reservations', error)
+    }
+  }
+
+  const loadMySwaps = async () => {
+    if (!user?.userId) return
+    
+    try {
+      const response = await fetch(`/api/swaps?staffId=${user.userId}&hospitalId=${user.hospitalId}`, {
+        credentials: 'include'
+      })
+      const data = await response.json()
+      
+      if (data.success) {
+        setMySwaps(data.swaps || [])
+      }
+    } catch (error) {
+      logger.error('UnifiedDashboard', 'Failed to load swaps', error)
+    }
+  }
+
+  const handleQuickReserve = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !quickReserveDate) return
+
+    setIsQuickReserving(true)
+    try {
+      const data = await apiClient.post('/api/reservations', {
+        staffId: user.userId,
+        shiftDate: quickReserveDate,
+        department: quickReserveDept
+      })
+
+      if (data.success) {
+        showToast('success', 'Rezervare creată cu succes!')
+        setQuickReserveDate('')
+        setShowQuickReserve(false)
+        loadMyReservations()
+        fetchDashboardStats()
+      } else {
+        showToast('error', data.error || 'Eroare la crearea rezervării')
+      }
+    } catch (error: any) {
+      showToast('error', error.message || 'Eroare la crearea rezervării')
+    } finally {
+      setIsQuickReserving(false)
+    }
+  }
+
+  const handleCancelReservation = async (reservationId: number) => {
+    try {
+      const data = await apiClient.delete(`/api/reservations?reservationId=${reservationId}`)
+      
+      if (data.success) {
+        showToast('success', 'Rezervare anulată cu succes!')
+        loadMyReservations()
+        fetchDashboardStats()
+      } else {
+        showToast('error', data.error || 'Eroare la anularea rezervării')
+      }
+    } catch (error: any) {
+      showToast('error', error.message || 'Eroare la anularea rezervării')
     }
   }
 
@@ -234,6 +319,18 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
     })
   }
 
+  const getMinReserveDate = () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    return tomorrow.toISOString().split('T')[0]
+  }
+
+  const getMaxReserveDate = () => {
+    const maxDate = new Date()
+    maxDate.setMonth(maxDate.getMonth() + 2)
+    return maxDate.toISOString().split('T')[0]
+  }
+
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', {
@@ -287,6 +384,221 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
     })
   }
 
+  // Staff gets a completely different layout
+  if (isStaff) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Staff Header */}
+        <div className="bg-white border-b border-gray-200 px-4 py-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-xl">👨‍⚕️</span>
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Programul Meu</h1>
+                <p className="text-sm text-gray-600">{user?.name} • {user?.hospitalName}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowQuickReserve(!showQuickReserve)}
+                disabled={myReservations.length >= 3}
+              >
+                + Rezervare
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                Ieși
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto p-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Main Calendar - Takes up 3/4 of the space */}
+            <div className="lg:col-span-3">
+              <Card className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Calendarul Meu</h2>
+                    <p className="text-sm text-gray-600">Gărzile mele și rezervările</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={handlePrevMonth} icon="chevronLeft">
+                      <span className="sr-only">Luna anterioară</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setViewMonth(currentDate.getMonth())
+                      setViewYear(currentDate.getFullYear())
+                    }}>
+                      Azi
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleNextMonth} icon="chevronRight">
+                      <span className="sr-only">Luna următoare</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Quick Reserve Form */}
+                {showQuickReserve && (
+                  <Card className="p-4 mb-6 bg-blue-50 border-blue-200">
+                    <h3 className="font-medium text-blue-900 mb-3">Rezervare Rapidă</h3>
+                    <form onSubmit={handleQuickReserve} className="flex items-end gap-4">
+                      <div className="flex-1">
+                        <Input
+                          type="date"
+                          label="Data"
+                          value={quickReserveDate}
+                          onChange={(e) => setQuickReserveDate(e.target.value)}
+                          min={getMinReserveDate()}
+                          max={getMaxReserveDate()}
+                          required
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Departament</label>
+                        <select
+                          value={quickReserveDept}
+                          onChange={(e) => setQuickReserveDept(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="LABORATOR">LABORATOR</option>
+                          <option value="URGENTA">URGENȚĂ</option>
+                          <option value="CHIRURGIE">CHIRURGIE</option>
+                          <option value="INTERNA">INTERNĂ</option>
+                        </select>
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={isQuickReserving || !quickReserveDate}
+                        size="sm"
+                      >
+                        {isQuickReserving ? 'Se salvează...' : 'Rezervă'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowQuickReserve(false)}
+                      >
+                        Anulează
+                      </Button>
+                    </form>
+                  </Card>
+                )}
+
+                {shiftsLoading ? (
+                  <div className="text-center py-8 text-gray-500">
+                    Se încarcă programul...
+                  </div>
+                ) : (
+                  <Calendar
+                    year={viewYear}
+                    month={viewMonth}
+                    shifts={enhancedShifts}
+                    onDayClick={undefined}
+                  />
+                )}
+              </Card>
+            </div>
+
+            {/* Staff Sidebar - Takes up 1/4 of the space */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Quick Stats */}
+              <Card className="p-4">
+                <h3 className="font-medium text-gray-900 mb-3">Statistici Rapide</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Rezervări Active</span>
+                    <span className="text-sm font-semibold text-blue-600">{myReservations.length}/3</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Gărzi Luna</span>
+                    <span className="text-sm font-semibold text-green-600">{stats.monthShifts}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Gărzi Săptămâna</span>
+                    <span className="text-sm font-semibold text-orange-600">{stats.weekShifts}</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* My Reservations */}
+              <Card className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-gray-900">Rezervările Mele</h3>
+                  <span className="text-xs text-gray-500">{myReservations.length}/3</span>
+                </div>
+                <div className="space-y-2">
+                  {myReservations.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic">Nu ai rezervări active</p>
+                  ) : (
+                    myReservations.map((reservation) => (
+                      <div key={reservation.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {new Date(reservation.shift_date).toLocaleDateString('ro-RO', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </p>
+                          <p className="text-xs text-gray-600">{reservation.department}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleCancelReservation(reservation.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+
+              {/* My Swaps */}
+              <Card className="p-4">
+                <h3 className="font-medium text-gray-900 mb-3">Schimburile Mele</h3>
+                <div className="space-y-2">
+                  {mySwaps.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic">Nu ai cereri de schimb</p>
+                  ) : (
+                    mySwaps.slice(0, 3).map((swap) => (
+                      <div key={swap.id} className="p-2 bg-gray-50 rounded">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-gray-900">
+                            {new Date(swap.shift_date).toLocaleDateString('ro-RO', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </p>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            swap.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            swap.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {swap.status === 'pending' ? 'Pending' : swap.status === 'approved' ? 'Aprobat' : 'Respins'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">{swap.reason}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Manager/Admin flow continues with existing layout
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -294,52 +606,27 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {isStaff ? 'Programul Meu' : `Dashboard ${user?.role === 'admin' ? 'Administrator' : 'Manager'}`}
+              Dashboard {user?.role === 'admin' ? 'Administrator' : 'Manager'}
             </h1>
             <p className="text-gray-600">
               Bun venit, {user?.name}! • {user?.hospitalName}
-              {isStaff && ' • LABORATOR'}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {isStaff && (
-              <>
-                <Button 
-                  variant="secondary" 
-                  size="sm"
-                  onClick={() => router.push('/reservations')}
-                >
-                  Rezervări ({myReservations.length}/3)
-                </Button>
-                {canGenerateShifts && (
-                  <Button 
-                    variant="primary" 
-                    size="sm"
-                    onClick={() => router.push('/generate-shifts')}
-                  >
-                    Generează Gărzi
-                  </Button>
-                )}
-              </>
-            )}
-            {isManager && (
-              <>
-                <Button 
-                  variant="secondary" 
-                  size="sm"
-                  onClick={() => router.push('/schedule')}
-                >
-                  Program Gărzi
-                </Button>
-                <Button 
-                  variant="primary" 
-                  size="sm"
-                  onClick={() => router.push('/management')}
-                >
-                  Management
-                </Button>
-              </>
-            )}
+            <Button 
+              variant="secondary" 
+              size="sm"
+              onClick={() => router.push('/schedule')}
+            >
+              Program Gărzi
+            </Button>
+            <Button 
+              variant="primary" 
+              size="sm"
+              onClick={() => router.push('/management')}
+            >
+              Management
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               Ieși
             </Button>
