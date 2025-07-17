@@ -6,7 +6,7 @@
 import { sql } from './db'
 import { logger } from './logger'
 import bcrypt from 'bcryptjs'
-import { generateSecurePassword } from './password-generator'
+// Password generator removed during authentication simplification
 
 export interface Migration {
   version: number

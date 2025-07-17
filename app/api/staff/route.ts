@@ -3,8 +3,7 @@ import { sql } from '@/lib/db'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
-import { generateMemorablePassword } from '@/lib/password-generator'
-import { accessCodeManager } from '@/lib/accessCodes'
+// Removed password generator and access codes during authentication simplification
 import { logger } from '@/lib/logger'
 import { withHospitalAuth, validateHospitalParam } from '@/lib/hospitalMiddleware'
 
@@ -178,7 +177,7 @@ export async function POST(request: NextRequest) {
       }
       
       // Generate a secure temporary password
-      const tempPassword = generateMemorablePassword()
+      const tempPassword = Math.random().toString(36).slice(-8) // Simple password generation
       const hashedPassword = await bcrypt.hash(tempPassword, 10)
       
       // TODO: Send this password to the user via secure email
@@ -191,27 +190,22 @@ export async function POST(request: NextRequest) {
       
       const staff = result[0]
       
-      // Auto-generate permanent access code for new staff member
+      // Access codes are now hospital-based, not individual staff
+      // Staff use hospital codes (LAB, BUH1, BUH2) for authentication
       try {
-        const accessCode = await accessCodeManager.generateAccessCode(
-          targetHospitalId,
-          'staff',
-          staff.id
-        )
         
-        logger.info('StaffAPI', 'Auto-generated access code for new staff', {
+        logger.info('StaffAPI', 'Staff created successfully', {
           staffId: staff.id,
           staffName: staff.name,
           hospitalId: targetHospitalId,
-          accessCode: accessCode.substring(0, 2) + '***',
-          createdBy: authUser.userId
+          createdBy: authUser.userId,
+          note: 'Staff will use hospital access code for authentication'
         })
-      } catch (accessCodeError) {
-        logger.error('StaffAPI', 'Failed to generate access code for new staff', {
+      } catch (error) {
+        logger.error('StaffAPI', 'Error in staff creation process', {
           staffId: staff.id,
-          error: accessCodeError
+          error
         })
-        // Don't fail the staff creation if access code generation fails
       }
       
       return NextResponse.json({

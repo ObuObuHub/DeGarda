@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
-import { notifyShiftAssignment } from '@/lib/notifications'
-import { logActivity } from '@/lib/activity-logger'
+// Removed notification and activity logging dependencies during simplification
 import { logger } from '@/lib/logger'
 import { withHospitalAuth } from '@/lib/hospitalMiddleware'
 
@@ -292,14 +291,14 @@ export async function POST(request: NextRequest) {
       }
       
       // Create notification for the assigned staff
-      await notifyShiftAssignment(staffId, date, 'Hospital')
+      // Notification system removed during simplification
       
-      // Log activity (TODO: get current user ID from auth context)
-      await logActivity(
-        parseInt(staffId), 
-        'shift_assigned', 
-        `a fost asignat(ă) la garda din ${date}`
-      )
+      // Log activity using simplified logger
+      logger.info('ShiftAssignment', 'Shift assigned', { 
+        staffId: parseInt(staffId), 
+        date, 
+        type: 'manual_assignment' 
+      })
       
       return NextResponse.json({ success: true, shift: result[0] })
     } else {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
-import { notifySwapRequest } from '@/lib/notifications'
+// Notification system removed during simplification
 import { staff } from '@/lib/data'
 
 // GET all swap requests
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       // Notify specific staff member
       const fromStaff = staff.find(s => s.id === fromStaffId)
       if (fromStaff) {
-        await notifySwapRequest(toStaffId, fromStaff.name, shiftInfo[0].date)
+        // Notification system removed during simplification
       }
     } else {
       // Notify all managers about open swap request
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       const fromStaff = staff.find(s => s.id === fromStaffId)
       if (fromStaff) {
         for (const manager of managers) {
-          await notifySwapRequest(manager.id, fromStaff.name, shiftInfo[0].date)
+          // Notification system removed during simplification
         }
       }
     }

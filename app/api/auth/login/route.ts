@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { comparePassword, generateToken } from '@/lib/auth'
 import { ensureArray } from '@/lib/db-helpers'
-import { logActivity } from '@/lib/activity-logger'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     // All new authentication should use /api/auth/access-code
     
     // Log successful login  
-    await logActivity(user.id, 'login', `a intrat în aplicație`)
+    logger.info('AuthLogin', 'User login successful', { userId: user.id, email: user.email, role: user.role })
 
     // Return user data without password
     const { password: _, ...userWithoutPassword } = user

@@ -6,7 +6,7 @@
 import { sql } from './db'
 import { logger } from './logger'
 import bcrypt from 'bcryptjs'
-import { generateSecurePassword } from './password-generator'
+// Password generator removed during authentication simplification
 
 export interface SeederCredentials {
   admin: { email: string; password: string }
@@ -41,8 +41,8 @@ export class DatabaseSeeder {
   async seedAdminUsers(hospitalIds: number[]): Promise<SeederCredentials['admin' | 'manager']> {
     logger.info('Seeder', 'Seeding admin users')
     
-    const adminPassword = generateSecurePassword()
-    const managerPassword = generateSecurePassword()
+    const adminPassword = Math.random().toString(36).slice(-12) // Simple password generation
+    const managerPassword = Math.random().toString(36).slice(-12) // Simple password generation
     
     const adminPasswordHash = await bcrypt.hash(adminPassword, 10)
     const managerPasswordHash = await bcrypt.hash(managerPassword, 10)
@@ -85,7 +85,7 @@ export class DatabaseSeeder {
     
     for (let i = 0; i < staffMembers.length; i++) {
       const member = staffMembers[i]
-      const password = generateSecurePassword()
+      const password = Math.random().toString(36).slice(-10) // Simple password generation
       const hashedPassword = await bcrypt.hash(password, 10)
       
       // Distribute staff across hospitals
