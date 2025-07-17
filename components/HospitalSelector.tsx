@@ -1,222 +1,109 @@
 'use client'
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { useHospital } from '@/contexts/HospitalContext'
-import { Icon } from '@/components/ui/Icon'
+import { useState, useEffect } from 'react'
+import { Card } from '@/components/ui/Card'
 import { logger } from '@/lib/logger'
 
 interface Hospital {
-  id: string
+  id: number
   name: string
   city: string
-  departments?: number
-  staff?: number
 }
 
-export function HospitalSelector() {
-  const { selectedHospitalId, setSelectedHospitalId } = useHospital()
-  const [isOpen, setIsOpen] = useState(false)
-  const [focusedIndex, setFocusedIndex] = useState(-1)
-  const [hospitals, setHospitals] = useState<Hospital[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  
-  const selectedHospital = hospitals.find(h => h.id === selectedHospitalId)
+interface HospitalSelectorProps {
+  selectedHospital: string
+  onHospitalChange: (hospitalId: string) => void
+  userRole: 'admin' | 'manager' | 'staff'
+  userHospitalId?: number
+  className?: string
+}
 
-  const fetchHospitals = useCallback(async () => {
+export function HospitalSelector({
+  selectedHospital,
+  onHospitalChange,
+  userRole,
+  userHospitalId,
+  className = ''
+}: HospitalSelectorProps) {
+  const [hospitals, setHospitals] = useState<Hospital[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetchHospitals()
+  }, [])
+
+  const fetchHospitals = async () => {
     try {
-      const response = await fetch('/api/hospitals')
+      setLoading(true)
+      const response = await fetch('/api/hospitals', {
+        credentials: 'include'
+      })
+      
       if (response.ok) {
         const data = await response.json()
         setHospitals(data)
-        // If no hospital is selected, select the first one
-        if (!selectedHospitalId && data.length > 0) {
-          setSelectedHospitalId(data[0].id)
+        
+        // Auto-select based on role
+        if (userRole === 'manager' && userHospitalId) {
+          onHospitalChange(userHospitalId.toString())
+        } else if (data.length > 0 && !selectedHospital) {
+          onHospitalChange(data[0].id.toString())
         }
+      } else {
+        setError('Failed to fetch hospitals')
       }
     } catch (error) {
       logger.error('HospitalSelector', 'Failed to fetch hospitals', error)
+      setError('Failed to fetch hospitals')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
-  }, [selectedHospitalId, setSelectedHospitalId])
-
-  // Fetch hospitals from API
-  useEffect(() => {
-    fetchHospitals()
-  }, [fetchHospitals])
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const handleSelect = (hospitalId: string) => {
-    setSelectedHospitalId(hospitalId)
-    setIsOpen(false)
-    setFocusedIndex(-1)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!isOpen) {
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
-        e.preventDefault()
-        setIsOpen(true)
-        setFocusedIndex(hospitals.findIndex(h => h.id === selectedHospitalId))
-      }
-    } else {
-      switch (e.key) {
-        case 'Escape':
-          e.preventDefault()
-          setIsOpen(false)
-          setFocusedIndex(-1)
-          break
-        case 'ArrowDown':
-          e.preventDefault()
-          setFocusedIndex(prev => (prev + 1) % hospitals.length)
-          break
-        case 'ArrowUp':
-          e.preventDefault()
-          setFocusedIndex(prev => (prev - 1 + hospitals.length) % hospitals.length)
-          break
-        case 'Enter':
-          e.preventDefault()
-          if (focusedIndex >= 0) {
-            handleSelect(hospitals[focusedIndex].id)
-          }
-          break
-      }
-    }
+  // Don't show selector for managers (they're restricted to their hospital)
+  if (userRole === 'manager') {
+    return null
+  }
+
+  if (loading) {
+    return (
+      <Card className={`p-6 ${className}`}>
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+          <span className="ml-2 text-sm text-gray-600">Loading hospitals...</span>
+        </div>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card className={`p-6 ${className}`}>
+        <div className="text-red-600 text-sm">{error}</div>
+      </Card>
+    )
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        onKeyDown={handleKeyDown}
-        className="
-          w-full max-w-[280px] sm:max-w-none
-          bg-white
-          border border-gray-200
-          rounded-xl
-          px-4 py-3
-          text-left
-          hover:border-system-blue/30
-          hover:shadow-md
-          focus:outline-none
-          focus:ring-2
-          focus:ring-system-blue
-          focus:border-transparent
-          transition-all duration-200
-          group
-          shadow-sm
-        "
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-2xl flex-shrink-0">🏥</span>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-label-primary truncate">
-                {isLoading ? 'Se încarcă...' : (selectedHospital?.name || 'Selectează spital')}
-              </p>
-              {selectedHospital && (
-                <p className="text-xs text-label-tertiary">
-                  {selectedHospital.city}
-                </p>
-              )}
-            </div>
-          </div>
-          <Icon 
-            name="chevronDown" 
-            size="sm" 
-            className={`text-label-tertiary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          />
-        </div>
-      </button>
-
-      {/* Dropdown */}
-      {isOpen && (
-        <>
-          {/* Mobile backdrop */}
-          <div className="fixed inset-0 bg-black/20 z-40 sm:hidden" onClick={() => setIsOpen(false)} />
-          
-          {/* Dropdown content */}
-          <div className={`
-            absolute top-full mt-2 
-            w-full sm:w-[320px] 
-            bg-white 
-            rounded-xl 
-            shadow-lg 
-            border border-gray-200
-            overflow-hidden
-            z-50
-            animate-dropdown sm:animate-dropdown
-            
-            ${/* Mobile full screen styles */ ''}
-            fixed sm:absolute
-            inset-x-0 sm:inset-x-auto
-            bottom-0 sm:bottom-auto
-            mt-0 sm:mt-2
-            rounded-t-2xl sm:rounded-xl
-            max-h-[70vh] sm:max-h-[400px]
-            animate-mobile-slide-up sm:animate-dropdown
-          `}>
-            {/* Mobile drag handle */}
-            <div className="sm:hidden flex justify-center pt-3 pb-2">
-              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
-            </div>
-            
-            <div className="overflow-y-auto max-h-[60vh] sm:max-h-[350px]">
-              {isLoading ? (
-                <div className="text-center py-4 text-label-secondary">
-                  Se încarcă spitalele...
-                </div>
-              ) : hospitals.length === 0 ? (
-                <div className="text-center py-4 text-label-secondary">
-                  Niciun spital disponibil
-                </div>
-              ) : (
-                hospitals.map((hospital, index) => (
-                <button
-                  key={hospital.id}
-                  onClick={() => handleSelect(hospital.id)}
-                  onMouseEnter={() => setFocusedIndex(index)}
-                  className={`
-                    w-full px-4 py-3
-                    flex items-center gap-3
-                    hover:bg-gray-50
-                    transition-colors
-                    ${hospital.id === selectedHospitalId ? 'bg-system-blue/5' : ''}
-                    ${focusedIndex === index ? 'bg-gray-50' : ''}
-                  `}
-                >
-                  <span className="text-2xl">🏥</span>
-                  <div className="flex-1 text-left">
-                    <p className={`text-sm font-medium ${
-                      hospital.id === selectedHospitalId ? 'text-system-blue' : 'text-label-primary'
-                    }`}>
-                      {hospital.name}
-                    </p>
-                    <p className="text-xs text-label-tertiary">
-                      {hospital.city} • {hospital.departments || 0} secții • {hospital.staff || 0} personal
-                    </p>
-                  </div>
-                  {hospital.id === selectedHospitalId && (
-                    <Icon name="check" size="sm" className="text-system-blue" />
-                  )}
-                </button>
-              ))
-              )}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+    <Card className={`p-6 ${className}`}>
+      <div className="flex items-center space-x-4">
+        <label className="text-sm font-medium text-gray-700">
+          Selectează Spitalul:
+        </label>
+        <select
+          value={selectedHospital}
+          onChange={(e) => onHospitalChange(e.target.value)}
+          className="form-select rounded-lg border-gray-300 min-w-[200px]"
+        >
+          <option value="">Selectează...</option>
+          {hospitals.map(hospital => (
+            <option key={hospital.id} value={hospital.id.toString()}>
+              {hospital.name} - {hospital.city}
+            </option>
+          ))}
+        </select>
+      </div>
+    </Card>
   )
 }

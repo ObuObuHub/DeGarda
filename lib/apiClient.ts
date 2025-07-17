@@ -35,16 +35,15 @@ class ApiClient {
       ...(headers as Record<string, string>)
     }
 
-    if (this.token) {
-      finalHeaders['Authorization'] = `Bearer ${this.token}`
-    }
+    // No need to set Authorization header - using HTTP-only cookies
 
     // Retry logic
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
         const response = await fetch(url, {
           ...fetchOptions,
-          headers: finalHeaders
+          headers: finalHeaders,
+          credentials: 'include' // Include cookies for authentication
         })
 
         // Don't retry on auth errors
