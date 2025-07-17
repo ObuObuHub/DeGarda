@@ -183,7 +183,9 @@ export function canAccessRoute(userRole: UserRole, route: string): boolean {
     '/admin/swaps': [PERMISSIONS.SWAP_VIEW],
     '/admin/shift-permissions': [PERMISSIONS.STAFF_VIEW],
     '/staff': [PERMISSIONS.SCHEDULE_VIEW],
-    '/staff/schedule': [PERMISSIONS.SCHEDULE_VIEW]
+    '/staff/schedule': [PERMISSIONS.SCHEDULE_VIEW],
+    '/staff/reservations': [PERMISSIONS.SHIFT_RESERVE],
+    '/staff/generate-shifts': [PERMISSIONS.SCHEDULE_GENERATE]
   }
   
   const requiredPermissions = routePermissions[route]
@@ -271,6 +273,11 @@ export function checkAPIPermission(
     },
     '/api/shifts/generate': {
       POST: [PERMISSIONS.SCHEDULE_GENERATE]
+    },
+    '/api/reservations': {
+      GET: [PERMISSIONS.SHIFT_VIEW],
+      POST: [PERMISSIONS.SHIFT_RESERVE],
+      DELETE: [PERMISSIONS.SHIFT_RESERVE]
     }
   }
   

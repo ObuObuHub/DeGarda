@@ -214,6 +214,13 @@ function StaffSchedulePage({ user, isLoading: authLoading, error: authError }: S
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              variant="secondary" 
+              size="sm"
+              onClick={() => router.push('/staff/reservations')}
+            >
+              Rezervări ({myReservations.length}/3)
+            </Button>
             {canGenerateShifts && (
               <Button 
                 variant="primary" 
@@ -233,10 +240,10 @@ function StaffSchedulePage({ user, isLoading: authLoading, error: authError }: S
         <Card className="p-4 mb-6 bg-system-blue/5 border-system-blue/20">
           <h3 className="font-medium text-system-blue mb-2">Cum funcționează?</h3>
           <ul className="text-sm text-label-secondary space-y-1">
-            <li>• Click pe o zi liberă pentru a rezerva o gardă</li>
+            <li>• Folosește pagina "Rezervări" pentru a rezerva gărzi preferate</li>
             <li>• Poți rezerva maxim 3 gărzi pe lună</li>
-            <li>• Click pe o rezervare pentru a o anula</li>
             <li>• Rezervările vor fi luate în considerare la generarea programului</li>
+            <li>• Programul final va fi afișat aici după aprobare</li>
           </ul>
         </Card>
 
