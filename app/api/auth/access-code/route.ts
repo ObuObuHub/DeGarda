@@ -26,38 +26,66 @@ export async function POST(request: NextRequest) {
     const hospitals = ensureArray(hospitalResult)
 
     if (hospitals.length > 0) {
-      // Valid hospital access code - create staff session
+      // Valid hospital access code - get a real staff member from this hospital
       const hospital = hospitals[0]
       
-      // For hospital access codes, create a generic staff user session
-      // This allows any staff member from that hospital to log in
+      // Find the first active staff member from this hospital
+      const staffResult = await sql`
+        SELECT id, name, email, specialization
+        FROM staff
+        WHERE hospital_id = ${hospital.id} 
+          AND role = 'staff' 
+          AND is_active = true
+        ORDER BY id
+        LIMIT 1
+      `
+      
+      const staffMembers = ensureArray(staffResult)
+      
+      if (staffMembers.length === 0) {
+        logger.error('HospitalAuth', 'No active staff found for hospital', {
+          hospitalId: hospital.id,
+          hospitalName: hospital.name
+        })
+        return NextResponse.json(
+          { success: false, error: 'No active staff found for this hospital' },
+          { status: 404 }
+        )
+      }
+      
+      const staffMember = staffMembers[0]
+      
+      // Create real staff session using actual staff member
       const token = generateToken({
-        id: 'staff-' + hospital.id, // Generic staff ID for hospital
+        id: staffMember.id,
         hospitalId: hospital.id,
         hospitalName: hospital.name,
         role: 'staff',
-        name: 'Personal Medical',
-        email: `staff@${hospital.name.toLowerCase().replace(/\s+/g, '')}.ro`
+        name: staffMember.name,
+        email: staffMember.email
       })
 
-      // Log successful hospital login
+      // Log successful hospital login with real staff
       logger.info('HospitalAuth', 'Hospital staff login successful', {
         hospitalId: hospital.id,
         hospitalName: hospital.name,
+        staffId: staffMember.id,
+        staffName: staffMember.name,
         accessCode: accessCode
       })
 
       const response = NextResponse.json({
         success: true,
         user: {
-          id: 'staff-' + hospital.id,
-          name: 'Personal Medical',
-          email: `staff@${hospital.name.toLowerCase().replace(/\s+/g, '')}.ro`,
+          id: staffMember.id,
+          name: staffMember.name,
+          email: staffMember.email,
           role: 'staff',
           hospital_id: hospital.id,
           hospitalId: hospital.id,
           hospitalName: hospital.name,
-          userId: 'staff-' + hospital.id
+          userId: staffMember.id,
+          specialization: staffMember.specialization
         }
       })
 
