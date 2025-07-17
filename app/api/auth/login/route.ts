@@ -59,7 +59,10 @@ export async function POST(request: NextRequest) {
       hospitalId: user.hospital_id
     })
 
-    // Log successful login
+    // Note: This legacy login endpoint should redirect to unified dashboard
+    // All new authentication should use /api/auth/access-code
+    
+    // Log successful login  
     await logActivity(user.id, 'login', `a intrat în aplicație`)
 
     // Return user data without password

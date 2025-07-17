@@ -32,16 +32,10 @@ export default function DirectLoginPage() {
         // Authentication successful - token is now stored in HTTP-only cookie
         // No need to store token in localStorage anymore for security
         
-        // Route based on user role
-        if (data.user?.role === 'admin') {
-          router.push('/admin/dashboard')
-        } else if (data.user?.role === 'manager') {
-          router.push('/admin/dashboard')
-        } else {
-          router.push('/staff/schedule')
-        }
+        // Route all users to unified dashboard
+        router.push('/dashboard')
       } else {
-        setError(data.error || 'Parolă invalidă')
+        setError(data.error || 'Cod de acces invalid')
       }
     } catch (err) {
       setError('Eroare de conexiune')
@@ -66,10 +60,10 @@ export default function DirectLoginPage() {
         <form onSubmit={handleLogin} className="space-y-6">
           <Input
             type="text"
-            label="Parolă Personal"
+            label="Cod de Acces"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Introdu parola ta (ex: AB3)"
+            placeholder="Cod spital (ex: LAB) sau manager (ex: MGR101)"
             required
             autoFocus
           />

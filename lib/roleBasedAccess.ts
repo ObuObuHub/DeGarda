@@ -177,12 +177,17 @@ export function hasPermission(
  */
 export function canAccessRoute(userRole: UserRole, route: string): boolean {
   const routePermissions: Record<string, Permission[]> = {
+    // Unified app routes
+    '/dashboard': [PERMISSIONS.SCHEDULE_VIEW],
+    '/schedule': [PERMISSIONS.SCHEDULE_VIEW],
+    '/management': [PERMISSIONS.STAFF_VIEW],
+    '/reservations': [PERMISSIONS.SHIFT_RESERVE],
+    '/generate-shifts': [PERMISSIONS.SCHEDULE_GENERATE],
+    
+    // Legacy routes (deprecated)
     '/admin/dashboard': [PERMISSIONS.SCHEDULE_VIEW],
     '/admin/schedule': [PERMISSIONS.SCHEDULE_VIEW],
     '/admin/management': [PERMISSIONS.STAFF_VIEW],
-    '/admin/swaps': [PERMISSIONS.SWAP_VIEW],
-    '/admin/shift-permissions': [PERMISSIONS.STAFF_VIEW],
-    '/staff': [PERMISSIONS.SCHEDULE_VIEW],
     '/staff/schedule': [PERMISSIONS.SCHEDULE_VIEW],
     '/staff/reservations': [PERMISSIONS.SHIFT_RESERVE],
     '/staff/generate-shifts': [PERMISSIONS.SCHEDULE_GENERATE]
@@ -210,21 +215,21 @@ export function getAllowedNavItems(userRole: UserRole) {
   const allNavItems = [
     { 
       label: 'Dashboard', 
-      href: '/admin/dashboard', 
+      href: '/dashboard', 
       icon: 'dashboard', 
       permission: PERMISSIONS.SCHEDULE_VIEW,
       description: 'Overview, calendar, and key metrics'
     },
     { 
       label: 'Program Gărzi', 
-      href: '/admin/schedule', 
+      href: '/schedule', 
       icon: 'calendar', 
       permission: PERMISSIONS.SCHEDULE_VIEW,
       description: 'Schedule management and shift swaps'
     },
     { 
       label: 'Management', 
-      href: '/admin/management', 
+      href: '/management', 
       icon: 'users', 
       permission: PERMISSIONS.STAFF_VIEW,
       description: 'Staff and system management'
