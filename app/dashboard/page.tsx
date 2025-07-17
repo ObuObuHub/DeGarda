@@ -12,6 +12,8 @@ import { Calendar } from '@/components/Calendar'
 import { useData } from '@/contexts/DataContext'
 import { apiClient } from '@/lib/apiClient'
 import { showToast } from '@/components/Toast'
+import { ManagerDashboard } from '@/components/ManagerDashboard'
+import { MobileLayout } from '@/components/MobileLayout'
 
 interface DashboardStats {
   staff: number
@@ -387,7 +389,8 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
   // Staff gets a completely different layout
   if (isStaff) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <MobileLayout user={user}>
+        <div className="bg-gray-50">
         {/* Staff Header */}
         <div className="bg-white border-b border-gray-200 px-4 py-4">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -594,11 +597,31 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </MobileLayout>
     )
   }
 
-  // Manager/Admin flow continues with existing layout
+  // Manager/Admin gets the new approval-central interface
+  if (isManager) {
+    return (
+      <MobileLayout user={user}>
+        <ManagerDashboard
+        user={user}
+        currentDate={currentDate}
+        viewMonth={viewMonth}
+        viewYear={viewYear}
+        setViewMonth={setViewMonth}
+        setViewYear={setViewYear}
+        handlePrevMonth={handlePrevMonth}
+        handleNextMonth={handleNextMonth}
+        handleLogout={handleLogout}
+      />
+      </MobileLayout>
+    )
+  }
+
+  // Fallback for any other roles
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
