@@ -34,6 +34,20 @@ interface UpcomingShift {
   type: string
 }
 
+interface SwapRequest {
+  id: number
+  from_staff_id: number
+  to_staff_id: number | null
+  shift_id: number
+  reason: string
+  status: string
+  created_at: string
+  shift_date: string
+  shift_type: string
+  from_staff_name: string
+  to_staff_name: string | null
+}
+
 interface AdminDashboardProps extends WithAuthProps {
   // Additional props if needed
 }
@@ -50,6 +64,7 @@ function AdminDashboard({ user, isLoading, error }: AdminDashboardProps) {
     upcomingShifts: 0
   })
   const [upcomingShifts, setUpcomingShifts] = useState<UpcomingShift[]>([])
+  const [pendingSwaps, setPendingSwaps] = useState<SwapRequest[]>([])
   const [isLoadingStats, setIsLoadingStats] = useState(true)
 
   useEffect(() => {
@@ -63,28 +78,44 @@ function AdminDashboard({ user, isLoading, error }: AdminDashboardProps) {
       setIsLoadingStats(true)
       
       // Fetch staff count
-      const staffResponse = await fetch('/api/staff')
+      const staffResponse = await fetch('/api/staff', {
+        credentials: 'include'
+      })
       const staffData = await staffResponse.json()
       
       // Fetch shifts stats
-      const shiftsResponse = await fetch('/api/shifts')
+      const shiftsResponse = await fetch('/api/shifts', {
+        credentials: 'include'
+      })
       const shiftsData = await shiftsResponse.json()
+      
+      // Fetch pending swaps
+      const swapsResponse = await fetch(`/api/swaps?status=pending&hospitalId=${user?.hospitalId}`, {
+        credentials: 'include'
+      })
+      const swapsData = await swapsResponse.json()
       
       // Calculate stats
       const staffCount = staffData.success ? staffData.staff?.length || 0 : 0
       const todayShifts = calculateTodayShifts(shiftsData.shifts || [])
       const weekShifts = calculateWeekShifts(shiftsData.shifts || [])
       const monthShifts = calculateMonthShifts(shiftsData.shifts || [])
+      const pendingSwapsCount = swapsData.success ? swapsData.swaps?.length || 0 : 0
       
       setStats({
         staff: staffCount,
         todayShifts,
         weekShifts,
         monthShifts,
-        pendingSwaps: 0, // TODO: Implement
+        pendingSwaps: pendingSwapsCount,
         coverageGaps: 0, // TODO: Implement
         upcomingShifts: 0 // TODO: Implement
       })
+      
+      // Set pending swaps for approval interface
+      if (swapsData.success && swapsData.swaps) {
+        setPendingSwaps(swapsData.swaps)
+      }
       
     } catch (error) {
       logger.error('AdminDashboard', 'Failed to fetch dashboard stats', error)
@@ -122,34 +153,43 @@ function AdminDashboard({ user, isLoading, error }: AdminDashboardProps) {
     }).length
   }
 
+  const handleSwapAction = async (swapId: number, action: 'approved' | 'rejected') => {
+    if (!user) return
+
+    try {
+      const response = await fetch(`/api/swaps/${swapId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          status: action,
+          reviewedBy: user.userId 
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Refresh dashboard data
+        fetchDashboardStats()
+        logger.info('AdminDashboard', `Swap ${action}`, { swapId, userId: user.userId })
+      } else {
+        logger.error('AdminDashboard', `Failed to ${action} swap`, { error: data.error, swapId })
+      }
+    } catch (error) {
+      logger.error('AdminDashboard', `Failed to ${action} swap`, error)
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('ro-RO', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
   const quickActions: QuickAction[] = [
-    {
-      id: 'staff-passwords',
-      title: 'Parole Personal',
-      description: 'Gestionează parolele personalului',
-      icon: '🔐',
-      color: 'bg-blue-500',
-      onClick: () => router.push('/admin/staff-passwords'),
-      roles: ['admin', 'manager']
-    },
-    {
-      id: 'shift-permissions',
-      title: 'Permisiuni Gărzi',
-      description: 'Acordă permisiuni de generare gărzi',
-      icon: '⚙️',
-      color: 'bg-green-500',
-      onClick: () => router.push('/admin/shift-permissions'),
-      roles: ['admin', 'manager']
-    },
-    {
-      id: 'staff-management',
-      title: 'Gestionare Personal',
-      description: 'Adaugă și gestionează personalul',
-      icon: '👥',
-      color: 'bg-purple-500',
-      onClick: () => router.push('/admin/staff'),
-      roles: ['admin', 'manager']
-    },
     {
       id: 'schedule-management',
       title: 'Program Gărzi',
@@ -160,22 +200,22 @@ function AdminDashboard({ user, isLoading, error }: AdminDashboardProps) {
       roles: ['admin', 'manager']
     },
     {
-      id: 'hospitals',
-      title: 'Gestionare Spitale',
-      description: 'Configurează spitalele',
-      icon: '🏥',
-      color: 'bg-red-500',
-      onClick: () => router.push('/admin/hospitals'),
-      roles: ['admin']
+      id: 'staff-management',
+      title: 'Gestionare Personal',
+      description: 'Personal, permisiuni și configurări',
+      icon: '👥',
+      color: 'bg-purple-500',
+      onClick: () => router.push('/admin/management'),
+      roles: ['admin', 'manager']
     },
     {
-      id: 'settings',
-      title: 'Configurări',
-      description: 'Setări sistem',
-      icon: '⚙️',
-      color: 'bg-gray-500',
-      onClick: () => router.push('/admin/settings'),
-      roles: ['admin']
+      id: 'reservations',
+      title: 'Vezi Rezervări',
+      description: 'Rezervările personalului pentru gărzi',
+      icon: '📝',
+      color: 'bg-blue-500',
+      onClick: () => fetchDashboardStats(), // Refresh to show latest data
+      roles: ['admin', 'manager']
     }
   ]
 
@@ -219,7 +259,7 @@ function AdminDashboard({ user, isLoading, error }: AdminDashboardProps) {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -275,6 +315,24 @@ function AdminDashboard({ user, isLoading, error }: AdminDashboardProps) {
               </div>
             </div>
           </Card>
+
+          {(user?.role === 'manager' || user?.role === 'admin') && (
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Cereri Schimb</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {isLoadingStats ? '...' : stats.pendingSwaps}
+                  </p>
+                </div>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  stats.pendingSwaps > 0 ? 'bg-orange-100' : 'bg-gray-100'
+                }`}>
+                  <span className="text-2xl">{stats.pendingSwaps > 0 ? '⏳' : '✅'}</span>
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Quick Actions */}
@@ -302,6 +360,80 @@ function AdminDashboard({ user, isLoading, error }: AdminDashboardProps) {
             ))}
           </div>
         </Card>
+
+        {/* Pending Approvals - Only for Managers and Admins */}
+        {(user?.role === 'manager' || user?.role === 'admin') && pendingSwaps.length > 0 && (
+          <Card className="p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Cereri Schimb în Așteptare ({pendingSwaps.length})
+              </h2>
+              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                <span className="text-lg">⏳</span>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {pendingSwaps.slice(0, 5).map((swap) => (
+                <div
+                  key={swap.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-4">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {swap.from_staff_name}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Gardă {formatDate(swap.shift_date)} • {swap.shift_type}
+                        </p>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-700">
+                          <span className="font-medium">Motiv:</span> {swap.reason}
+                        </p>
+                        {swap.to_staff_name && (
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Către:</span> {swap.to_staff_name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 ml-4">
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => handleSwapAction(swap.id, 'approved')}
+                    >
+                      Aprobă
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => handleSwapAction(swap.id, 'rejected')}
+                    >
+                      Respinge
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              
+              {pendingSwaps.length > 5 && (
+                <div className="text-center pt-4">
+                  <Button
+                    variant="secondary"
+                    onClick={() => router.push('/admin/schedule')}
+                  >
+                    Vezi toate ({pendingSwaps.length - 5} mai multe)
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         {/* Role-specific Information */}
         <Card className="p-6">
