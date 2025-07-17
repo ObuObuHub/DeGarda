@@ -2,7 +2,7 @@ import React from 'react'
 import { Icon } from './Icon'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline'
   size?: 'sm' | 'md' | 'lg'
   fullWidth?: boolean
   icon?: string
@@ -28,6 +28,7 @@ export const Button: React.FC<ButtonProps> = ({
     secondary: 'bg-system-gray-6 text-white hover:opacity-90 disabled:opacity-50',
     ghost: 'bg-transparent text-system-blue hover:bg-system-gray-6/10',
     danger: 'bg-system-red text-white hover:opacity-90 disabled:opacity-50',
+    outline: 'bg-transparent border border-system-blue text-system-blue hover:bg-system-blue hover:text-white',
   }
   
   const sizeClasses = {

@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon'
 
 export interface ToastMessage {
   id: string
-  type: 'success' | 'error' | 'info'
+  type: 'success' | 'error' | 'info' | 'warning'
   title: string
   message?: string
 }
@@ -27,13 +27,15 @@ function Toast({ toast, onClose }: ToastProps) {
   const bgColors = {
     success: 'bg-system-green',
     error: 'bg-system-red',
-    info: 'bg-system-blue'
+    info: 'bg-system-blue',
+    warning: 'bg-system-orange'
   }
 
   const icons = {
     success: 'check',
     error: 'x',
-    info: 'info'
+    info: 'info',
+    warning: 'alert-triangle'
   }
 
   return (

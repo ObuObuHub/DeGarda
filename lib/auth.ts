@@ -17,6 +17,8 @@ export interface TokenPayload {
   email: string
   role: string
   hospitalId?: number
+  hospitalName?: string
+  name?: string
 }
 
 export function generateToken(payload: TokenPayload): string {

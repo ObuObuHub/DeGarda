@@ -112,6 +112,14 @@ class ApiClient {
   async delete<T = any>(endpoint: string, options?: ApiOptions): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' })
   }
+
+  async patch<T = any>(endpoint: string, data?: any, options?: ApiOptions): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined
+    })
+  }
 }
 
 // Create singleton instance
