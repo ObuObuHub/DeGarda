@@ -14,51 +14,47 @@ export async function GET(request: NextRequest) {
       let query
       let params: (string | number)[] = [authUser.hospitalId]
 
+      let result
+      
       if (staffId) {
         // Get reservations for specific staff member
         if (month && year) {
-          query = `
-            SELECT * FROM shift_reservations 
-            WHERE hospital_id = $1 AND staff_id = $2 
-            AND EXTRACT(MONTH FROM shift_date) = $3 
-            AND EXTRACT(YEAR FROM shift_date) = $4
+          result = await sql`
+            SELECT * FROM reservations 
+            WHERE hospital_id = ${authUser.hospitalId} AND staff_id = ${staffId}
+            AND EXTRACT(MONTH FROM shift_date) = ${parseInt(month)}
+            AND EXTRACT(YEAR FROM shift_date) = ${parseInt(year)}
             ORDER BY shift_date
           `
-          params = [authUser.hospitalId, staffId, parseInt(month), parseInt(year)]
         } else {
-          query = `
-            SELECT * FROM shift_reservations 
-            WHERE hospital_id = $1 AND staff_id = $2 
+          result = await sql`
+            SELECT * FROM reservations 
+            WHERE hospital_id = ${authUser.hospitalId} AND staff_id = ${staffId}
             ORDER BY shift_date
           `
-          params = [authUser.hospitalId, staffId]
         }
       } else {
         // Get all reservations for hospital
         if (month && year) {
-          query = `
-            SELECT sr.*, s.name as staff_name 
-            FROM shift_reservations sr
-            LEFT JOIN staff s ON sr.staff_id = s.id
-            WHERE sr.hospital_id = $1 
-            AND EXTRACT(MONTH FROM sr.shift_date) = $2 
-            AND EXTRACT(YEAR FROM sr.shift_date) = $3
-            ORDER BY sr.shift_date
+          result = await sql`
+            SELECT r.*, s.name as staff_name 
+            FROM reservations r
+            LEFT JOIN staff s ON r.staff_id = s.id
+            WHERE r.hospital_id = ${authUser.hospitalId}
+            AND EXTRACT(MONTH FROM r.shift_date) = ${parseInt(month)}
+            AND EXTRACT(YEAR FROM r.shift_date) = ${parseInt(year)}
+            ORDER BY r.shift_date
           `
-          params = [authUser.hospitalId, parseInt(month), parseInt(year)]
         } else {
-          query = `
-            SELECT sr.*, s.name as staff_name 
-            FROM shift_reservations sr
-            LEFT JOIN staff s ON sr.staff_id = s.id
-            WHERE sr.hospital_id = $1 
-            ORDER BY sr.shift_date
+          result = await sql`
+            SELECT r.*, s.name as staff_name 
+            FROM reservations r
+            LEFT JOIN staff s ON r.staff_id = s.id
+            WHERE r.hospital_id = ${authUser.hospitalId}
+            ORDER BY r.shift_date
           `
-          params = [authUser.hospitalId]
         }
       }
-
-      const result = await sql.query(query, params)
       
       logger.info('Reservations', 'Retrieved reservations', {
         hospitalId: authUser.hospitalId,
@@ -68,7 +64,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        reservations: result.rows
+        reservations: result
       })
 
     } catch (error) {
@@ -135,7 +131,7 @@ export async function POST(request: NextRequest) {
         WHERE id = ${staffId} AND hospital_id = ${authUser.hospitalId}
       `
 
-      if (staffCheck.rows.length === 0) {
+      if (staffCheck.length === 0) {
         return NextResponse.json({
           success: false,
           error: 'Staff member not found in this hospital'
@@ -149,14 +145,14 @@ export async function POST(request: NextRequest) {
       monthEnd.setMonth(monthEnd.getMonth() + 1)
 
       const monthlyCount = await sql`
-        SELECT COUNT(*) as count FROM shift_reservations
+        SELECT COUNT(*) as count FROM reservations
         WHERE staff_id = ${staffId} 
         AND hospital_id = ${authUser.hospitalId}
         AND shift_date >= ${monthStart.toISOString()}
         AND shift_date < ${monthEnd.toISOString()}
       `
 
-      if (parseInt(monthlyCount.rows[0].count) >= 3) {
+      if (parseInt(monthlyCount[0].count) >= 3) {
         return NextResponse.json({
           success: false,
           error: 'Monthly reservation limit reached (3 per month)'
@@ -165,13 +161,13 @@ export async function POST(request: NextRequest) {
 
       // Check if date is already reserved by this staff
       const existingReservation = await sql`
-        SELECT id FROM shift_reservations
+        SELECT id FROM reservations
         WHERE staff_id = ${staffId} 
         AND hospital_id = ${authUser.hospitalId}
         AND shift_date = ${shiftDate}
       `
 
-      if (existingReservation.rows.length > 0) {
+      if (existingReservation.length > 0) {
         return NextResponse.json({
           success: false,
           error: 'Date already reserved'
@@ -182,11 +178,11 @@ export async function POST(request: NextRequest) {
       const assignedShift = await sql`
         SELECT id FROM shifts
         WHERE hospital_id = ${authUser.hospitalId}
-        AND shift_date = ${shiftDate}
-        AND doctor_id IS NOT NULL
+        AND date = ${shiftDate}
+        AND staff_id IS NOT NULL
       `
 
-      if (assignedShift.rows.length > 0) {
+      if (assignedShift.length > 0) {
         return NextResponse.json({
           success: false,
           error: 'Shift already assigned to another doctor'
@@ -195,8 +191,8 @@ export async function POST(request: NextRequest) {
 
       // Create reservation
       const result = await sql`
-        INSERT INTO shift_reservations (staff_id, hospital_id, shift_date, department, created_at)
-        VALUES (${staffId}, ${authUser.hospitalId}, ${shiftDate}, ${department || 'General'}, NOW())
+        INSERT INTO reservations (staff_id, hospital_id, shift_date, department, created_at)
+        VALUES (${staffId}, ${authUser.hospitalId}, ${shiftDate}, ${department || 'LABORATOR'}, NOW())
         RETURNING *
       `
 
@@ -204,12 +200,12 @@ export async function POST(request: NextRequest) {
         hospitalId: authUser.hospitalId,
         staffId,
         shiftDate,
-        reservationId: result.rows[0].id
+        reservationId: result[0].id
       })
 
       return NextResponse.json({
         success: true,
-        reservation: result.rows[0]
+        reservation: result[0]
       })
 
     } catch (error) {
@@ -238,7 +234,7 @@ export async function DELETE(request: NextRequest) {
       if (reservationId) {
         // Delete by reservation ID
         result = await sql`
-          DELETE FROM shift_reservations
+          DELETE FROM reservations
           WHERE id = ${reservationId} 
           AND hospital_id = ${authUser.hospitalId}
           RETURNING *
@@ -246,7 +242,7 @@ export async function DELETE(request: NextRequest) {
       } else if (staffId && shiftDate) {
         // Delete by staff and date
         result = await sql`
-          DELETE FROM shift_reservations
+          DELETE FROM reservations
           WHERE staff_id = ${staffId} 
           AND hospital_id = ${authUser.hospitalId}
           AND shift_date = ${shiftDate}
@@ -259,7 +255,7 @@ export async function DELETE(request: NextRequest) {
         }, { status: 400 })
       }
 
-      if (result.rows.length === 0) {
+      if (result.length === 0) {
         return NextResponse.json({
           success: false,
           error: 'Reservation not found'
@@ -268,8 +264,8 @@ export async function DELETE(request: NextRequest) {
 
       logger.info('Reservations', 'Reservation deleted', {
         hospitalId: authUser.hospitalId,
-        reservationId: result.rows[0].id,
-        staffId: result.rows[0].staff_id
+        reservationId: result[0].id,
+        staffId: result[0].staff_id
       })
 
       return NextResponse.json({

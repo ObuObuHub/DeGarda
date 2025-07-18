@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json()
-    const { name } = body
+    const { name, city } = body
     
     if (!name) {
       return NextResponse.json(
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     
     const result = await sql`
       INSERT INTO hospitals (name, city)
-      VALUES (${name}, ${''})
+      VALUES (${name}, ${city || ''})
       RETURNING id, name, city, created_at
     `
     

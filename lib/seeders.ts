@@ -43,25 +43,23 @@ export class DatabaseSeeder {
   }
 
   async seedHospitals(): Promise<number[]> {
-    logger.info('Seeder', 'Seeding hospitals')
+    logger.info('Seeder', 'Skipping hospital seeding - admin will add hospitals manually')
     
-    const hospitals = await sql`
-      INSERT INTO hospitals (name, city) VALUES 
-        ('Spitalul Județean de Urgență Piatra-Neamț', 'Piatra-Neamț'),
-        ('Spitalul Municipal Buhusi', 'Buhusi')
-      ON CONFLICT DO NOTHING
-      RETURNING id
+    // Create a default hospital for admin user if none exists
+    const existingHospitals = await sql`
+      SELECT id FROM hospitals ORDER BY id LIMIT 1
     `
     
-    // If no hospitals were inserted (they already exist), get existing ones
-    if (hospitals.length === 0) {
-      const existingHospitals = await sql`
-        SELECT id FROM hospitals ORDER BY id LIMIT 2
+    if (existingHospitals.length === 0) {
+      const defaultHospital = await sql`
+        INSERT INTO hospitals (name, city) VALUES 
+          ('System Default', 'Admin')
+        RETURNING id
       `
-      return existingHospitals.map(h => h.id)
+      return [defaultHospital[0].id]
     }
     
-    return hospitals.map(h => h.id)
+    return existingHospitals.map(h => h.id)
   }
 
   async seedAdminUsers(hospitalIds: number[]): Promise<SeederCredentials['admin']> {
@@ -75,7 +73,7 @@ export class DatabaseSeeder {
     
     await sql`
       INSERT INTO staff (name, email, password, role, hospital_id, specialization, access_code) VALUES
-        ('Administrator Principal', 'admin@degarda.ro', ${adminPasswordHash}, 'admin', ${primaryHospitalId}, 'Administration', ${adminAccessCode})
+        ('Admin User', 'admin@degarda.ro', ${adminPasswordHash}, 'admin', ${primaryHospitalId}, 'Administration', ${adminAccessCode})
       ON CONFLICT (email) DO UPDATE SET
         password = EXCLUDED.password,
         hospital_id = EXCLUDED.hospital_id,
@@ -88,54 +86,10 @@ export class DatabaseSeeder {
   }
 
   async seedStaffMembers(hospitalIds: number[]): Promise<SeederCredentials['staff']> {
-    logger.info('Seeder', 'Seeding staff members')
+    logger.info('Seeder', 'Skipping staff seeding - admin will add staff manually')
     
-    const staffMembers = [
-      { name: 'Dr. Zugun Eduard', email: 'zugun.eduard@degarda.ro', specialization: 'ATI' },
-      { name: 'Dr. Gîlea Arina', email: 'gilea.arina@degarda.ro', specialization: 'Urgențe' },
-      { name: 'Dr. Manole Anca', email: 'manole.anca@degarda.ro', specialization: 'Medicină Internă' },
-      { name: 'Biol. Alforei Magda Elena', email: 'alforei.magda@degarda.ro', specialization: 'Laborator' },
-      { name: 'Dr. Rusica Iovu Elena', email: 'rusica.elena@degarda.ro', specialization: 'Chirurgie' },
-      { name: 'Dr. Grădinariu Cristina', email: 'gradinariu.cristina@degarda.ro', specialization: 'ATI' },
-      { name: 'Dr. Ciorsac Alina', email: 'ciorsac.alina@degarda.ro', specialization: 'Urgențe' },
-      { name: 'Dr. Constantinescu Raluca', email: 'constantinescu.raluca@degarda.ro', specialization: 'Medicină Internă' },
-      { name: 'Dr. Dobrea Letiția', email: 'dobrea.letitia@degarda.ro', specialization: 'Chirurgie' },
-      { name: 'Ch. Dobre Liliana Gabriela', email: 'dobre.liliana@degarda.ro', specialization: 'Laborator' },
-      { name: 'Dr. Chiper Leferman Andrei', email: 'chiper.andrei@degarda.ro', specialization: 'ATI' }
-    ]
-
-    const credentials: SeederCredentials['staff'] = []
-    const existingCodes = new Set<string>(['ADM']) // Reserve admin code
-    
-    for (let i = 0; i < staffMembers.length; i++) {
-      const member = staffMembers[i]
-      const password = Math.random().toString(36).slice(-10) // Simple password generation
-      const hashedPassword = await bcrypt.hash(password, 10)
-      
-      // Generate 3-character access code
-      const accessCode = this.generateAccessCode(member.name, existingCodes)
-      
-      // Distribute staff across hospitals
-      const hospitalId = hospitalIds[i % hospitalIds.length]
-      
-      await sql`
-        INSERT INTO staff (name, email, password, role, hospital_id, specialization, access_code) VALUES
-          (${member.name}, ${member.email}, ${hashedPassword}, 'staff', ${hospitalId}, ${member.specialization}, ${accessCode})
-        ON CONFLICT (email) DO UPDATE SET
-          password = EXCLUDED.password,
-          hospital_id = EXCLUDED.hospital_id,
-          specialization = EXCLUDED.specialization,
-          access_code = EXCLUDED.access_code
-      `
-      
-      credentials.push({
-        email: member.email,
-        password,
-        name: member.name
-      })
-    }
-    
-    return credentials
+    // Return empty array - no staff seeded
+    return []
   }
 
   async seedAll(): Promise<SeederCredentials> {
@@ -169,7 +123,7 @@ export class DatabaseSeeder {
     await sql`TRUNCATE TABLE activities CASCADE`
     await sql`TRUNCATE TABLE notifications CASCADE`
     await sql`TRUNCATE TABLE shift_swaps CASCADE`
-    await sql`TRUNCATE TABLE shift_reservations CASCADE`
+    await sql`TRUNCATE TABLE reservations CASCADE`
     await sql`TRUNCATE TABLE shifts CASCADE`
     await sql`TRUNCATE TABLE staff_unavailability CASCADE`
     await sql`TRUNCATE TABLE staff CASCADE`

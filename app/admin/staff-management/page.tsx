@@ -8,6 +8,12 @@ import { Input } from '@/components/ui/Input'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 import { logger } from '@/lib/logger'
 
+interface Hospital {
+  id: number
+  name: string
+  city: string
+}
+
 interface StaffMember {
   id: number
   name: string
@@ -15,10 +21,11 @@ interface StaffMember {
   access_code: string
   role: string
   specialization: string
+  hospital_id: number
   hospital_name: string
 }
 
-interface AdminStaffManagementProps extends WithAuthProps {
+interface AdminControlPanelProps extends WithAuthProps {
   // Additional props if needed
 }
 

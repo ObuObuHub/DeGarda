@@ -15,8 +15,8 @@ DELETE FROM staff_unavailability;
 -- 3. Delete shift swaps (depends on shifts and staff)
 DELETE FROM shift_swaps;
 
--- 4. Delete shift reservations (depends on shifts and staff)
-DELETE FROM shift_reservations;
+-- 4. Delete reservations (staff date preferences)
+DELETE FROM reservations;
 
 -- 5. Delete shifts (depends on staff and hospitals)
 DELETE FROM shifts;
@@ -31,10 +31,11 @@ DELETE FROM hospitals;
 ALTER SEQUENCE hospitals_id_seq RESTART WITH 1;
 ALTER SEQUENCE staff_id_seq RESTART WITH 1;
 ALTER SEQUENCE shifts_id_seq RESTART WITH 1;
-ALTER SEQUENCE shift_reservations_id_seq RESTART WITH 1;
+ALTER SEQUENCE reservations_id_seq RESTART WITH 1;
 ALTER SEQUENCE shift_swaps_id_seq RESTART WITH 1;
 ALTER SEQUENCE staff_unavailability_id_seq RESTART WITH 1;
 ALTER SEQUENCE notifications_id_seq RESTART WITH 1;
+ALTER SEQUENCE activities_id_seq RESTART WITH 1;
 
 -- Confirm completion
 SELECT 'Database cleared successfully!' as status;

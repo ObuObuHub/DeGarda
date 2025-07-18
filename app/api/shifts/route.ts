@@ -98,13 +98,9 @@ export async function GET(request: NextRequest) {
           s.status,
           s.department,
           st.name as staff_name,
-          st.specialization as staff_department,
-          sr.staff_id as reserved_by,
-          rst.name as reserved_by_name
+          st.specialization as staff_department
         FROM shifts s
         LEFT JOIN staff st ON s.staff_id = st.id
-        LEFT JOIN shift_reservations sr ON s.id = sr.shift_id
-        LEFT JOIN staff rst ON sr.staff_id = rst.id
         WHERE s.date >= ${startDate} 
           AND s.date <= ${endDate}
           AND s.hospital_id = ${targetHospitalId}
