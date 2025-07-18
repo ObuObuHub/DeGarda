@@ -173,6 +173,69 @@ export function hasPermission(
 }
 
 /**
+ * Check if a manager has permission to manage a specific staff member
+ * Managers can only manage staff in their own department
+ */
+export function canManageStaff(
+  managerUser: any,
+  targetStaff: any
+): boolean {
+  // Admin can manage all staff
+  if (managerUser.role === 'admin') {
+    return true
+  }
+  
+  // Manager can only manage staff in their department
+  if (managerUser.role === 'manager') {
+    // Must be in same hospital
+    if (managerUser.hospitalId !== targetStaff.hospital_id) {
+      return false
+    }
+    
+    // Must be in same department (specialization)
+    if (managerUser.specialization !== targetStaff.specialization) {
+      return false
+    }
+    
+    return true
+  }
+  
+  return false
+}
+
+/**
+ * Check if a manager can generate shifts for a specific department
+ * Managers can only generate shifts for their own department
+ */
+export function canGenerateShiftsForDepartment(
+  managerUser: any,
+  targetDepartment: string,
+  targetHospitalId: number
+): boolean {
+  // Admin can generate shifts for any department
+  if (managerUser.role === 'admin') {
+    return true
+  }
+  
+  // Manager can only generate shifts for their own department
+  if (managerUser.role === 'manager') {
+    // Must be in same hospital
+    if (managerUser.hospitalId !== targetHospitalId) {
+      return false
+    }
+    
+    // Must be for their own department
+    if (managerUser.specialization !== targetDepartment) {
+      return false
+    }
+    
+    return true
+  }
+  
+  return false
+}
+
+/**
  * Check if a user can access a specific route
  */
 export function canAccessRoute(userRole: UserRole, route: string): boolean {

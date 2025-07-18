@@ -244,6 +244,60 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
     }
   }
 
+  const handleCalendarDayClick = async (dateStr: string) => {
+    // Only staff can make reservations by clicking on calendar
+    if (!isStaff) return
+    
+    // Check if user has reached reservation limit
+    if (myReservations.length >= 3) {
+      showToast('error', 'Ai atins limita de 3 rezervări pe lună')
+      return
+    }
+    
+    // Check if date is already reserved
+    const existingReservation = myReservations.find(r => r.shift_date === dateStr)
+    if (existingReservation) {
+      showToast('error', 'Ai deja o rezervare pentru această dată')
+      return
+    }
+    
+    // Check if date is in the future
+    const clickedDate = new Date(dateStr)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    if (clickedDate <= today) {
+      showToast('error', 'Nu poți rezerva pentru date trecute sau astăzi')
+      return
+    }
+    
+    // Check if date is too far in the future (max 2 months)
+    const maxDate = new Date()
+    maxDate.setMonth(maxDate.getMonth() + 2)
+    if (clickedDate > maxDate) {
+      showToast('error', 'Nu poți rezerva cu mai mult de 2 luni în avans')
+      return
+    }
+    
+    try {
+      const data = await apiClient.post('/api/reservations', {
+        staffId: user?.userId,
+        shiftDate: dateStr,
+        department: user?.specialization || 'LABORATOR'
+      })
+
+      if (data.success) {
+        showToast('success', 'Rezervare creată cu succes!')
+        loadMyReservations()
+        fetchDashboardStats()
+      } else {
+        showToast('error', data.error || 'Eroare la crearea rezervării')
+      }
+    } catch (error: any) {
+      showToast('error', error.message || 'Eroare la crearea rezervării')
+    }
+  }
+
   const checkShiftPermissions = async () => {
     try {
       const response = await fetch('/api/staff/shift-permissions', {
@@ -427,7 +481,9 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">Calendarul Meu</h2>
-                    <p className="text-sm text-gray-600">Gărzile mele și rezervările</p>
+                    <p className="text-sm text-gray-600">
+                      Gărzile mele și rezervările • Click pe o zi pentru a rezerva
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={handlePrevMonth} icon="chevronLeft">
@@ -502,7 +558,7 @@ function UnifiedDashboard({ user, isLoading: authLoading, error: authError }: Un
                     year={viewYear}
                     month={viewMonth}
                     shifts={enhancedShifts}
-                    onDayClick={undefined}
+                    onDayClick={isStaff ? handleCalendarDayClick : undefined}
                   />
                 )}
               </Card>

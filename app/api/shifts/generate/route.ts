@@ -1,17 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
+import { withHospitalAuth } from '@/lib/hospitalMiddleware'
+import { canGenerateShiftsForDepartment } from '@/lib/roleBasedAccess'
+import { logger } from '@/lib/logger'
 
 // POST to generate/save multiple shifts at once
 export async function POST(request: NextRequest) {
-  try {
-    const { shifts, hospitalId } = await request.json()
+  return withHospitalAuth(request, async (authUser) => {
+    try {
+      const { shifts, hospitalId, department } = await request.json()
 
-    if (!shifts || !Array.isArray(shifts) || !hospitalId) {
-      return NextResponse.json(
-        { success: false, error: 'Shifts array and hospitalId are required' },
-        { status: 400 }
-      )
-    }
+      if (!shifts || !Array.isArray(shifts) || !hospitalId || !department) {
+        return NextResponse.json(
+          { success: false, error: 'Shifts array, hospitalId, and department are required' },
+          { status: 400 }
+        )
+      }
+
+      // Check if user has permission to generate shifts for this department
+      if (!canGenerateShiftsForDepartment(authUser, department, hospitalId)) {
+        logger.warn('ShiftGenerationAPI', 'Department access denied', {
+          userId: authUser.userId,
+          userRole: authUser.role,
+          userDepartment: authUser.specialization,
+          requestedDepartment: department,
+          hospitalId
+        })
+        return NextResponse.json(
+          { error: 'You can only generate shifts for your own department' },
+          { status: 403 }
+        )
+      }
 
     // Start transaction
     const results = []
@@ -139,5 +158,16 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     )
-  }
+    } catch (error) {
+      logger.error('ShiftGenerationAPI', 'Failed to generate shifts', { error, userId: authUser.userId })
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Failed to generate shifts',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        },
+        { status: 500 }
+      )
+    }
+  })
 }
