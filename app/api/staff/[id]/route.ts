@@ -199,26 +199,24 @@ export async function DELETE(
         WHERE from_staff_id = ${staffId} OR to_staff_id = ${staffId}
       `
       
-      // 2. Delete reservations for this staff
-      await sql`
-        DELETE FROM reservations
-        WHERE staff_id = ${staffId}
-      `
+      // 2. Delete reservations for this staff (if table exists)
+      try {
+        await sql`
+          DELETE FROM reservations
+          WHERE staff_id = ${staffId}
+        `
+      } catch (e) {
+        // Table might not exist, continue
+      }
       
-      // 3. Delete shift permissions for this staff
-      await sql`
-        DELETE FROM shift_permissions
-        WHERE staff_id = ${staffId}
-      `
-      
-      // 4. Remove staff from assigned shifts (set to null)
+      // 3. Remove staff from assigned shifts (set to null)
       await sql`
         UPDATE shifts
         SET staff_id = NULL
         WHERE staff_id = ${staffId}
       `
       
-      // 5. Finally, permanently delete the staff member
+      // 4. Finally, permanently delete the staff member
       await sql`
         DELETE FROM staff
         WHERE id = ${staffId}

@@ -160,32 +160,30 @@ export async function DELETE(
         )
       `
       
-      // 2. Delete reservations for this hospital
-      await sql`
-        DELETE FROM reservations
-        WHERE hospital_id = ${hospitalId}
-      `
+      // 2. Delete reservations for this hospital (if table exists)
+      try {
+        await sql`
+          DELETE FROM reservations
+          WHERE hospital_id = ${hospitalId}
+        `
+      } catch (e) {
+        // Table might not exist, continue
+      }
       
-      // 3. Delete shift permissions for this hospital
-      await sql`
-        DELETE FROM shift_permissions
-        WHERE hospital_id = ${hospitalId}
-      `
-      
-      // 4. Delete shifts for this hospital
+      // 3. Delete shifts for this hospital
       await sql`
         DELETE FROM shifts
         WHERE hospital_id = ${hospitalId}
       `
       
-      // 5. Delete staff members from this hospital
+      // 4. Delete staff members from this hospital
       const deletedStaff = await sql`
         DELETE FROM staff
         WHERE hospital_id = ${hospitalId}
         RETURNING id, name
       `
       
-      // 6. Finally delete the hospital
+      // 5. Finally delete the hospital
       await sql`
         DELETE FROM hospitals
         WHERE id = ${hospitalId}
@@ -203,13 +201,25 @@ export async function DELETE(
         success: true,
         message: `Hospital "${hospitalName}" and all related data (${deletedStaff.length} staff members) have been permanently deleted`
       })
-    } catch (error) {
+    } catch (error: any) {
       logger.error('HospitalDelete', 'Failed to delete hospital', error, {
         userId: authUser.userId,
-        hospitalId: params.id
+        hospitalId: params.id,
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        errorDetail: error?.detail
       })
+      
+      // Return more detailed error for debugging
       return NextResponse.json(
-        { error: 'Failed to delete hospital' },
+        { 
+          error: 'Failed to delete hospital',
+          details: process.env.NODE_ENV === 'development' ? {
+            message: error?.message,
+            code: error?.code,
+            detail: error?.detail
+          } : undefined
+        },
         { status: 500 }
       )
     }
