@@ -248,6 +248,7 @@ export function canAccessRoute(userRole: UserRole, route: string): boolean {
     '/generate-shifts': [PERMISSIONS.SCHEDULE_GENERATE],
     
     // Legacy routes (deprecated)
+    '/admin': [PERMISSIONS.HOSPITAL_VIEW],
     '/admin/dashboard': [PERMISSIONS.SCHEDULE_VIEW],
     '/admin/schedule': [PERMISSIONS.SCHEDULE_VIEW],
     '/admin/hospitals': [PERMISSIONS.HOSPITAL_VIEW],
@@ -298,11 +299,11 @@ export function getAllowedNavItems(userRole: UserRole) {
       description: 'Staff and system management'
     },
     { 
-      label: 'Hospitals', 
-      href: '/admin/hospitals', 
+      label: 'Admin Panel', 
+      href: '/admin', 
       icon: 'hospital', 
       permission: PERMISSIONS.HOSPITAL_VIEW,
-      description: 'Hospital management for admins'
+      description: 'Full admin control panel'
     }
   ]
   

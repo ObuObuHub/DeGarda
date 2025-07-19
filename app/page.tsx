@@ -34,7 +34,7 @@ export default function DirectLoginPage() {
         
         // Route based on user role
         if (data.user && data.user.role === 'admin') {
-          router.push('/admin/hospitals')
+          router.push('/admin')
         } else {
           router.push('/dashboard')
         }

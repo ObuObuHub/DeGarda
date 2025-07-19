@@ -205,7 +205,7 @@ function AdminDashboard({ user, isLoading, error }: AdminDashboardProps) {
       description: 'Personal, permisiuni și configurări',
       icon: '👥',
       color: 'bg-purple-500',
-      onClick: () => router.push('/admin/hospitals'),
+      onClick: () => router.push('/admin'),
       roles: ['admin', 'manager']
     },
     {
