@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Calendar } from '@/components/Calendar'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
-import { useData } from '@/contexts/DataContext'
+import { useShifts } from '@/contexts/ShiftsContext'
 import { showToast } from '@/components/Toast'
 import { logger } from '@/lib/logger'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
@@ -18,7 +18,7 @@ interface SchedulePageProps extends WithAuthProps {
 
 function SchedulePage({ user, isLoading: authLoading, error: authError }: SchedulePageProps) {
   const router = useRouter()
-  const { shifts, isLoading, loadShifts } = useData()
+  const { shifts, isLoading, loadShifts } = useShifts()
   
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>(user?.hospitalId?.toString() || '')
   const [swapModalOpen, setSwapModalOpen] = useState(false)

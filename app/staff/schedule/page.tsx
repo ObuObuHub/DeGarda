@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Calendar } from '@/components/Calendar'
-import { useData } from '@/contexts/DataContext'
+import { useShifts } from '@/contexts/ShiftsContext'
 import { showToast } from '@/components/Toast'
 import { logger } from '@/lib/logger'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
@@ -26,7 +26,7 @@ interface StaffScheduleProps extends WithAuthProps {
 
 function StaffSchedulePage({ user, isLoading: authLoading, error: authError }: StaffScheduleProps) {
   const router = useRouter()
-  const { shifts, isLoading, loadShifts } = useData()
+  const { shifts, isLoading, loadShifts } = useShifts()
   
   const [myReservations, setMyReservations] = useState<Reservation[]>([])
   const [isLoadingReservations, setIsLoadingReservations] = useState(false)

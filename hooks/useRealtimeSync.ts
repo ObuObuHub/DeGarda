@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react'
-import { useData } from '@/contexts/DataContext'
+import { useShifts } from '@/contexts/ShiftsContext'
+import { useNotifications } from '@/contexts/NotificationsContext'
 
 interface UseRealtimeSyncOptions {
   userId?: string
@@ -16,14 +17,11 @@ export const useRealtimeSync = ({
   month,
   interval = 30000 // 30 seconds default
 }: UseRealtimeSyncOptions) => {
-  const { 
-    loadShifts, 
-    loadNotifications, 
-    autoRefresh,
-    addNotification 
-  } = useData()
+  const { loadShifts } = useShifts()
+  const { loadNotifications, addNotification } = useNotifications()
   
   const lastSyncRef = useRef<Date>(new Date())
+  const autoRefresh = true // Always enabled for now
   
   // Sync function
   const syncData = useCallback(async (silent = true) => {
@@ -31,7 +29,7 @@ export const useRealtimeSync = ({
       const promises: Promise<void>[] = []
       
       // Sync shifts if we have the required params
-      if (year !== undefined && month !== undefined) {
+      if (year !== undefined && month !== undefined && hospitalId) {
         promises.push(loadShifts(year, month, hospitalId))
       }
       
@@ -45,7 +43,7 @@ export const useRealtimeSync = ({
     } catch (error) {
       console.error('Sync error:', error)
       if (!silent) {
-        addNotification('Failed to sync data', 'error')
+        addNotification?.('Failed to sync data', 'error')
       }
     }
   }, [year, month, hospitalId, userId, loadShifts, loadNotifications, addNotification])

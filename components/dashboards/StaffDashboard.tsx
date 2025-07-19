@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Calendar } from '@/components/Calendar'
-import { useData } from '@/contexts/DataContext'
+import { useShifts } from '@/contexts/ShiftsContext'
 import { AuthUser } from '@/components/withAuth'
 import { logger } from '@/lib/logger'
 import { StaffStats } from '@/components/staff/StaffStats'
@@ -51,7 +51,7 @@ interface StaffDashboardProps {
 
 export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
   const router = useRouter()
-  const { shifts, isLoading: shiftsLoading, loadShifts } = useData()
+  const { shifts, isLoading: shiftsLoading, loadShifts } = useShifts()
   
   const [stats, setStats] = useState<StaffStats>({
     myReservations: 0,
