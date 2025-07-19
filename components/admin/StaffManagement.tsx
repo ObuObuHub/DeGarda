@@ -7,26 +7,17 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { logger } from '@/lib/logger'
 import { DEPARTMENTS, type Department } from '@/lib/constants'
+import { Hospital, Staff } from '@/types'
 
-interface Hospital {
-  id: number
-  name: string
-  city: string
-}
-
-interface StaffMember {
-  id: number
-  name: string
-  email: string
+// Extended type for staff with additional admin details
+interface StaffWithDetails extends Staff {
   access_code: string
-  role: string
-  specialization: string
   hospital_id: number
   hospital_name: string
 }
 
 interface StaffManagementProps {
-  staff: StaffMember[]
+  staff: StaffWithDetails[]
   hospitals: Hospital[]
   onStaffChange: () => void
 }

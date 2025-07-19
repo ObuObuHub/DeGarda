@@ -5,19 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { logger } from '@/lib/logger'
 import { showToast } from '@/components/Toast'
-
-interface SwapRequest {
-  id: number
-  fromStaffId: number
-  toStaffId?: number
-  shiftId: number
-  reason: string
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
-  fromStaffName: string
-  toStaffName?: string
-  shiftDate: string
-  createdAt: string
-}
+import { SwapRequest } from '@/types'
 
 interface SwapManagementProps {
   hospitalId: string
@@ -147,17 +135,17 @@ export function SwapManagement({ hospitalId, userRole }: SwapManagementProps) {
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-4 mb-2">
-                    <h4 className="font-medium text-gray-900">{swap.fromStaffName}</h4>
-                    {swap.toStaffName && (
+                    <h4 className="font-medium text-gray-900">{swap.from_staff_name}</h4>
+                    {swap.to_staff_name && (
                       <>
                         <span className="text-gray-400">→</span>
-                        <span className="text-gray-700">{swap.toStaffName}</span>
+                        <span className="text-gray-700">{swap.to_staff_name}</span>
                       </>
                     )}
                   </div>
                   
                   <div className="text-sm text-gray-600 mb-2">
-                    <strong>Data:</strong> {formatDate(swap.shiftDate)}
+                    <strong>Data:</strong> {formatDate(swap.shift_date)}
                   </div>
                   
                   {swap.reason && (
@@ -167,7 +155,7 @@ export function SwapManagement({ hospitalId, userRole }: SwapManagementProps) {
                   )}
                   
                   <div className="text-xs text-gray-500">
-                    Cerere creată: {formatDate(swap.createdAt)}
+                    Cerere creată: {formatDate(swap.created_at)}
                   </div>
                 </div>
 

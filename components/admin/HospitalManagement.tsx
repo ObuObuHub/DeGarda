@@ -6,17 +6,16 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { logger } from '@/lib/logger'
+import { Hospital } from '@/types'
 
-interface Hospital {
-  id: number
-  name: string
-  city: string
+// Extended type for hospital with metadata
+interface HospitalWithMetadata extends Hospital {
   created_at: string
   staff_count?: number
 }
 
 interface HospitalManagementProps {
-  hospitals: Hospital[]
+  hospitals: HospitalWithMetadata[]
   onHospitalChange: () => void
   staffCounts: Record<number, number>
 }
@@ -24,7 +23,7 @@ interface HospitalManagementProps {
 export function HospitalManagement({ hospitals, onHospitalChange, staffCounts }: HospitalManagementProps) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [hospitalToDelete, setHospitalToDelete] = useState<Hospital | null>(null)
+  const [hospitalToDelete, setHospitalToDelete] = useState<HospitalWithMetadata | null>(null)
   const [newHospital, setNewHospital] = useState({ name: '', city: '' })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')

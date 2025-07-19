@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useReducer, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -26,19 +26,104 @@ interface GenerateShiftsPageProps extends WithAuthProps {
   // Additional props if needed
 }
 
+// State shape for useReducer
+interface GenerateShiftsState {
+  selectedHospitalId: string
+  selectedDepartment: string
+  selectedMonth: string
+  selectedYear: string
+  reservations: Reservation[]
+  isLoadingReservations: boolean
+  isGenerating: boolean
+  error: string
+  success: string
+  canGenerate: boolean
+}
+
+// Action types
+type GenerateShiftsAction =
+  | { type: 'SET_SELECTION'; payload: { hospitalId?: string; department?: string; month?: string; year?: string } }
+  | { type: 'SET_RESERVATIONS'; payload: Reservation[] }
+  | { type: 'SET_LOADING'; payload: { reservations?: boolean; generating?: boolean } }
+  | { type: 'SET_ERROR'; payload: string }
+  | { type: 'SET_SUCCESS'; payload: string }
+  | { type: 'SET_CAN_GENERATE'; payload: boolean }
+  | { type: 'RESET_MESSAGES' }
+
+// Reducer function
+function generateShiftsReducer(state: GenerateShiftsState, action: GenerateShiftsAction): GenerateShiftsState {
+  switch (action.type) {
+    case 'SET_SELECTION':
+      return {
+        ...state,
+        selectedHospitalId: action.payload.hospitalId ?? state.selectedHospitalId,
+        selectedDepartment: action.payload.department ?? state.selectedDepartment,
+        selectedMonth: action.payload.month ?? state.selectedMonth,
+        selectedYear: action.payload.year ?? state.selectedYear
+      }
+    
+    case 'SET_RESERVATIONS':
+      return {
+        ...state,
+        reservations: action.payload
+      }
+    
+    case 'SET_LOADING':
+      return {
+        ...state,
+        isLoadingReservations: action.payload.reservations ?? state.isLoadingReservations,
+        isGenerating: action.payload.generating ?? state.isGenerating
+      }
+    
+    case 'SET_ERROR':
+      return {
+        ...state,
+        error: action.payload,
+        success: ''
+      }
+    
+    case 'SET_SUCCESS':
+      return {
+        ...state,
+        success: action.payload,
+        error: ''
+      }
+    
+    case 'SET_CAN_GENERATE':
+      return {
+        ...state,
+        canGenerate: action.payload
+      }
+    
+    case 'RESET_MESSAGES':
+      return {
+        ...state,
+        error: '',
+        success: ''
+      }
+    
+    default:
+      return state
+  }
+}
+
+// Initial state
+const initialState: GenerateShiftsState = {
+  selectedHospitalId: '',
+  selectedDepartment: 'LABORATOR',
+  selectedMonth: '',
+  selectedYear: '',
+  reservations: [],
+  isLoadingReservations: false,
+  isGenerating: false,
+  error: '',
+  success: '',
+  canGenerate: false
+}
+
 function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: GenerateShiftsPageProps) {
   const router = useRouter()
-  const [selectedHospitalId, setSelectedHospitalId] = useState<string>(user?.hospitalId?.toString() || '')
-  const [selectedDepartment, setSelectedDepartment] = useState('LABORATOR')
-  const [selectedMonth, setSelectedMonth] = useState('')
-  const [selectedYear, setSelectedYear] = useState('')
-  
-  const [reservations, setReservations] = useState<Reservation[]>([])
-  const [isLoadingReservations, setIsLoadingReservations] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [canGenerate, setCanGenerate] = useState(false)
+  const [state, dispatch] = useReducer(generateShiftsReducer, initialState)
 
   const isAdmin = user?.role === 'admin'
   const isManager = user?.role === 'manager'
@@ -47,10 +132,10 @@ function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: 
   useEffect(() => {
     if (user) {
       // All users see only their assigned hospital
-      setSelectedHospitalId(user.hospitalId?.toString() || '')
+      dispatch({ type: 'SET_SELECTION', payload: { hospitalId: user.hospitalId?.toString() || '' } })
       
       if (isAdmin || isManager) {
-        setCanGenerate(true)
+        dispatch({ type: 'SET_CAN_GENERATE', payload: true })
       } else if (isStaff) {
         checkStaffPermissions()
       }
@@ -58,16 +143,21 @@ function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: 
       // Set default to next month
       const nextMonth = new Date()
       nextMonth.setMonth(nextMonth.getMonth() + 1)
-      setSelectedMonth((nextMonth.getMonth() + 1).toString().padStart(2, '0'))
-      setSelectedYear(nextMonth.getFullYear().toString())
+      dispatch({ 
+        type: 'SET_SELECTION', 
+        payload: {
+          month: (nextMonth.getMonth() + 1).toString().padStart(2, '0'),
+          year: nextMonth.getFullYear().toString()
+        }
+      })
     }
   }, [user])
 
   useEffect(() => {
-    if (selectedHospitalId && selectedMonth && selectedYear) {
+    if (state.selectedHospitalId && state.selectedMonth && state.selectedYear) {
       loadReservations()
     }
-  }, [selectedHospitalId, selectedMonth, selectedYear, selectedDepartment])
+  }, [state.selectedHospitalId, state.selectedMonth, state.selectedYear, state.selectedDepartment])
 
   const checkStaffPermissions = async () => {
     try {
@@ -77,172 +167,153 @@ function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: 
       const data = await response.json()
       
       if (response.ok) {
-        setCanGenerate(data.canGenerateShifts || false)
+        dispatch({ type: 'SET_CAN_GENERATE', payload: data.canGenerateShifts || false })
         if (data.department) {
-          setSelectedDepartment(data.department)
+          dispatch({ type: 'SET_SELECTION', payload: { department: data.department } })
         }
       }
     } catch (error) {
       logger.error('GenerateShiftsPage', 'Failed to check permissions', error)
-      setCanGenerate(false)
+      dispatch({ type: 'SET_CAN_GENERATE', payload: false })
     }
   }
 
   const loadReservations = async () => {
-    setIsLoadingReservations(true)
+    dispatch({ type: 'SET_LOADING', payload: { reservations: true } })
     try {
       const data = await apiClient.get<{ success: boolean, reservations?: Reservation[], error?: string }>(
-        `/api/reservations?hospitalId=${selectedHospitalId}&month=${selectedMonth}&year=${selectedYear}&department=${selectedDepartment}`
+        `/api/reservations?hospitalId=${state.selectedHospitalId}&month=${state.selectedMonth}&year=${state.selectedYear}&department=${state.selectedDepartment}`
       )
 
       if (data.success) {
-        setReservations(data.reservations || [])
+        dispatch({ type: 'SET_RESERVATIONS', payload: data.reservations || [] })
       } else {
-        setError(data.error || 'Failed to load reservations')
+        dispatch({ type: 'SET_ERROR', payload: data.error || 'Failed to load reservations' })
       }
-    } catch (error: any) {
+    } catch (error) {
       logger.error('GenerateShiftsPage', 'Failed to load reservations', error)
-      setError(error.message || 'Failed to load reservations')
+      dispatch({ type: 'SET_ERROR', payload: 'Failed to load reservations' })
     } finally {
-      setIsLoadingReservations(false)
+      dispatch({ type: 'SET_LOADING', payload: { reservations: false } })
     }
   }
 
   const handleGenerateShifts = async () => {
-    if (!canGenerate || !selectedHospitalId || !selectedMonth || !selectedYear) {
-      setError('Missing required information for generation')
-      return
-    }
-
-    setIsGenerating(true)
-    setError('')
-    setSuccess('')
+    dispatch({ type: 'SET_LOADING', payload: { generating: true } })
+    dispatch({ type: 'RESET_MESSAGES' })
 
     try {
-      const data = await apiClient.post<{ success: boolean, generated?: number, message?: string, error?: string }>(
-        '/api/shifts/generate',
-        {
-          hospitalId: selectedHospitalId,
-          department: selectedDepartment,
-          month: parseInt(selectedMonth),
-          year: parseInt(selectedYear),
-          considerReservations: true
-        }
-      )
+      const response = await fetch('/api/shifts/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          hospitalId: state.selectedHospitalId,
+          month: parseInt(state.selectedMonth),
+          year: parseInt(state.selectedYear),
+          department: state.selectedDepartment
+        })
+      })
+
+      const data = await response.json()
 
       if (data.success) {
-        setSuccess(`Program generat cu succes! ${data.generated || 0} gărzi create pentru ${selectedDepartment}.`)
-        loadReservations() // Refresh to see updated statuses
+        dispatch({ type: 'SET_SUCCESS', payload: data.message || 'Shifts generated successfully!' })
+        // Reload reservations to show updated status
+        loadReservations()
       } else {
-        setError(data.error || 'Failed to generate shifts')
+        dispatch({ type: 'SET_ERROR', payload: data.error || 'Failed to generate shifts' })
       }
-    } catch (error: any) {
+    } catch (error) {
       logger.error('GenerateShiftsPage', 'Failed to generate shifts', error)
-      setError(error.message || 'Failed to generate shifts')
+      dispatch({ type: 'SET_ERROR', payload: 'Failed to generate shifts. Please try again.' })
     } finally {
-      setIsGenerating(false)
+      dispatch({ type: 'SET_LOADING', payload: { generating: false } })
     }
   }
 
-  // Check if user has access
-  if (!canGenerate) {
-    return (
-      <AccessDenied 
-        isStaff={isStaff} 
-        onNavigateToDashboard={() => router.push('/dashboard')} 
-      />
-    )
+  // Access check
+  if (!state.canGenerate) {
+    return <AccessDenied isAdmin={isAdmin} />
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-              Generare Gărzi
-            </h1>
-            <p className="text-gray-600 mt-2">
-              {user?.name} • {user?.hospitalName}
-              {isStaff && ` • ${selectedDepartment}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={() => router.push('/dashboard')}
-            >
-              Dashboard
-            </Button>
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={() => router.push('/schedule')}
-            >
-              Program Gărzi
-            </Button>
-          </div>
+    <div className="min-h-screen bg-background-primary">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-label-primary">Generate Shifts</h1>
+          <p className="mt-2 text-label-secondary">
+            {isAdmin ? 'Generate shifts for any hospital and department' : 
+             isManager ? 'Generate shifts for your hospital' : 
+             'Generate shifts for your department'}
+          </p>
         </div>
 
-        {/* Hospital info */}
-        <Card className="p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Spital</p>
-              <p className="font-medium text-gray-900">{user?.hospitalName || 'Loading...'}</p>
-            </div>
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-xl">🏥</span>
-            </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            <GenerationParameters
+              user={user}
+              selectedHospitalId={state.selectedHospitalId}
+              selectedDepartment={state.selectedDepartment}
+              selectedMonth={state.selectedMonth}
+              selectedYear={state.selectedYear}
+              onHospitalChange={(id) => dispatch({ type: 'SET_SELECTION', payload: { hospitalId: id } })}
+              onDepartmentChange={(dept) => dispatch({ type: 'SET_SELECTION', payload: { department: dept } })}
+              onMonthChange={(month) => dispatch({ type: 'SET_SELECTION', payload: { month } })}
+              onYearChange={(year) => dispatch({ type: 'SET_SELECTION', payload: { year } })}
+            />
+
+            <GenerationInstructions />
           </div>
-        </Card>
 
-        {/* Error/Success Messages */}
-        {error && (
-          <Card className="p-4 mb-6 bg-red-50 border-red-200">
-            <p className="text-sm text-red-600">{error}</p>
-          </Card>
-        )}
+          <div className="space-y-6">
+            <ReservationsPreview
+              reservations={state.reservations}
+              isLoading={state.isLoadingReservations}
+              month={state.selectedMonth}
+              year={state.selectedYear}
+              department={state.selectedDepartment}
+            />
 
-        {success && (
-          <Card className="p-4 mb-6 bg-green-50 border-green-200">
-            <p className="text-sm text-green-600">{success}</p>
-          </Card>
-        )}
+            <Card>
+              <div className="space-y-4">
+                {state.error && (
+                  <div className="p-3 bg-system-red/10 border border-system-red/30 rounded-ios text-sm text-system-red">
+                    {state.error}
+                  </div>
+                )}
 
-        {/* Generation Parameters */}
-        <GenerationParameters
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-          selectedDepartment={selectedDepartment}
-          onMonthChange={setSelectedMonth}
-          onYearChange={setSelectedYear}
-          onDepartmentChange={setSelectedDepartment}
-          onGenerate={handleGenerateShifts}
-          isGenerating={isGenerating}
-          canGenerate={canGenerate}
-          userRole={user?.role || ''}
-        />
+                {state.success && (
+                  <div className="p-3 bg-system-green/10 border border-system-green/30 rounded-ios text-sm text-system-green">
+                    {state.success}
+                  </div>
+                )}
 
-        {/* Reservations Preview */}
-        <ReservationsPreview
-          reservations={reservations}
-          isLoading={isLoadingReservations}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-          selectedDepartment={selectedDepartment}
-        />
+                <Button
+                  fullWidth
+                  size="lg"
+                  onClick={handleGenerateShifts}
+                  disabled={
+                    state.isGenerating || 
+                    !state.selectedHospitalId || 
+                    !state.selectedMonth || 
+                    !state.selectedYear ||
+                    state.reservations.length === 0
+                  }
+                >
+                  {state.isGenerating ? 'Generating...' : 'Generate Shifts'}
+                </Button>
 
-        {/* Instructions */}
-        <GenerationInstructions />
+                <p className="text-xs text-center text-label-tertiary">
+                  This will generate shifts for {state.reservations.length} reservations
+                </p>
+              </div>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
-export default withAuth(GenerateShiftsPage, {
-  allowedRoles: ['admin', 'manager', 'staff'],
-  redirectTo: '/dashboard'
-})
+export default withAuth(GenerateShiftsPage)

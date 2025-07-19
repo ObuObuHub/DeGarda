@@ -6,21 +6,15 @@ import { logger } from '@/lib/logger'
 import { HospitalManagement } from '@/components/admin/HospitalManagement'
 import { StaffManagement } from '@/components/admin/StaffManagement'
 import { AccessCodeSummary } from '@/components/admin/AccessCodeSummary'
+import { Hospital, Staff } from '@/types'
 
-interface Hospital {
-  id: number
-  name: string
-  city: string
+// Extended types for admin view with additional fields from database
+interface HospitalWithMetadata extends Hospital {
   created_at: string
 }
 
-interface StaffMember {
-  id: number
-  name: string
-  email: string
+interface StaffWithDetails extends Staff {
   access_code: string
-  role: string
-  specialization: string
   hospital_id: number
   hospital_name: string
 }
@@ -29,8 +23,8 @@ interface AdminProps extends WithAuthProps {}
 
 function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProps) {
   const [activeSection, setActiveSection] = useState<'hospitals' | 'staff' | 'codes'>('hospitals')
-  const [hospitals, setHospitals] = useState<Hospital[]>([])
-  const [staff, setStaff] = useState<StaffMember[]>([])
+  const [hospitals, setHospitals] = useState<HospitalWithMetadata[]>([])
+  const [staff, setStaff] = useState<StaffWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 

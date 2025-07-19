@@ -8,14 +8,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { logger } from '@/lib/logger'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 import apiClient from '@/lib/apiClient'
-
-interface Reservation {
-  id: number
-  staff_id: number
-  shift_date: string
-  department: string
-  created_at: string
-}
+import { Reservation } from '@/types'
 
 interface ReservationsProps extends WithAuthProps {
   // Additional props if needed
