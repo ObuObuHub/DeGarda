@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs'
 import { generateUniqueAccessCode } from '@/lib/accessCodes'
 import { logger } from '@/lib/logger'
 import { withHospitalAuth, validateHospitalParam } from '@/lib/hospitalMiddleware'
+import { isValidDepartment } from '@/lib/constants'
 
 // Verify user is admin or manager
 async function verifyAdminOrManager(request: NextRequest) {
@@ -141,6 +142,14 @@ export async function POST(request: NextRequest) {
       if (!name || !type || !hospitalId) {
         return NextResponse.json(
           { error: 'Name, type, and hospital are required' },
+          { status: 400 }
+        )
+      }
+
+      // Validate department if provided
+      if (specialization && !isValidDepartment(specialization)) {
+        return NextResponse.json(
+          { error: 'Invalid department. Must be one of: Laborator, Urgențe, Chirurgie, Medicină Internă, ATI' },
           { status: 400 }
         )
       }

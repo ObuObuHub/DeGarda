@@ -4,6 +4,7 @@ import { withHospitalAuth } from '@/lib/hospitalMiddleware'
 import { logger } from '@/lib/logger'
 import bcrypt from 'bcryptjs'
 import { generateUniqueAccessCode } from '@/lib/accessCodes'
+import { isValidDepartment } from '@/lib/constants'
 
 export async function POST(request: NextRequest) {
   return withHospitalAuth(request, async (authUser) => {
@@ -21,6 +22,14 @@ export async function POST(request: NextRequest) {
       if (!name || !specialization || !hospitalId) {
         return NextResponse.json(
           { error: 'Name, specialization, and hospitalId are required' },
+          { status: 400 }
+        )
+      }
+
+      // Validate department
+      if (!isValidDepartment(specialization)) {
+        return NextResponse.json(
+          { error: 'Invalid department. Must be one of: Laborator, Urgențe, Chirurgie, Medicină Internă, ATI' },
           { status: 400 }
         )
       }

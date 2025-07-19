@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 import { logger } from '@/lib/logger'
+import { DEPARTMENTS, type Department } from '@/lib/constants'
 
 interface Hospital {
   id: number
@@ -47,10 +48,11 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
   // Staff management state
   const [showCreateStaffModal, setShowCreateStaffModal] = useState(false)
   const [selectedHospitalForStaff, setSelectedHospitalForStaff] = useState('')
+  const [selectedHospitalForCreation, setSelectedHospitalForCreation] = useState<Hospital | null>(null)
   const [newStaff, setNewStaff] = useState({
     name: '',
     email: '',
-    specialization: '',
+    department: '' as Department | '',
     hospitalId: ''
   })
 
@@ -189,8 +191,8 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
   }
 
   const handleCreateStaff = async () => {
-    if (!newStaff.name.trim() || !newStaff.hospitalId) {
-      setError('Staff name and hospital are required')
+    if (!newStaff.name.trim() || !newStaff.hospitalId || !newStaff.department) {
+      setError('Staff name, hospital, and department are required')
       return
     }
 
@@ -206,15 +208,16 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
           name: newStaff.name,
           email: newStaff.email,
           type: 'medic', // Default type
-          specialization: newStaff.specialization,
+          specialization: newStaff.department,
           hospitalId: newStaff.hospitalId
         })
       })
 
       const data = await response.json()
       if (data.id) {
-        setSuccess('Staff member created successfully!')
-        setNewStaff({ name: '', email: '', specialization: '', hospitalId: '' })
+        setSuccess(`Staff member created successfully! Access code: ${data.accessCode}`)
+        setNewStaff({ name: '', email: '', department: '', hospitalId: '' })
+        setSelectedHospitalForCreation(null)
         setShowCreateStaffModal(false)
         loadStaff()
       } else {
@@ -279,6 +282,28 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
   const confirmDeleteHospital = (hospital: Hospital) => {
     setHospitalToDelete(hospital)
     setShowDeleteHospitalModal(true)
+  }
+
+  const openStaffCreationForHospital = (hospital: Hospital) => {
+    setSelectedHospitalForCreation(hospital)
+    setNewStaff({
+      name: '',
+      email: '',
+      department: '',
+      hospitalId: hospital.id.toString()
+    })
+    setShowCreateStaffModal(true)
+  }
+
+  const openGeneralStaffCreation = () => {
+    setSelectedHospitalForCreation(null)
+    setNewStaff({
+      name: '',
+      email: '',
+      department: '',
+      hospitalId: ''
+    })
+    setShowCreateStaffModal(true)
   }
 
   const filteredStaff = selectedHospitalForStaff 
@@ -393,13 +418,22 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
                               <p className="text-sm text-gray-600">{hospital.city}</p>
                             </div>
                           </div>
-                          <button
-                            onClick={() => confirmDeleteHospital(hospital)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Hospital"
-                          >
-                            🗑️
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openStaffCreationForHospital(hospital)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Add Staff to this Hospital"
+                            >
+                              👤➕
+                            </button>
+                            <button
+                              onClick={() => confirmDeleteHospital(hospital)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete Hospital"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </div>
                         
                         <div className="space-y-2 text-sm text-gray-600">
@@ -441,7 +475,7 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
                         <option key={h.id} value={h.id.toString()}>{h.name}</option>
                       ))}
                     </select>
-                    <Button onClick={() => setShowCreateStaffModal(true)}>
+                    <Button onClick={openGeneralStaffCreation}>
                       <span className="mr-2">👤</span>
                       Add Staff
                     </Button>
@@ -643,8 +677,14 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
         {/* Create Staff Modal */}
         <Modal
           isOpen={showCreateStaffModal}
-          onClose={() => setShowCreateStaffModal(false)}
-          title="Add New Staff Member"
+          onClose={() => {
+            setShowCreateStaffModal(false)
+            setSelectedHospitalForCreation(null)
+          }}
+          title={selectedHospitalForCreation 
+            ? `Add Staff to ${selectedHospitalForCreation.name}` 
+            : "Add New Staff Member"
+          }
         >
           <div className="space-y-4">
             <div>
@@ -674,27 +714,38 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Hospital *
               </label>
-              <select
-                value={newStaff.hospitalId}
-                onChange={(e) => setNewStaff(prev => ({ ...prev, hospitalId: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">Select a hospital</option>
-                {hospitals.map(h => (
-                  <option key={h.id} value={h.id.toString()}>{h.name} - {h.city}</option>
-                ))}
-              </select>
+              {selectedHospitalForCreation ? (
+                <div className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50">
+                  <span className="text-gray-700">{selectedHospitalForCreation.name} - {selectedHospitalForCreation.city}</span>
+                </div>
+              ) : (
+                <select
+                  value={newStaff.hospitalId}
+                  onChange={(e) => setNewStaff(prev => ({ ...prev, hospitalId: e.target.value }))}
+                  className="w-full p-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="">Select a hospital</option>
+                  {hospitals.map(h => (
+                    <option key={h.id} value={h.id.toString()}>{h.name} - {h.city}</option>
+                  ))}
+                </select>
+              )}
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Specialization
+                Department *
               </label>
-              <Input
-                value={newStaff.specialization}
-                onChange={(e) => setNewStaff(prev => ({ ...prev, specialization: e.target.value }))}
-                placeholder="Enter specialization/department"
-              />
+              <select
+                value={newStaff.department}
+                onChange={(e) => setNewStaff(prev => ({ ...prev, department: e.target.value as Department }))}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Select a department</option>
+                {DEPARTMENTS.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
             </div>
             
             <div className="flex gap-3 justify-end pt-4">
