@@ -10,7 +10,7 @@ export function hasPermission(
   userRole: UserRole,
   requiredPermission: Permission,
   user?: User,
-  resource?: any
+  resource?: unknown
 ): boolean {
   const userPermissions = getRolePermissions(userRole)
   

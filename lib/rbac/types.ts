@@ -8,7 +8,7 @@ export type UserRole = 'staff' | 'manager' | 'admin'
 export interface Permission {
   resource: string
   action: string
-  condition?: (user: any, resource: any) => boolean
+  condition?: (user: User, resource: unknown) => boolean
 }
 
 export interface RoleDefinition {

@@ -3,6 +3,7 @@ import { sql } from '@/lib/db'
 import { withHospitalAuth } from '@/lib/hospitalMiddleware'
 import { canGenerateShiftsForDepartment } from "@/lib/rbac"
 import { logger } from '@/lib/logger'
+import { getErrorMessage, isDatabaseError } from '@/lib/types/errors'
 
 // POST to generate/save multiple shifts at once
 export async function POST(request: NextRequest) {
@@ -102,8 +103,9 @@ export async function POST(request: NextRequest) {
             status = EXCLUDED.status
           RETURNING *
         `
-      } catch (error: any) {
-        if (error.message?.includes('column "department" of relation "shifts" does not exist')) {
+      } catch (error: unknown) {
+        const errorMessage = getErrorMessage(error)
+        if (errorMessage.includes('column "department" of relation "shifts" does not exist')) {
           // Fallback to old schema without department
           result = await sql`
             INSERT INTO shifts (date, type, start_time, end_time, staff_id, hospital_id, status)
@@ -135,11 +137,12 @@ export async function POST(request: NextRequest) {
       shifts: results,
       conflicts
     })
-    } catch (error: any) {
-      logger.error('ShiftGenerationAPI', 'Failed to generate shifts', { error, userId: authUser.userId })
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error)
+      logger.error('ShiftGenerationAPI', 'Failed to generate shifts', { error: errorMessage, userId: authUser.userId })
       
       // Check for database connection errors
-      if (error.message?.includes('Cannot convert argument to a ByteString')) {
+      if (errorMessage.includes('Cannot convert argument to a ByteString')) {
         return NextResponse.json(
           { 
             success: false, 
