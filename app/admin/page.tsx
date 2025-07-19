@@ -81,8 +81,17 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
   const loadData = async () => {
     setIsLoading(true)
     setError('')
-    await Promise.all([loadHospitals(), loadStaff()])
-    setIsLoading(false)
+    setSuccess('')
+    
+    try {
+      // Load hospitals and staff in parallel
+      await Promise.all([loadHospitals(), loadStaff()])
+    } catch (error) {
+      logger.error('AdminPage', 'Failed to load data', error)
+      setError('Failed to load admin data')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const loadHospitals = async () => {
@@ -104,14 +113,14 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
 
   const loadStaff = async () => {
     try {
-      const response = await fetch('/api/admin/view-access-codes', {
+      const response = await fetch('/api/admin/all-staff', {
         credentials: 'include'
       })
       const data = await response.json()
       if (data.success) {
         setStaff(data.staff || [])
       } else {
-        setError('Failed to load staff')
+        setError(data.error || 'Failed to load staff')
       }
     } catch (error) {
       logger.error('AdminPage', 'Failed to load staff', error)
