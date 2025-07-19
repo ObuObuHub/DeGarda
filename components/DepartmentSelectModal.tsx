@@ -26,6 +26,7 @@ export const DepartmentSelectModal: React.FC<DepartmentSelectModalProps> = ({
   date
 }) => {
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return ''
     const [year, month, day] = dateStr.split('-')
     const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
     const days = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă']

@@ -33,7 +33,7 @@ interface SwapModalData {
   shift: Shift
 }
 
-export default function SchedulePage() {
+function SchedulePage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
@@ -172,14 +172,15 @@ export default function SchedulePage() {
     }
   }
 
-  const handleExport = () => {
-    exportScheduleToExcel(shifts, viewMonth, viewYear, selectedDepartment)
-  }
-
-  // Filter shifts by department
+  // Filter shifts by department - convert object to array first with safety check
+  const shiftsArray = shifts ? Object.values(shifts) : []
   const filteredShifts = selectedDepartment === 'all' 
-    ? shifts 
-    : shifts.filter(shift => shift.department === selectedDepartment)
+    ? shiftsArray 
+    : shiftsArray.filter(shift => shift.department === selectedDepartment)
+
+  const handleExport = () => {
+    exportScheduleToExcel(shiftsArray, viewMonth, viewYear, selectedDepartment)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -278,7 +279,7 @@ export default function SchedulePage() {
         onAssign={handleAssignShift}
         selectedDate={selectedDate}
         selectedDepartment={pendingShiftDepartment || selectedDepartment}
-        availableStaff={staff.filter(s => 
+        availableStaff={(staff || []).filter(s => 
           s.role === 'staff' && 
           s.hospitalId?.toString() === selectedHospitalId
         )}
@@ -295,7 +296,7 @@ export default function SchedulePage() {
             shiftId: swapModalData.shift.id
           }}
           onSubmit={submitSwapRequest}
-          availableStaff={staff.filter(s => 
+          availableStaff={(staff || []).filter(s => 
             s.role === 'staff' && 
             s.hospitalId?.toString() === selectedHospitalId &&
             s.id !== swapModalData.shift.doctorId
@@ -305,3 +306,8 @@ export default function SchedulePage() {
     </div>
   )
 }
+
+// Disable pre-rendering for this page due to dynamic data dependencies
+export const dynamic = 'force-dynamic'
+
+export default SchedulePage

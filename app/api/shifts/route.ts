@@ -75,18 +75,18 @@ export async function GET(request: NextRequest) {
         return apiValidationError('Invalid hospital ID format')
       }
 
-    // Calculate date range for the month
-    // Frontend sends 0-indexed months (0-11), but SQL needs 1-indexed (1-12)
-    const monthNum = parseInt(month);
-    const yearNum = parseInt(year);
-    const sqlMonth = monthNum + 1;
-    
-    const startDate = `${year}-${String(sqlMonth).padStart(2, '0')}-01`
-    
-    // Calculate proper last day of month
-    const lastDayDate = new Date(yearNum, monthNum + 1, 0);
-    const lastDay = lastDayDate.getDate();
-    const endDate = `${year}-${String(sqlMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+      // Calculate date range for the month
+      // Frontend sends 0-indexed months (0-11), but SQL needs 1-indexed (1-12)
+      const monthNum = parseInt(month);
+      const yearNum = parseInt(year);
+      const sqlMonth = monthNum + 1;
+      
+      const startDate = `${year}-${String(sqlMonth).padStart(2, '0')}-01`
+      
+      // Calculate proper last day of month
+      const lastDayDate = new Date(yearNum, monthNum + 1, 0);
+      const lastDay = lastDayDate.getDate();
+      const endDate = `${year}-${String(sqlMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
       // Get shifts with staff info and reservations
       // Always filter by hospital_id for security
@@ -110,81 +110,53 @@ export async function GET(request: NextRequest) {
         LIMIT 500
       `
 
-    // Convert to format expected by calendar
-    const shiftMap: Record<string, {
-      id: string
-      doctorId: string | null
-      doctorName: string | null
-      department: string | null
-      type: string
-      status: string
-      hospitalId: string
-      reservedBy: string | null
-      reservedByName: string | null
-    }> = {}
-    shifts.forEach(shift => {
-      const dateStr = new Date(shift.date).toISOString().split('T')[0]
-      shiftMap[dateStr] = {
-        id: shift.id.toString(),
-        doctorId: shift.staff_id?.toString() || null,
-        doctorName: shift.staff_name || null,
-        department: shift.department || shift.staff_department || null,
-        type: shift.type,
-        status: shift.status,
-        hospitalId: shift.hospital_id.toString(),
-        reservedBy: shift.reserved_by?.toString() || null,
-        reservedByName: shift.reserved_by_name || null
-      }
-    })
+      // Convert to format expected by calendar
+      const shiftMap: Record<string, {
+        id: string
+        doctorId: string | null
+        doctorName: string | null
+        department: string | null
+        type: string
+        status: string
+        hospitalId: string
+        reservedBy: string | null
+        reservedByName: string | null
+      }> = {}
+      
+      shifts.forEach(shift => {
+        const dateStr = new Date(shift.date).toISOString().split('T')[0]
+        shiftMap[dateStr] = {
+          id: shift.id.toString(),
+          doctorId: shift.staff_id?.toString() || null,
+          doctorName: shift.staff_name || null,
+          department: shift.department || shift.staff_department || null,
+          type: shift.type,
+          status: shift.status,
+          hospitalId: shift.hospital_id.toString(),
+          reservedBy: shift.reserved_by?.toString() || null,
+          reservedByName: shift.reserved_by_name || null
+        }
+      })
 
-      return NextResponse.json({ success: true, shifts: shiftMap })
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Shifts', 'Get shifts error', error)
-      
-      // Check for database connection errors
-      if (errorMessage.includes('Cannot convert argument to a ByteString')) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Database connection error. Please check your database configuration.' 
-          },
-          { status: 500 }
-        )
-      }
-      
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Failed to fetch shifts',
-          details: errorMessage
-        },
-        { status: 500 }
-      )
-    }
+      return apiSuccess({ shifts: shiftMap }, `Retrieved ${shifts.length} shifts for ${yearNum}-${String(sqlMonth).padStart(2, '0')}`)
+    }, 'shifts GET')
   })
 }
 
 // POST to create or update a shift
 export async function POST(request: NextRequest) {
   return withHospitalAuth(request, async (authUser) => {
-    try {
+    return withApiErrorHandling(async () => {
       const { date, staffId, hospitalId, type = '24h', department } = await request.json()
 
       if (!date) {
-        return NextResponse.json(
-          { success: false, error: 'Date is required' },
-          { status: 400 }
-        )
+        return apiValidationError('Date is required')
       }
 
       // Enforce hospital isolation - user can only create shifts for their own hospital
       const userHospitalId = authUser.hospitalId.toString()
       if (hospitalId && hospitalId !== userHospitalId) {
-        return NextResponse.json(
-          { success: false, error: 'Access denied - hospital isolation violation' },
-          { status: 403 }
-        )
+        return apiForbidden('Access denied - hospital isolation violation')
       }
 
       // Use authenticated user's hospital ID
@@ -196,16 +168,10 @@ export async function POST(request: NextRequest) {
           SELECT hospital_id FROM staff WHERE id = ${staffId}
         `
         if (staffCheck.length === 0) {
-          return NextResponse.json(
-            { success: false, error: 'Staff member not found' },
-            { status: 400 }
-          )
+          return apiValidationError('Staff member not found')
         }
         if (staffCheck[0].hospital_id.toString() !== targetHospitalId) {
-          return NextResponse.json(
-            { success: false, error: 'Staff member does not belong to your hospital' },
-            { status: 403 }
-          )
+          return apiForbidden('Staff member does not belong to your hospital')
         }
       }
 
@@ -235,10 +201,7 @@ export async function POST(request: NextRequest) {
       `
       
       if (existingShifts.length > 0) {
-        return NextResponse.json(
-          { success: false, error: 'Doctorul are deja o gardă în această zi' },
-          { status: 400 }
-        )
+        return apiValidationError('Doctorul are deja o gardă în această zi')
       }
       
       // Get staff department if not provided
@@ -252,10 +215,7 @@ export async function POST(request: NextRequest) {
       
       // STRICT: Validate department match if both are provided
       if (staffId && shiftDepartment && department && shiftDepartment !== department) {
-        return NextResponse.json(
-          { success: false, error: `Personal din departamentul ${shiftDepartment} nu poate fi asignat la o gardă din departamentul ${department}` },
-          { status: 400 }
-        )
+        return apiValidationError(`Personal din departamentul ${shiftDepartment} nu poate fi asignat la o gardă din departamentul ${department}`)
       }
       
       // Try with department first, fallback to without if column doesn't exist
@@ -298,17 +258,14 @@ export async function POST(request: NextRequest) {
         type: 'manual_assignment' 
       })
       
-      return NextResponse.json({ success: true, shift: result[0] })
+      return apiSuccess({ shift: result[0] }, `Shift assigned successfully to ${staffId} for ${date}`)
     } else {
       // Remove assignment (make shift open)
       let result
       try {
         // When creating open shift, department must be provided
         if (!department) {
-          return NextResponse.json(
-            { success: false, error: 'Department is required when creating an open shift' },
-            { status: 400 }
-          )
+          return apiValidationError('Department is required when creating an open shift')
         }
         
         result = await sql`
@@ -336,29 +293,9 @@ export async function POST(request: NextRequest) {
           throw error
         }
       }
-      return NextResponse.json({ success: true, shift: result[0] })
+      return apiSuccess({ shift: result[0] }, `Open shift created successfully for ${date}`)
     }
-    } catch (error: any) {
-      logger.error('Shifts', 'Create/update shift error', error)
-      
-      // Provide more specific error messages
-      let errorMessage = 'Failed to save shift'
-      if (error.code === '23505') {
-        errorMessage = 'A shift already exists for this date, type, and department'
-      } else if (error.code === '23503') {
-        errorMessage = 'Invalid staff or hospital reference'
-      }
-      
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: errorMessage,
-          details: error.message || 'Unknown error',
-          code: error.code
-        },
-        { status: 500 }
-      )
-    }
+    }, 'shifts POST')
   })
 }
 

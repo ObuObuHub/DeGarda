@@ -26,6 +26,7 @@ export const ShiftOptionsModal: React.FC<ShiftOptionsModalProps> = ({
   currentUserId
 }) => {
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return ''
     const [year, month, day] = dateStr.split('-')
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
     const days = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă']

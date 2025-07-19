@@ -33,6 +33,7 @@ export const AssignShiftModal: React.FC<AssignShiftModalProps> = ({
   shiftDepartment
 }) => {
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return ''
     const [year, month, day] = dateStr.split('-')
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
     const days = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă']
@@ -40,6 +41,7 @@ export const AssignShiftModal: React.FC<AssignShiftModalProps> = ({
   }
 
   const isWeekend = (dateStr: string) => {
+    if (!dateStr) return false
     const [year, month, day] = dateStr.split('-')
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
     return date.getDay() === 0 || date.getDay() === 6
@@ -50,8 +52,8 @@ export const AssignShiftModal: React.FC<AssignShiftModalProps> = ({
   // Filter doctors by department
   const departmentToShow = shiftDepartment || selectedDepartment
   const filteredDoctors = departmentToShow 
-    ? doctors.filter(d => d.department === departmentToShow)
-    : doctors
+    ? (doctors || []).filter(d => d.department === departmentToShow)
+    : (doctors || [])
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Atribuie Gardă" size="md">
