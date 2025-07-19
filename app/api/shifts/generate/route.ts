@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { withHospitalAuth } from '@/lib/hospitalMiddleware'
-import { canGenerateShiftsForDepartment } from '@/lib/roleBasedAccess'
+import { canGenerateShiftsForDepartment } from "@/lib/rbac"
 import { logger } from '@/lib/logger'
 
 // POST to generate/save multiple shifts at once

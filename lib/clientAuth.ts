@@ -3,7 +3,7 @@
  * Separated from server-side middleware to avoid import conflicts
  */
 
-import { UserRole } from './roleBasedAccess'
+import { UserRole } from './rbac'
 
 /**
  * Client-side role validation helper

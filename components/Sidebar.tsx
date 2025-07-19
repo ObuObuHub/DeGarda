@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation'
 import { Icon } from '@/components/ui/Icon'
 import { useEffect, useState } from 'react'
-import { getAllowedNavItems, UserRole } from '@/lib/roleBasedAccess'
+import { getAllowedNavItems, UserRole } from '@/lib/rbac'
 import { logger } from '@/lib/logger'
 
 interface NavItem {

@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyHospitalAuth, AuthUser } from './hospitalMiddleware'
-import { checkAPIPermission, UserRole } from './roleBasedAccess'
+import { checkAPIPermission, UserRole } from "@/lib/rbac"'
 import { logger } from './logger'
 
 export interface RoleBasedAuthResult {
