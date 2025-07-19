@@ -29,11 +29,11 @@ export async function GET(request: NextRequest) {
     // Verify the JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as any
     
-    // Return user information
+    // Return user information - normalize userId vs id
     return NextResponse.json({
       success: true,
       user: {
-        userId: decoded.userId,
+        userId: decoded.id || decoded.userId,
         name: decoded.name,
         email: decoded.email,
         role: decoded.role,
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         hospitalName: decoded.hospitalName
       },
       // Include individual fields for backward compatibility
-      userId: decoded.userId,
+      userId: decoded.id || decoded.userId,
       name: decoded.name,
       email: decoded.email,
       role: decoded.role,

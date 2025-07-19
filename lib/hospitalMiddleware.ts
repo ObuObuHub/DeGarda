@@ -49,7 +49,7 @@ export async function verifyHospitalAuth(request: NextRequest): Promise<Hospital
       success: true,
       user: {
         userId: decoded.id,
-        name: decoded.email, // Using email as name for now
+        name: decoded.name || decoded.email, // Use name if available, otherwise email
         email: decoded.email,
         role: decoded.role,
         hospitalId: decoded.hospitalId,

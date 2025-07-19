@@ -249,6 +249,33 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
     }
   }
 
+  const handleDeleteStaff = async (staffId: number, staffName: string) => {
+    if (!confirm(`Are you sure you want to permanently delete staff member "${staffName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setError('')
+      setSuccess('')
+      
+      const response = await fetch(`/api/staff/${staffId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+      if (response.ok && data.success) {
+        setSuccess(data.message || 'Staff member deleted successfully!')
+        loadStaff()
+      } else {
+        setError(data.error || 'Failed to delete staff member')
+      }
+    } catch (error) {
+      logger.error('AdminPage', 'Failed to delete staff', error)
+      setError('Failed to delete staff member')
+    }
+  }
+
   const confirmDeleteHospital = (hospital: Hospital) => {
     setHospitalToDelete(hospital)
     setShowDeleteHospitalModal(true)
@@ -466,15 +493,25 @@ function AdminPage({ user, isLoading: authLoading, error: authError }: AdminProp
                         <div className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
                           {member.access_code}
                         </div>
-                        <div>
+                        <div className="flex gap-2">
                           {member.role !== 'admin' && (
-                            <Button
-                              onClick={() => handleRoleToggle(member.id, member.role)}
-                              size="sm"
-                              variant={member.role === 'manager' ? 'danger' : 'secondary'}
-                            >
-                              {member.role === 'manager' ? 'Remove Manager' : 'Make Manager'}
-                            </Button>
+                            <>
+                              <Button
+                                onClick={() => handleRoleToggle(member.id, member.role)}
+                                size="sm"
+                                variant={member.role === 'manager' ? 'danger' : 'secondary'}
+                              >
+                                {member.role === 'manager' ? 'Remove Manager' : 'Make Manager'}
+                              </Button>
+                              <Button
+                                onClick={() => handleDeleteStaff(member.id, member.name)}
+                                size="sm"
+                                variant="danger"
+                                title="Delete Staff Member"
+                              >
+                                🗑️
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
