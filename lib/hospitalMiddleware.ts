@@ -65,7 +65,12 @@ export async function verifyHospitalAuth(request: NextRequest): Promise<Hospital
 /**
  * Check if user has permission to access hospital data
  */
-export function checkHospitalAccess(userHospitalId: number, targetHospitalId: number): boolean {
+export function checkHospitalAccess(userHospitalId: number, targetHospitalId: number, userRole?: string): boolean {
+  // Admins can access all hospitals
+  if (userRole === 'admin') {
+    return true
+  }
+  
   return userHospitalId === targetHospitalId
 }
 
@@ -106,6 +111,7 @@ export async function withHospitalAuth(
 export function validateHospitalParam(
   userHospitalId: number,
   paramValue: string | null,
+  userRole?: string,
   paramName: string = 'hospitalId'
 ): { valid: boolean, hospitalId?: number, error?: string } {
   if (!paramValue) {
@@ -118,7 +124,7 @@ export function validateHospitalParam(
     return { valid: false, error: `Invalid ${paramName} parameter` }
   }
   
-  if (!checkHospitalAccess(userHospitalId, targetHospitalId)) {
+  if (!checkHospitalAccess(userHospitalId, targetHospitalId, userRole)) {
     return { valid: false, error: `Access denied to hospital ${targetHospitalId}` }
   }
   

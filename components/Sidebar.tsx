@@ -58,16 +58,18 @@ export function Sidebar({ onClose }: SidebarProps) {
         )}
       </div>
 
-      {/* Current Hospital Display */}
-      {selectedHospital && (
+      {/* User Role Display */}
+      {userRole && (
         <div className="p-4 border-b border-separator bg-gray-50">
-          <label className="text-xs font-medium text-label-secondary mb-2 block uppercase tracking-wider">Spital Activ</label>
+          <label className="text-xs font-medium text-label-secondary mb-2 block uppercase tracking-wider">Role</label>
           <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">🏥</span>
+              <span className="text-2xl">
+                {userRole === 'admin' ? '👑' : userRole === 'manager' ? '👨‍💼' : '👩‍⚕️'}
+              </span>
               <div>
-                <p className="text-sm font-medium text-label-primary">{selectedHospital.name}</p>
-                <p className="text-xs text-label-tertiary">{selectedHospital.city}</p>
+                <p className="text-sm font-medium text-label-primary capitalize">{userRole}</p>
+                <p className="text-xs text-label-tertiary">DeGarda v2.0</p>
               </div>
             </div>
           </div>

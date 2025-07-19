@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       let targetHospitalId = authUser.hospitalId
       
       if (hospitalIdParam) {
-        const validation = validateHospitalParam(authUser.hospitalId, hospitalIdParam)
+        const validation = validateHospitalParam(authUser.hospitalId, hospitalIdParam, authUser.role)
         if (!validation.valid) {
           logger.warn('StaffAPI', 'Hospital access denied', {
             userId: authUser.userId,
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
       }
       
       // Validate hospital access
-      const validation = validateHospitalParam(authUser.hospitalId, hospitalId)
+      const validation = validateHospitalParam(authUser.hospitalId, hospitalId, authUser.role)
       if (!validation.valid) {
         logger.warn('StaffAPI', 'Hospital access denied for staff creation', {
           userId: authUser.userId,

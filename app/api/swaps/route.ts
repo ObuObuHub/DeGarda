@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       let targetHospitalId = authUser.hospitalId
       
       if (hospitalIdParam) {
-        const validation = validateHospitalParam(authUser.hospitalId, hospitalIdParam)
+        const validation = validateHospitalParam(authUser.hospitalId, hospitalIdParam, authUser.role)
         if (!validation.valid) {
           logger.warn('SwapsAPI', 'Hospital access denied', {
             userId: authUser.userId,

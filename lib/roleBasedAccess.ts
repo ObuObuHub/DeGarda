@@ -296,6 +296,13 @@ export function getAllowedNavItems(userRole: UserRole) {
       icon: 'users', 
       permission: PERMISSIONS.STAFF_VIEW,
       description: 'Staff and system management'
+    },
+    { 
+      label: 'Hospitals', 
+      href: '/admin/hospitals', 
+      icon: 'hospital', 
+      permission: PERMISSIONS.HOSPITAL_VIEW,
+      description: 'Hospital management for admins'
     }
   ]
   
