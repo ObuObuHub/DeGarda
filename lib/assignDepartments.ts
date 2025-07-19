@@ -1,7 +1,7 @@
 // Temporary utility to assign departments to doctors based on their names or other criteria
 // This is a workaround until proper department data is available
 
-import { VALID_DEPARTMENTS } from './shiftGenerator'
+import { VALID_DEPARTMENTS } from './shift-generation'
 import { logger } from './logger'
 
 interface DoctorInput {

@@ -5,8 +5,13 @@
 
 const { neon } = require('@neondatabase/serverless')
 
-// Get database URL from environment
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_O6Wz7SkAvZNx@ep-billowing-brook-a2xtu503-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+// Get database URL from environment - NEVER hardcode credentials!
+const DATABASE_URL = process.env.DATABASE_URL
+if (!DATABASE_URL) {
+  console.error('❌ DATABASE_URL environment variable is required')
+  console.error('Please set DATABASE_URL in your .env.local file')
+  process.exit(1)
+}
 const sql = neon(DATABASE_URL)
 
 async function createShiftPermissionsTable() {

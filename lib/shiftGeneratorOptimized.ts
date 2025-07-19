@@ -11,13 +11,13 @@ import { ShiftType } from '@/types'
 import { logger } from './logger'
 import { performanceMonitor } from './performanceMonitor'
 
-// Import types to avoid circular dependency
+// Import types from modular system
 import type { 
   Doctor, 
   GeneratedShift, 
   GenerationStats, 
   HospitalConfig 
-} from './shiftGenerator'
+} from './shift-generation'
 
 // Re-export types for compatibility  
 export type { Doctor, GeneratedShift, GenerationStats, HospitalConfig }
