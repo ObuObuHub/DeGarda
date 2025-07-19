@@ -32,8 +32,12 @@ export default function DirectLoginPage() {
         // Authentication successful - token is now stored in HTTP-only cookie
         // No need to store token in localStorage anymore for security
         
-        // Route all users to unified dashboard
-        router.push('/dashboard')
+        // Route based on user role
+        if (data.user && data.user.role === 'admin') {
+          router.push('/admin/hospitals')
+        } else {
+          router.push('/dashboard')
+        }
       } else {
         setError(data.error || 'Cod de acces invalid')
       }

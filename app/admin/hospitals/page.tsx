@@ -230,7 +230,7 @@ function AdminHospitals({ user, isLoading: authLoading, error: authError }: Admi
                       variant="secondary"
                       size="sm"
                       className="w-full"
-                      onClick={() => window.open(`/admin/staff-management?hospital=${hospital.id}`, '_blank')}
+                      onClick={() => window.open(`/management?hospital=${hospital.id}`, '_blank')}
                     >
                       <span className="mr-2">👥</span>
                       Manage Staff

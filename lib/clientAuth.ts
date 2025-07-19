@@ -67,7 +67,6 @@ export function checkPageAccess(userRole: UserRole, route: string): boolean {
     '/admin/access-codes': { role: 'manager', level: 2 },
     '/admin/swaps': { role: 'staff', level: 1 },
     '/admin/settings': { role: 'manager', level: 2 },
-    '/admin/management': { role: 'staff', level: 1 },
     '/staff': { role: 'staff', level: 1 },
     '/staff/schedule': { role: 'staff', level: 1 }
   }

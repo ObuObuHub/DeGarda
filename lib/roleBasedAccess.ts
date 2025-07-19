@@ -250,7 +250,7 @@ export function canAccessRoute(userRole: UserRole, route: string): boolean {
     // Legacy routes (deprecated)
     '/admin/dashboard': [PERMISSIONS.SCHEDULE_VIEW],
     '/admin/schedule': [PERMISSIONS.SCHEDULE_VIEW],
-    '/admin/management': [PERMISSIONS.STAFF_VIEW],
+    '/admin/hospitals': [PERMISSIONS.HOSPITAL_VIEW],
     '/staff/schedule': [PERMISSIONS.SCHEDULE_VIEW],
     '/staff/reservations': [PERMISSIONS.SHIFT_RESERVE],
     '/staff/generate-shifts': [PERMISSIONS.SCHEDULE_GENERATE]
