@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
-import { LoadingSpinner } from '@/components/LoadingSpinner'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
+import { GenerationParameters } from '@/components/shifts/GenerationParameters'
+import { ReservationsPreview } from '@/components/shifts/ReservationsPreview'
+import { GenerationInstructions } from '@/components/shifts/GenerationInstructions'
+import { AccessDenied } from '@/components/shifts/AccessDenied'
 import { logger } from '@/lib/logger'
 import { apiClient } from '@/lib/apiClient'
 
@@ -142,42 +144,13 @@ function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: 
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ro-RO', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    })
-  }
-
-  const getMonthName = (month: string) => {
-    const monthNames = [
-      'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
-      'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
-    ]
-    return monthNames[parseInt(month) - 1] || month
-  }
-
   // Check if user has access
   if (!canGenerate) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="max-w-4xl mx-auto">
-          <Card className="p-6 text-center">
-            <span className="text-4xl mb-4 block">🔒</span>
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Acces Restricționat</h1>
-            <p className="text-gray-600 mb-6">
-              {isStaff 
-                ? 'Nu ai permisiunea de a genera gărzi. Contactează managerul pentru a obține această permisiune.'
-                : 'Această pagină este disponibilă doar pentru manageri, administratori și personalul cu permisiuni speciale.'
-              }
-            </p>
-            <Button onClick={() => router.push('/dashboard')}>
-              Înapoi la Dashboard
-            </Button>
-          </Card>
-        </div>
-      </div>
+      <AccessDenied 
+        isStaff={isStaff} 
+        onNavigateToDashboard={() => router.push('/dashboard')} 
+      />
     )
   }
 
@@ -240,185 +213,30 @@ function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: 
         )}
 
         {/* Generation Parameters */}
-        <Card className="p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Parametri Generare
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Month Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Luna
-              </label>
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={isGenerating}
-              >
-                {Array.from({ length: 12 }, (_, i) => {
-                  const month = (i + 1).toString().padStart(2, '0')
-                  const monthName = getMonthName(month)
-                  return (
-                    <option key={month} value={month}>
-                      {monthName}
-                    </option>
-                  )
-                })}
-              </select>
-            </div>
-
-            {/* Year Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Anul
-              </label>
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={isGenerating}
-              >
-                {Array.from({ length: 3 }, (_, i) => {
-                  const year = (new Date().getFullYear() + i).toString()
-                  return (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  )
-                })}
-              </select>
-            </div>
-
-            {/* Department Selection - Only for Managers/Admin */}
-            {(isManager || isAdmin) && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Departament
-                </label>
-                <select
-                  value={selectedDepartment}
-                  onChange={(e) => setSelectedDepartment(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={isGenerating}
-                >
-                  <option value="LABORATOR">LABORATOR</option>
-                  <option value="URGENTA">URGENȚĂ</option>
-                  <option value="CHIRURGIE">CHIRURGIE</option>
-                  <option value="INTERNA">INTERNĂ</option>
-                </select>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6">
-            <Button
-              onClick={handleGenerateShifts}
-              disabled={isGenerating || !selectedHospitalId || !selectedMonth || !selectedYear}
-              className="w-full md:w-auto"
-            >
-              {isGenerating ? (
-                <span className="flex items-center space-x-2">
-                  <LoadingSpinner size="sm" />
-                  <span>Se generează...</span>
-                </span>
-              ) : (
-                `Generează Gărzi pentru ${getMonthName(selectedMonth)} ${selectedYear}`
-              )}
-            </Button>
-          </div>
-        </Card>
+        <GenerationParameters
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          selectedDepartment={selectedDepartment}
+          onMonthChange={setSelectedMonth}
+          onYearChange={setSelectedYear}
+          onDepartmentChange={setSelectedDepartment}
+          onGenerate={handleGenerateShifts}
+          isGenerating={isGenerating}
+          canGenerate={canGenerate}
+          userRole={user?.role || ''}
+        />
 
         {/* Reservations Preview */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Rezervări Existente ({reservations.length})
-            </h2>
-            {isLoadingReservations && <LoadingSpinner size="sm" />}
-          </div>
+        <ReservationsPreview
+          reservations={reservations}
+          isLoading={isLoadingReservations}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          selectedDepartment={selectedDepartment}
+        />
 
-          {selectedMonth && selectedYear && (
-            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-              <h3 className="font-medium text-blue-900 mb-2">
-                Informații Generare pentru {getMonthName(selectedMonth)} {selectedYear}
-              </h3>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• <strong>Departament:</strong> {selectedDepartment}</li>
-                <li>• <strong>Rezervări găsite:</strong> {reservations.length}</li>
-                <li>• <strong>Algoritm:</strong> Optimizat cu considere pentru rezervări</li>
-                <li>• <strong>Echitatea:</strong> Distribuție echitabilă între tot personalul</li>
-              </ul>
-            </div>
-          )}
-
-          {reservations.length === 0 ? (
-            <div className="text-center py-8">
-              <span className="text-4xl mb-4 block">📝</span>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Nu există rezervări
-              </h3>
-              <p className="text-gray-600">
-                {selectedMonth && selectedYear 
-                  ? `Nu s-au găsit rezervări pentru ${getMonthName(selectedMonth)} ${selectedYear} în departamentul ${selectedDepartment}.`
-                  : 'Selectează luna și anul pentru a vedea rezervările.'
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {reservations.map((reservation) => (
-                <div
-                  key={reservation.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-lg">📅</span>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">
-                          {reservation.staff_name}
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          {formatDate(reservation.shift_date)} • {reservation.department}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      reservation.status === 'active' 
-                        ? 'bg-blue-100 text-blue-800'
-                        : reservation.status === 'fulfilled'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {reservation.status === 'active' ? 'Activă' 
-                       : reservation.status === 'fulfilled' ? 'Îndeplinită'
-                       : reservation.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {/* Info Card */}
-        <Card className="mt-6 p-6 bg-yellow-50 border-yellow-200">
-          <h3 className="font-semibold text-yellow-900 mb-3">Instrucțiuni Generare Gărzi</h3>
-          <ul className="text-sm text-yellow-800 space-y-2">
-            <li>• <strong>Rezervările sunt prioritare</strong> - personalul care a rezervat zile preferate va fi luat în considerare</li>
-            <li>• <strong>Distribuție echitabilă</strong> - algoritmul asigură o distribuție corectă a gărzilor</li>
-            <li>• <strong>Restricții departamentale</strong> - doar personalul din departamentul selectat va fi inclus</li>
-            <li>• <strong>Generarea suprascrie</strong> programul existent pentru luna selectată</li>
-            <li>• <strong>Verifică rezultatele</strong> în secțiunea "Program Gărzi" după generare</li>
-          </ul>
-        </Card>
+        {/* Instructions */}
+        <GenerationInstructions />
       </div>
     </div>
   )

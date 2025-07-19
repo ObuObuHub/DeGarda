@@ -44,12 +44,27 @@ export interface Notification {
 
 export interface SwapRequest {
   id: number
-  fromStaffId: number
-  toStaffId?: number
-  shiftId: number
-  reason?: string
+  from_staff_id: number
+  to_staff_id?: number | null
+  shift_id: number
+  reason: string
   status: 'pending' | 'approved' | 'rejected' | 'cancelled'
-  reviewedBy?: number
-  reviewedAt?: string
-  createdAt: string
+  created_at: string
+  shift_date: string
+  shift_type: string
+  from_staff_name: string
+  to_staff_name?: string | null
+  reviewed_by?: number
+  reviewed_at?: string
+}
+
+export interface Reservation {
+  id: number
+  staff_id: number
+  hospital_id: number
+  shift_date: string
+  department: string
+  status: 'active' | 'cancelled' | 'fulfilled'
+  created_at: string
+  staff_name?: string
 }

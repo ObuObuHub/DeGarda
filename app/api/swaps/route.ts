@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { withHospitalAuth, validateHospitalParam } from '@/lib/hospitalMiddleware'
 import { logger } from '@/lib/logger'
+import { 
+  apiSuccess, 
+  apiError, 
+  apiValidationError, 
+  apiForbidden, 
+  apiServerError,
+  withApiErrorHandling 
+} from '@/lib/apiResponse'
 // Notification system removed during simplification
 import { staff } from '@/lib/data'
 
 // GET all swap requests
 export async function GET(request: NextRequest) {
   return withHospitalAuth(request, async (authUser) => {
-    try {
+    return withApiErrorHandling(async () => {
       const { searchParams } = new URL(request.url)
       const status = searchParams.get('status') || 'pending'
       const hospitalIdParam = searchParams.get('hospitalId')
@@ -25,10 +33,7 @@ export async function GET(request: NextRequest) {
             requestedHospital: hospitalIdParam,
             error: validation.error
           })
-          return NextResponse.json(
-            { error: validation.error },
-            { status: 403 }
-          )
+          return apiForbidden(validation.error)
         }
         targetHospitalId = validation.hospitalId!
       }
@@ -66,28 +71,23 @@ export async function GET(request: NextRequest) {
         count: swaps.length
       })
 
-      return NextResponse.json({ success: true, swaps })
-    } catch (error) {
-      logger.error('SwapsAPI', 'Error fetching swaps', { error, userId: authUser.userId })
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch swap requests' },
-        { status: 500 }
-      )
-    }
+      return apiSuccess({ swaps }, `Retrieved ${swaps.length} swap requests with status '${status}'`)
+    }, 'swaps GET')
   })
 }
 
 // POST create a new swap request
 export async function POST(request: NextRequest) {
   return withHospitalAuth(request, async (authUser) => {
-    try {
+    return withApiErrorHandling(async () => {
       const { fromStaffId, toStaffId, shiftId, reason } = await request.json()
 
       if (!fromStaffId || !shiftId || !reason) {
-        return NextResponse.json(
-          { success: false, error: 'Missing required fields' },
-          { status: 400 }
-        )
+        return apiValidationError('Missing required fields', {
+          fromStaffId: !fromStaffId ? ['From staff ID is required'] : [],
+          shiftId: !shiftId ? ['Shift ID is required'] : [],
+          reason: !reason ? ['Reason is required'] : []
+        })
       }
 
       // Verify the fromStaffId belongs to the authenticated user's hospital
@@ -101,10 +101,7 @@ export async function POST(request: NextRequest) {
           userHospital: authUser.hospitalId,
           requestedStaffId: fromStaffId
         })
-        return NextResponse.json(
-          { error: 'Unauthorized staff access' },
-          { status: 403 }
-        )
+        return apiForbidden('Unauthorized staff access')
       }
 
       // Verify the shift belongs to the authenticated user's hospital
@@ -118,10 +115,7 @@ export async function POST(request: NextRequest) {
           userHospital: authUser.hospitalId,
           requestedShiftId: shiftId
         })
-        return NextResponse.json(
-          { error: 'Unauthorized shift access' },
-          { status: 403 }
-        )
+        return apiForbidden('Unauthorized shift access')
       }
 
       // Create swap request
@@ -131,44 +125,30 @@ export async function POST(request: NextRequest) {
         RETURNING *
       `
 
+      const createdSwap = result[0]
+
       logger.info('SwapsAPI', 'Swap request created successfully', {
         userId: authUser.userId,
         hospitalId: authUser.hospitalId,
-        swapId: result[0].id,
+        swapId: createdSwap.id,
         fromStaffId,
         toStaffId,
         shiftId
       })
 
-      // Get shift details for notification
+      // Get shift details for notification context
       const shiftInfo = await sql`
         SELECT date FROM shifts WHERE id = ${shiftId}
       `
       
-      if (toStaffId && shiftInfo.length > 0) {
-        // Notify specific staff member
-        const fromStaff = staff.find(s => s.id === fromStaffId)
-        if (fromStaff) {
-          // Notification system removed during simplification
-        }
-      } else {
-        // Notify all managers about open swap request
-        const managers = staff.filter(s => s.role === 'manager')
-        const fromStaff = staff.find(s => s.id === fromStaffId)
-        if (fromStaff) {
-          for (const manager of managers) {
-            // Notification system removed during simplification
-          }
-        }
-      }
-
-      return NextResponse.json({ success: true, swap: result[0] })
-    } catch (error) {
-      logger.error('SwapsAPI', 'Error creating swap request', { error, userId: authUser.userId })
-      return NextResponse.json(
-        { success: false, error: 'Failed to create swap request' },
-        { status: 500 }
+      const shiftDate = shiftInfo.length > 0 ? shiftInfo[0].date : 'unknown'
+      const targetDescription = toStaffId ? 'specific staff member' : 'any available staff'
+      
+      return apiSuccess(
+        { swap: createdSwap }, 
+        `Swap request created successfully for shift on ${shiftDate} (targeting ${targetDescription})`,
+        { shiftDate, targetType: toStaffId ? 'specific' : 'open' }
       )
-    }
+    }, 'swaps POST')
   })
 }

@@ -3,6 +3,14 @@ import { sql } from '@/lib/db'
 // Removed notification and activity logging dependencies during simplification
 import { logger } from '@/lib/logger'
 import { withHospitalAuth } from '@/lib/hospitalMiddleware'
+import { 
+  apiSuccess, 
+  apiError, 
+  apiValidationError, 
+  apiForbidden, 
+  apiServerError,
+  withApiErrorHandling 
+} from '@/lib/apiResponse'
 
 // Input validation functions
 function validateYear(year: unknown): year is string {
@@ -41,36 +49,30 @@ function validateDepartment(department: unknown): department is string {
 // GET shifts for a specific month/year and hospital
 export async function GET(request: NextRequest) {
   return withHospitalAuth(request, async (authUser) => {
-    try {
+    return withApiErrorHandling(async () => {
       const { searchParams } = new URL(request.url)
       const year = searchParams.get('year')
       const month = searchParams.get('month')
       const hospitalId = searchParams.get('hospitalId')
 
       if (!validateYear(year) || !validateMonth(month)) {
-        return NextResponse.json(
-          { success: false, error: 'Valid year and month are required' },
-          { status: 400 }
-        )
+        return apiValidationError('Valid year and month are required', {
+          year: !validateYear(year) ? ['Year must be between 2020 and 2030'] : [],
+          month: !validateMonth(month) ? ['Month must be between 0 and 11'] : []
+        })
       }
 
       // Enforce hospital isolation - user can only access their own hospital data
       const userHospitalId = authUser.hospitalId.toString()
       if (hospitalId && hospitalId !== userHospitalId) {
-        return NextResponse.json(
-          { success: false, error: 'Access denied - hospital isolation violation' },
-          { status: 403 }
-        )
+        return apiForbidden('Access denied - hospital isolation violation')
       }
 
       // Use authenticated user's hospital ID if none provided
       const targetHospitalId = hospitalId || userHospitalId
 
       if (!validateHospitalId(targetHospitalId)) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid hospital ID format' },
-          { status: 400 }
-        )
+        return apiValidationError('Invalid hospital ID format')
       }
 
     // Calculate date range for the month

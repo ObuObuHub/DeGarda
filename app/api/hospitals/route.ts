@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { withHospitalAuth } from '@/lib/hospitalMiddleware'
 import { logger } from '@/lib/logger'
+import { apiSuccess, apiError, apiForbidden, withApiErrorHandling } from '@/lib/apiResponse'
 
 export async function GET(request: NextRequest) {
   return withHospitalAuth(request, async (authUser) => {
@@ -68,16 +69,13 @@ export async function GET(request: NextRequest) {
         count: hospitalsWithStats.length
       })
       
-      return NextResponse.json({ hospitals: hospitalsWithStats })
+      return apiSuccess(hospitalsWithStats, 'Hospitals retrieved successfully')
     } catch (error) {
       logger.error('HospitalsAPI', 'Error fetching hospitals', error, {
         userId: authUser.userId,
         hospitalId: authUser.hospitalId
       })
-      return NextResponse.json(
-        { error: 'Failed to fetch hospitals' },
-        { status: 500 }
-      )
+      return apiError('Failed to fetch hospitals', 500)
     }
   })
 }
@@ -90,10 +88,7 @@ export async function POST(request: NextRequest) {
         userId: authUser.userId,
         role: authUser.role
       })
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      )
+      return apiForbidden('Admin access required')
     }
     
     try {
@@ -101,10 +96,7 @@ export async function POST(request: NextRequest) {
       const { name, city } = body
       
       if (!name) {
-        return NextResponse.json(
-          { error: 'Name is required' },
-          { status: 400 }
-        )
+        return apiError('Name is required', 400)
       }
       
       const result = await sql`
@@ -122,19 +114,18 @@ export async function POST(request: NextRequest) {
         createdByName: authUser.name
       })
       
-      return NextResponse.json({
+      const responseData = {
         ...hospital,
         id: hospital.id.toString(),
         staff: 0
-      })
+      }
+      
+      return apiSuccess(responseData, 'Hospital created successfully')
     } catch (error) {
       logger.error('HospitalsAPI', 'Error creating hospital', error, {
         userId: authUser.userId
       })
-      return NextResponse.json(
-        { error: 'Failed to create hospital' },
-        { status: 500 }
-      )
+      return apiError('Failed to create hospital', 500)
     }
   })
 }

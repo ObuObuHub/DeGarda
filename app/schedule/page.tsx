@@ -10,23 +10,10 @@ import { useData } from '@/contexts/DataContext'
 import { showToast } from '@/components/Toast'
 import { logger } from '@/lib/logger'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
+import { SwapRequest } from '@/types'
 
 interface SchedulePageProps extends WithAuthProps {
   // Additional props if needed
-}
-
-interface SwapRequest {
-  id: number
-  from_staff_id: number
-  to_staff_id: number | null
-  shift_id: number
-  reason: string
-  status: string
-  created_at: string
-  shift_date: string
-  shift_type: string
-  from_staff_name: string
-  to_staff_name: string | null
 }
 
 function SchedulePage({ user, isLoading: authLoading, error: authError }: SchedulePageProps) {

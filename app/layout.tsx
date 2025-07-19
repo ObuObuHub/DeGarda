@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { AppProviders } from '@/contexts/AppProviders'
 import { DataProvider } from '@/contexts/DataContext'
 import { ToastContainer } from '@/components/Toast'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -31,10 +32,12 @@ export default function RootLayout({
     <html lang="ro" className={inter.variable}>
       <body className="min-h-screen bg-background-secondary">
         <ErrorBoundary>
-          <DataProvider>
-            {children}
-            <ToastContainer />
-          </DataProvider>
+          <AppProviders>
+            <DataProvider>
+              {children}
+              <ToastContainer />
+            </DataProvider>
+          </AppProviders>
         </ErrorBoundary>
       </body>
     </html>

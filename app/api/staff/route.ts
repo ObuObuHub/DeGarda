@@ -7,6 +7,15 @@ import { generateUniqueAccessCode } from '@/lib/accessCodes'
 import { logger } from '@/lib/logger'
 import { withHospitalAuth, validateHospitalParam } from '@/lib/hospitalMiddleware'
 import { isValidDepartment } from '@/lib/constants'
+import { 
+  apiSuccess, 
+  apiSuccessWithPagination, 
+  apiError, 
+  apiValidationError, 
+  apiForbidden, 
+  apiServerError,
+  withApiErrorHandling 
+} from '@/lib/apiResponse'
 
 // Verify user is admin or manager
 async function verifyAdminOrManager(request: NextRequest) {
@@ -27,7 +36,7 @@ async function verifyAdminOrManager(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   return withHospitalAuth(request, async (authUser) => {
-    try {
+    return withApiErrorHandling(async () => {
       const { searchParams } = new URL(request.url)
       const hospitalIdParam = searchParams.get('hospitalId')
       const page = parseInt(searchParams.get('page') || '1')
@@ -46,10 +55,7 @@ export async function GET(request: NextRequest) {
             requestedHospital: hospitalIdParam,
             error: validation.error
           })
-          return NextResponse.json(
-            { error: validation.error },
-            { status: 403 }
-          )
+          return apiForbidden(validation.error)
         }
         targetHospitalId = validation.hospitalId!
       }
@@ -108,50 +114,43 @@ export async function GET(request: NextRequest) {
         }
       })
       
-      // For backward compatibility, return just the array if no pagination params
-      if (!searchParams.get('page') && !searchParams.get('limit')) {
-        return NextResponse.json(transformedStaff)
+      // Return paginated response if pagination params provided
+      if (searchParams.get('page') || searchParams.get('limit')) {
+        return apiSuccessWithPagination(
+          transformedStaff,
+          {
+            page,
+            limit,
+            total: totalCount,
+            totalPages: Math.ceil(totalCount / limit)
+          },
+          `Retrieved ${transformedStaff.length} staff members`
+        )
       }
       
-      // Return paginated response
-      return NextResponse.json({
-        data: transformedStaff,
-        pagination: {
-          page,
-          limit,
-          total: totalCount,
-          totalPages: Math.ceil(totalCount / limit)
-        }
-      })
-    } catch (error) {
-      logger.error('StaffAPI', 'Error fetching staff', { error, userId: authUser.userId })
-      return NextResponse.json(
-        { error: 'Failed to fetch staff' },
-        { status: 500 }
-      )
-    }
+      // For backward compatibility, return simple success with staff array
+      return apiSuccess({ staff: transformedStaff }, `Retrieved ${transformedStaff.length} staff members`)
+    }, 'staff GET')
   })
 }
 
 export async function POST(request: NextRequest) {
   return withHospitalAuth(request, async (authUser) => {
-    try {
+    return withApiErrorHandling(async () => {
       const body = await request.json()
       const { name, email, type, specialization, hospitalId, role = 'staff' } = body
       
       if (!name || !type || !hospitalId) {
-        return NextResponse.json(
-          { error: 'Name, type, and hospital are required' },
-          { status: 400 }
-        )
+        return apiValidationError('Name, type, and hospital are required', {
+          name: !name ? ['Name is required'] : [],
+          type: !type ? ['Type is required'] : [],
+          hospitalId: !hospitalId ? ['Hospital is required'] : []
+        })
       }
 
       // Validate department if provided
       if (specialization && !isValidDepartment(specialization)) {
-        return NextResponse.json(
-          { error: 'Invalid department. Must be one of: Laborator, Urgențe, Chirurgie, Medicină Internă, ATI' },
-          { status: 400 }
-        )
+        return apiValidationError('Invalid department. Must be one of: Laborator, Urgențe, Chirurgie, Medicină Internă, ATI')
       }
       
       // Validate hospital access
@@ -163,10 +162,7 @@ export async function POST(request: NextRequest) {
           requestedHospital: hospitalId,
           error: validation.error
         })
-        return NextResponse.json(
-          { error: validation.error },
-          { status: 403 }
-        )
+        return apiForbidden(validation.error)
       }
       
       const targetHospitalId = validation.hospitalId!
@@ -178,10 +174,7 @@ export async function POST(request: NextRequest) {
         `
         
         if (existing.length > 0) {
-          return NextResponse.json(
-            { error: 'Email already exists' },
-            { status: 400 }
-          )
+          return apiValidationError('Email already exists')
         }
       }
       
@@ -209,7 +202,7 @@ export async function POST(request: NextRequest) {
         createdByName: authUser.name
       })
       
-      return NextResponse.json({
+      const createdStaff = {
         id: staff.id.toString(),
         name: staff.name,
         email: staff.email,
@@ -218,13 +211,9 @@ export async function POST(request: NextRequest) {
         hospitalId: staff.hospital_id.toString(),
         role: staff.role,
         accessCode: staff.access_code
-      })
-    } catch (error) {
-      logger.error('StaffAPI', 'Error creating staff', { error, userId: authUser.userId })
-      return NextResponse.json(
-        { error: 'Failed to create staff member' },
-        { status: 500 }
-      )
-    }
+      }
+      
+      return apiSuccess(createdStaff, `Staff member '${staff.name}' created successfully with access code ${staff.access_code}`)
+    }, 'staff POST')
   })
 }
