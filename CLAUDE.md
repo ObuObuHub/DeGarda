@@ -56,10 +56,26 @@ Hospital     // Isolated tenant boundaries
 ```typescript
 // Current Implementation (SECURE)
 POST /api/auth/access-code 
-{ accessCode: "simple3char" } // Staff
-{ accessCode: "complex6char" } // Manager
+{ accessCode: "ABC123" } // Individual staff access codes
 → JWT token with { userId, hospitalId, role }
 ```
+
+#### **Access Code Generation (NEW - 2025)**
+- **Format**: 3 characters (2 letters + 1 number)
+- **Generation**: Automatic on staff creation
+  - First 2 characters: Initials from staff name (e.g., "JS" for "John Smith")
+  - Last character: Random digit (0-9)
+- **Uniqueness**: System ensures no duplicate codes across entire database
+- **Examples**: 
+  - "Dr. Maria Popescu" → "MP7"
+  - "John Doe" → "JD3"
+  - "Ana-Maria Ionescu" → "AI9"
+- **Fallback**: If initials + number combinations exhausted, generates random 3-char code
+- **Benefits**:
+  - Easy to remember (uses own initials)
+  - Direct login to assigned hospital
+  - Maintains strict hospital separation
+  - No need to select hospital or remember complex passwords
 
 ### **2. Hospital Isolation Middleware**
 ```typescript
@@ -130,11 +146,12 @@ npm run test:performance
 ## 📊 Current Implementation Status
 
 ### **✅ COMPLETED (Secure & Functional)**
-- **Authentication**: Hospital-specific access codes with JWT tokens
+- **Authentication**: Individual staff access codes (3-char) with JWT tokens
+- **Access Code Generation**: Automatic unique codes using initials + number
 - **Hospital Isolation**: Middleware enforces strict tenant boundaries  
 - **Role-Based Access**: Staff/Manager permissions at API + UI levels
 - **Shift Generation**: O(n log n) optimized algorithm with fallback
-- **Access Code Management**: Manager-only interface with actual code display
+- **Cascade Deletion**: Hospitals and staff can be deleted with all related data
 - **Database Architecture**: Versioned migrations with proper seeding
 
 ### **🔧 IN PROGRESS**

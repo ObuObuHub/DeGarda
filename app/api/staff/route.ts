@@ -3,7 +3,7 @@ import { sql } from '@/lib/db'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
-// Removed password generator and access codes during authentication simplification
+import { generateUniqueAccessCode } from '@/lib/accessCodes'
 import { logger } from '@/lib/logger'
 import { withHospitalAuth, validateHospitalParam } from '@/lib/hospitalMiddleware'
 
@@ -176,37 +176,29 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      // Generate a secure temporary password
-      const tempPassword = Math.random().toString(36).slice(-8) // Simple password generation
+      // Generate unique 3-character access code
+      const accessCode = await generateUniqueAccessCode(name)
+      
+      // Generate a secure temporary password (kept for legacy compatibility)
+      const tempPassword = Math.random().toString(36).slice(-8)
       const hashedPassword = await bcrypt.hash(tempPassword, 10)
       
-      // TODO: Send this password to the user via secure email
-      
       const result = await sql`
-        INSERT INTO staff (name, email, password, role, hospital_id, specialization, is_active)
-        VALUES (${name}, ${email || null}, ${hashedPassword}, ${role}, ${targetHospitalId}, ${specialization}, true)
-        RETURNING id, name, email, role, hospital_id, specialization, is_active, created_at
+        INSERT INTO staff (name, email, password, role, hospital_id, specialization, is_active, access_code)
+        VALUES (${name}, ${email || null}, ${hashedPassword}, ${role}, ${targetHospitalId}, ${specialization}, true, ${accessCode})
+        RETURNING id, name, email, role, hospital_id, specialization, is_active, created_at, access_code
       `
       
       const staff = result[0]
       
-      // Access codes are now hospital-based, not individual staff
-      // Staff use hospital codes (LAB, BUH1, BUH2) for authentication
-      try {
-        
-        logger.info('StaffAPI', 'Staff created successfully', {
-          staffId: staff.id,
-          staffName: staff.name,
-          hospitalId: targetHospitalId,
-          createdBy: authUser.userId,
-          note: 'Staff will use hospital access code for authentication'
-        })
-      } catch (error) {
-        logger.error('StaffAPI', 'Error in staff creation process', {
-          staffId: staff.id,
-          error
-        })
-      }
+      logger.info('StaffAPI', 'Staff created successfully with unique access code', {
+        staffId: staff.id,
+        staffName: staff.name,
+        accessCode: staff.access_code,
+        hospitalId: targetHospitalId,
+        createdBy: authUser.userId,
+        createdByName: authUser.name
+      })
       
       return NextResponse.json({
         id: staff.id.toString(),
@@ -215,7 +207,8 @@ export async function POST(request: NextRequest) {
         type,
         specialization: staff.specialization || '',
         hospitalId: staff.hospital_id.toString(),
-        role: staff.role
+        role: staff.role,
+        accessCode: staff.access_code
       })
     } catch (error) {
       logger.error('StaffAPI', 'Error creating staff', { error, userId: authUser.userId })

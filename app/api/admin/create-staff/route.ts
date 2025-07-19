@@ -3,6 +3,7 @@ import { sql } from '@/lib/db'
 import { withHospitalAuth } from '@/lib/hospitalMiddleware'
 import { logger } from '@/lib/logger'
 import bcrypt from 'bcryptjs'
+import { generateUniqueAccessCode } from '@/lib/accessCodes'
 
 export async function POST(request: NextRequest) {
   return withHospitalAuth(request, async (authUser) => {
@@ -15,34 +16,17 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const { name, email, specialization, hospitalId, accessCode, hasManagerPrivileges } = await request.json()
+      const { name, email, specialization, hospitalId, hasManagerPrivileges } = await request.json()
       
-      if (!name || !specialization || !hospitalId || !accessCode) {
+      if (!name || !specialization || !hospitalId) {
         return NextResponse.json(
-          { error: 'Name, specialization, hospitalId, and accessCode are required' },
+          { error: 'Name, specialization, and hospitalId are required' },
           { status: 400 }
         )
       }
 
-      // Validate access code is exactly 3 characters
-      if (accessCode.length !== 3) {
-        return NextResponse.json(
-          { error: 'Access code must be exactly 3 characters' },
-          { status: 400 }
-        )
-      }
-
-      // Check if access code already exists
-      const existingCode = await sql`
-        SELECT id FROM staff WHERE access_code = ${accessCode}
-      `
-      
-      if (existingCode.length > 0) {
-        return NextResponse.json(
-          { error: 'Access code already exists' },
-          { status: 400 }
-        )
-      }
+      // Generate unique 3-character access code automatically
+      const accessCode = await generateUniqueAccessCode(name)
 
       // Check if email already exists (only if email is provided)
       if (email) {
