@@ -3,8 +3,8 @@ import { sql } from '@/lib/db'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
 
-// Verify user is admin or manager
-async function verifyAdminOrManager(request: NextRequest) {
+// Verify user is admin only
+async function verifyAdmin(request: NextRequest) {
   const cookieStore = await cookies()
   const token = cookieStore.get('auth-token')
   
@@ -14,7 +14,7 @@ async function verifyAdminOrManager(request: NextRequest) {
   
   try {
     const decoded = jwt.verify(token.value, process.env.JWT_SECRET!) as any
-    return decoded.role === 'admin' || decoded.role === 'manager'
+    return decoded.role === 'admin'
   } catch {
     return false
   }
@@ -25,11 +25,11 @@ export async function PATCH(
   props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
-  // Verify admin or manager authentication
-  const isAuthorized = await verifyAdminOrManager(request)
+  // Verify admin authentication
+  const isAuthorized = await verifyAdmin(request)
   if (!isAuthorized) {
     return NextResponse.json(
-      { error: 'Unauthorized - Admin or Manager access required' },
+      { error: 'Unauthorized - Admin access required' },
       { status: 401 }
     )
   }
@@ -103,11 +103,11 @@ export async function DELETE(
   props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
-  // Verify admin or manager authentication
-  const isAuthorized = await verifyAdminOrManager(request)
+  // Verify admin authentication
+  const isAuthorized = await verifyAdmin(request)
   if (!isAuthorized) {
     return NextResponse.json(
-      { error: 'Unauthorized - Admin or Manager access required' },
+      { error: 'Unauthorized - Admin access required' },
       { status: 401 }
     )
   }

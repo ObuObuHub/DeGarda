@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
-import { HospitalSelector } from '@/components/HospitalSelector'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 import { logger } from '@/lib/logger'
@@ -27,7 +26,7 @@ interface GenerateShiftsPageProps extends WithAuthProps {
 
 function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: GenerateShiftsPageProps) {
   const router = useRouter()
-  const [selectedHospitalId, setSelectedHospitalId] = useState<string>('')
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>(user?.hospitalId?.toString() || '')
   const [selectedDepartment, setSelectedDepartment] = useState('LABORATOR')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
@@ -45,14 +44,12 @@ function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: 
 
   useEffect(() => {
     if (user) {
-      if (isAdmin) {
-        setSelectedHospitalId('5') // Default to Piatra-Neamț
-        setCanGenerate(true)
-      } else if (isManager) {
-        setSelectedHospitalId(user.hospitalId?.toString() || '')
+      // All users see only their assigned hospital
+      setSelectedHospitalId(user.hospitalId?.toString() || '')
+      
+      if (isAdmin || isManager) {
         setCanGenerate(true)
       } else if (isStaff) {
-        setSelectedHospitalId(user.hospitalId?.toString() || '')
         checkStaffPermissions()
       }
       
@@ -216,16 +213,18 @@ function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: 
           </div>
         </div>
 
-        {/* Hospital Selector - Only for Admin */}
-        {isAdmin && (
-          <Card className="p-4 mb-6">
-            <HospitalSelector
-              selectedHospitalId={selectedHospitalId}
-              onHospitalChange={setSelectedHospitalId}
-              userRole={user.role}
-            />
-          </Card>
-        )}
+        {/* Hospital info */}
+        <Card className="p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Spital</p>
+              <p className="font-medium text-gray-900">{user?.hospitalName || 'Loading...'}</p>
+            </div>
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-xl">🏥</span>
+            </div>
+          </div>
+        </Card>
 
         {/* Error/Success Messages */}
         {error && (

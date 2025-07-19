@@ -5,7 +5,6 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { StaffMember } from '@/lib/data'
-import { useHospital } from '@/contexts/HospitalContext'
 
 interface StaffModalProps {
   isOpen: boolean
@@ -20,13 +19,12 @@ export const StaffModal: React.FC<StaffModalProps> = ({
   onSave,
   staff
 }) => {
-  const { selectedHospitalId } = useHospital()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     type: 'medic' as StaffMember['type'],
     specialization: 'ATI',
-    hospitalId: selectedHospitalId || '1',
+    hospitalId: '1',
     role: 'staff' as StaffMember['role']
   })
 
@@ -46,7 +44,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
         email: '',
         type: 'medic',
         specialization: 'ATI',
-        hospitalId: selectedHospitalId || '1',
+        hospitalId: '1',
         role: 'staff'
       })
     }

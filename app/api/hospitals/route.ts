@@ -4,8 +4,8 @@ import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
 import { logger } from '@/lib/logger'
 
-// Verify user is admin or manager
-async function verifyAdminOrManager(request: NextRequest) {
+// Verify user is admin only
+async function verifyAdmin(request: NextRequest) {
   const cookieStore = await cookies()
   const token = cookieStore.get('auth-token')
   
@@ -15,8 +15,8 @@ async function verifyAdminOrManager(request: NextRequest) {
   
   try {
     const decoded = jwt.verify(token.value, process.env.JWT_SECRET!) as any
-    // Only admin and manager can modify hospitals
-    return decoded.role === 'admin' || decoded.role === 'manager'
+    // Only admin can create hospitals
+    return decoded.role === 'admin'
   } catch {
     return false
   }
@@ -68,11 +68,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Verify admin or manager authentication
-  const isAuthorized = await verifyAdminOrManager(request)
+  // Verify admin authentication
+  const isAuthorized = await verifyAdmin(request)
   if (!isAuthorized) {
     return NextResponse.json(
-      { error: 'Unauthorized - Admin or Manager access required' },
+      { error: 'Unauthorized - Admin access required' },
       { status: 401 }
     )
   }

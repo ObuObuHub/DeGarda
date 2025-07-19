@@ -17,7 +17,6 @@ import {
 } from '@/lib/shiftGenerator'
 import { logger } from '@/lib/logger'
 import { assignDepartmentsToDoctors } from '@/lib/assignDepartments'
-import { useHospital } from '@/contexts/HospitalContext'
 import { useData } from '@/contexts/DataContext'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import { exportScheduleToExcel } from '@/lib/exportUtils'
@@ -50,7 +49,9 @@ interface Shift {
 
 export default function SchedulePage() {
   const router = useRouter()
-  const { selectedHospitalId, selectedHospital } = useHospital()
+  const [user, setUser] = useState<any>(null)
+  const selectedHospitalId = user?.hospitalId?.toString() || ''
+  const selectedHospital = user?.hospitalName || ''
   const { 
     shifts, 
     staff, 

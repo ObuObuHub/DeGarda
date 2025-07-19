@@ -9,7 +9,6 @@ import { Modal } from '@/components/ui/Modal'
 import { logger } from '@/lib/logger'
 import { validateClientRole, getClientUserRole } from '@/lib/clientAuth'
 import { hasPermission } from '@/lib/roleBasedAccess'
-import { useHospital } from '@/contexts/HospitalContext'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 
 interface StaffMember {
@@ -39,7 +38,8 @@ interface ManagementProps extends WithAuthProps {
 
 function ManagementPage({ user, isLoading: authLoading, error: authError }: ManagementProps) {
   const router = useRouter()
-  const { selectedHospitalId, selectedHospital } = useHospital()
+  const selectedHospitalId = user?.hospitalId?.toString() || ''
+  const selectedHospital = user?.hospitalName || ''
   
   const [activeTab, setActiveTab] = useState<'staff' | 'codes' | 'settings'>('staff')
   

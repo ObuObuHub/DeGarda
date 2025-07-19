@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
-import { HospitalSelector } from '@/components/HospitalSelector'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import withAuth, { AuthUser, WithAuthProps } from '@/components/withAuth'
 import { logger } from '@/lib/logger'
@@ -39,7 +38,7 @@ interface ManagementPageProps extends WithAuthProps {
 function ManagementPage({ user, isLoading: authLoading, error: authError }: ManagementPageProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'staff' | 'permissions' | 'access-codes'>('staff')
-  const [selectedHospitalId, setSelectedHospitalId] = useState<string>('')
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>(user?.hospitalId?.toString() || '')
   
   // Staff management state
   const [staff, setStaff] = useState<Staff[]>([])
@@ -82,12 +81,9 @@ function ManagementPage({ user, isLoading: authLoading, error: authError }: Mana
   }
 
   useEffect(() => {
-    if (user) {
-      if (isAdmin) {
-        setSelectedHospitalId('5') // Default to Piatra-Neamț for admin
-      } else if (user.hospitalId) {
-        setSelectedHospitalId(user.hospitalId.toString())
-      }
+    // All users see only their assigned hospital
+    if (user?.hospitalId) {
+      setSelectedHospitalId(user.hospitalId.toString())
     }
   }, [user])
 
@@ -426,16 +422,18 @@ function ManagementPage({ user, isLoading: authLoading, error: authError }: Mana
           </div>
         </div>
 
-        {/* Hospital Selector - Only for Admin */}
-        {isAdmin && (
-          <Card className="p-4 mb-6">
-            <HospitalSelector
-              selectedHospitalId={selectedHospitalId}
-              onHospitalChange={setSelectedHospitalId}
-              userRole={user.role}
-            />
-          </Card>
-        )}
+        {/* Hospital info */}
+        <Card className="p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Spital</p>
+              <p className="font-medium text-gray-900">{user?.hospitalName || 'Loading...'}</p>
+            </div>
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-xl">🏥</span>
+            </div>
+          </div>
+        </Card>
 
         {/* Error/Success Messages */}
         {error && (

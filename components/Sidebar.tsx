@@ -2,7 +2,6 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import { Icon } from '@/components/ui/Icon'
-import { useHospital } from '@/contexts/HospitalContext'
 import { useEffect, useState } from 'react'
 import { getAllowedNavItems, UserRole } from '@/lib/roleBasedAccess'
 import { logger } from '@/lib/logger'
@@ -20,7 +19,6 @@ interface SidebarProps {
 export function Sidebar({ onClose }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const { selectedHospital } = useHospital()
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [navItems, setNavItems] = useState<NavItem[]>([])
 
@@ -107,8 +105,6 @@ export function Sidebar({ onClose }: SidebarProps) {
       <div className="p-4 border-t border-separator">
         <button
           onClick={() => {
-            localStorage.removeItem('selectedHospitalId')
-            sessionStorage.removeItem('selectedHospitalId')
             router.push('/')
           }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-ios text-sm font-medium text-label-primary hover:bg-system-gray-6/10 transition-all duration-200"

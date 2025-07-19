@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Calendar } from '@/components/Calendar'
-import { HospitalSelector } from '@/components/HospitalSelector'
 import { SwapRequestModal } from '@/components/SwapRequestModal'
 import { useData } from '@/contexts/DataContext'
 import { showToast } from '@/components/Toast'
@@ -34,7 +33,7 @@ function SchedulePage({ user, isLoading: authLoading, error: authError }: Schedu
   const router = useRouter()
   const { shifts, isLoading, loadShifts } = useData()
   
-  const [selectedHospitalId, setSelectedHospitalId] = useState<string>('')
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>(user?.hospitalId?.toString() || '')
   const [swapModalOpen, setSwapModalOpen] = useState(false)
   const [selectedShift, setSelectedShift] = useState<any>(null)
   const [pendingSwaps, setPendingSwaps] = useState<SwapRequest[]>([])
@@ -48,15 +47,9 @@ function SchedulePage({ user, isLoading: authLoading, error: authError }: Schedu
   const isManager = user?.role === 'manager' || user?.role === 'admin'
 
   useEffect(() => {
-    // Set initial hospital based on user role
-    if (user) {
-      if (user.role === 'admin') {
-        // Admin can see all hospitals, default to first one
-        setSelectedHospitalId('5') // Piatra-Neamț
-      } else if (user.hospitalId) {
-        // Manager and staff see only their hospital
-        setSelectedHospitalId(user.hospitalId.toString())
-      }
+    // All users see only their assigned hospital
+    if (user?.hospitalId) {
+      setSelectedHospitalId(user.hospitalId.toString())
     }
   }, [user])
 
@@ -222,16 +215,18 @@ function SchedulePage({ user, isLoading: authLoading, error: authError }: Schedu
           </div>
         </div>
 
-        {/* Hospital Selector - Only for Admin */}
-        {user?.role === 'admin' && (
-          <Card className="p-4 mb-6">
-            <HospitalSelector
-              selectedHospitalId={selectedHospitalId}
-              onHospitalChange={setSelectedHospitalId}
-              userRole={user.role}
-            />
-          </Card>
-        )}
+        {/* Hospital info */}
+        <Card className="p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Spital</p>
+              <p className="font-medium text-gray-900">{user?.hospitalName || 'Loading...'}</p>
+            </div>
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-xl">🏥</span>
+            </div>
+          </div>
+        </Card>
 
         {/* Pending Swaps for Managers */}
         {isManager && pendingSwaps.length > 0 && (
