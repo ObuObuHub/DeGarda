@@ -2,6 +2,8 @@
 
 **Minimal. Secure. Beautiful.** - A streamlined shift scheduling application for medical staff.
 
+*Latest deployment: 2025-07-20 - Fixed shift generator syntax error*
+
 ## 🎯 Mission
 
 Provide medical staff with an intuitive, secure platform to reserve and manage shifts while enabling managers to oversee departmental schedules within strict hospital boundaries.
