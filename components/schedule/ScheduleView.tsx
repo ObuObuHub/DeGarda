@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Calendar } from '@/components/Calendar'
@@ -43,6 +43,17 @@ export function ScheduleView({
   isLoading
 }: ScheduleViewProps) {
   const currentDate = new Date()
+
+  // Convert shifts array to Record format that Calendar expects
+  const shiftsRecord = useMemo(() => {
+    const record: Record<string, Shift> = {}
+    shifts.forEach(shift => {
+      if (shift.date) {
+        record[shift.date] = shift
+      }
+    })
+    return record
+  }, [shifts])
 
   const handleDayClick = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0]
@@ -148,7 +159,7 @@ export function ScheduleView({
         <Calendar
           year={viewYear}
           month={viewMonth}
-          shifts={shifts}
+          shifts={shiftsRecord}
           onDayClick={handleDayClick}
         />
       )}

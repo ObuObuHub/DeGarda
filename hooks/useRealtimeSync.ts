@@ -15,7 +15,7 @@ export const useRealtimeSync = ({
   hospitalId,
   year,
   month,
-  interval = 30000 // 30 seconds default
+  interval = 60000 // 60 seconds default (was too aggressive at 30s)
 }: UseRealtimeSyncOptions) => {
   const { loadShifts } = useShifts()
   const { loadNotifications, addNotification } = useNotifications()

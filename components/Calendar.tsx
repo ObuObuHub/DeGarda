@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo, useCallback } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Shift } from '@/types'
 
@@ -19,7 +19,7 @@ const MONTHS = [
   'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
 ]
 
-export const Calendar: React.FC<CalendarProps> = ({
+const CalendarComponent: React.FC<CalendarProps> = ({
   year,
   month,
   shifts = {},
@@ -48,14 +48,13 @@ export const Calendar: React.FC<CalendarProps> = ({
     return days
   }, [year, month])
 
-  const getShiftForDay = (day: number | null) => {
+  const getShiftForDay = useCallback((day: number | null) => {
     if (!day) return null
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     return shifts[dateStr]
-  }
+  }, [year, month, shifts])
 
-
-  const getDayIndicator = (day: number | null) => {
+  const getDayIndicator = useCallback((day: number | null) => {
     if (!day) return null
     
     const shift = getShiftForDay(day)
@@ -86,7 +85,7 @@ export const Calendar: React.FC<CalendarProps> = ({
         <span className="text-xs sm:text-sm">✓</span>
       </div>
     )
-  }
+  }, [getShiftForDay, year, month])
 
   return (
     <div className="w-full">
@@ -117,7 +116,7 @@ export const Calendar: React.FC<CalendarProps> = ({
           
           return (
             <div
-              key={index}
+              key={day ? `${year}-${month}-${day}` : `empty-${index}`}
               className={`
                 aspect-square rounded-md sm:rounded-ios p-1 sm:p-2 relative overflow-hidden
                 ${day ? 'bg-white hover:shadow-md cursor-pointer transition-all duration-200 transform hover:scale-[1.02]' : ''}
@@ -202,3 +201,6 @@ export const Calendar: React.FC<CalendarProps> = ({
     </div>
   )
 }
+
+// Memoize the Calendar to prevent unnecessary re-renders
+export const Calendar = memo(CalendarComponent)
