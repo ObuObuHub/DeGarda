@@ -125,6 +125,14 @@ function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: 
   const router = useRouter()
   const [state, dispatch] = useReducer(generateShiftsReducer, initialState)
 
+  const getMonthName = (month: string) => {
+    const monthNames = [
+      'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+      'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
+    ]
+    return monthNames[parseInt(month) - 1] || month
+  }
+
   const isAdmin = user?.role === 'admin'
   const isManager = user?.role === 'manager'
   const isStaff = user?.role === 'staff'
@@ -297,15 +305,17 @@ function GenerateShiftsPage({ user, isLoading: authLoading, error: authError }: 
                     state.isGenerating || 
                     !state.selectedHospitalId || 
                     !state.selectedMonth || 
-                    !state.selectedYear ||
-                    state.reservations.length === 0
+                    !state.selectedYear
                   }
                 >
                   {state.isGenerating ? 'Generating...' : 'Generate Shifts'}
                 </Button>
 
                 <p className="text-xs text-center text-label-tertiary">
-                  This will generate shifts for {state.reservations.length} reservations
+                  {state.reservations.length > 0 
+                    ? `Will honor ${state.reservations.length} reservations + generate remaining shifts`
+                    : `Will generate shifts for all days in ${getMonthName(state.selectedMonth)} ${state.selectedYear}`
+                  }
                 </p>
               </div>
             </Card>
