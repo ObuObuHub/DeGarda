@@ -110,7 +110,7 @@ function generateShiftsReducer(state: GenerateShiftsState, action: GenerateShift
 // Initial state
 const initialState: GenerateShiftsState = {
   selectedHospitalId: '',
-  selectedDepartment: 'LABORATOR',
+  selectedDepartment: 'Laborator',
   selectedMonth: '',
   selectedYear: '',
   reservations: [],

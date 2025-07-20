@@ -321,9 +321,10 @@ const results = await sql`
 
 ### **Key Files to Understand**
 - `lib/hospitalMiddleware.ts` - Hospital isolation enforcement
-- `lib/roleBasedAccess.ts` - Permission system
+- `lib/rbac/` - Modular role-based access control system
+- `lib/shift-generation/` - Focused shift generation modules
 - `lib/accessCodes.ts` - Authentication management
-- `contexts/DataContext.tsx` - Global state management
+- `contexts/AppProviders.tsx` - Modern focused context providers
 - `components/Sidebar.tsx` - Role-based navigation
 
 ### **When in Doubt**
@@ -335,10 +336,16 @@ const results = await sql`
 
 ---
 
+## 🔗 External Resources
+
+<script src="https://gist.github.com/rvaidya/53bf27621d6cfdc64d1520d5ba6e0984.js"></script>
+
+---
+
 **Remember**: DeGarda is a **minimal, secure, beautiful** medical shift scheduler. Every line of code should support these three pillars.
 
 ---
 
 *This document serves as the primary reference for all development work on DeGarda. Keep it updated as the project evolves.*
 
-*Last Updated: 2025-07-15 by Claude Code Assistant*
+*Last Updated: 2025-07-19 by Claude Code Assistant*

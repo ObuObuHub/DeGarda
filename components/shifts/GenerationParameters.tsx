@@ -1,33 +1,29 @@
 'use client'
 
-import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 interface GenerationParametersProps {
+  user: any
+  selectedHospitalId: string
   selectedMonth: string
   selectedYear: string
   selectedDepartment: string
+  onHospitalChange: (id: string) => void
   onMonthChange: (month: string) => void
   onYearChange: (year: string) => void
   onDepartmentChange: (department: string) => void
-  onGenerate: () => void
-  isGenerating: boolean
-  canGenerate: boolean
-  userRole: string
 }
 
 export function GenerationParameters({
+  user,
+  selectedHospitalId,
   selectedMonth,
   selectedYear,
   selectedDepartment,
+  onHospitalChange,
   onMonthChange,
   onYearChange,
-  onDepartmentChange,
-  onGenerate,
-  isGenerating,
-  canGenerate,
-  userRole
+  onDepartmentChange
 }: GenerationParametersProps) {
   
   const getMonthName = (month: string) => {
@@ -38,8 +34,8 @@ export function GenerationParameters({
     return monthNames[parseInt(month) - 1] || month
   }
 
-  const isManager = userRole === 'manager'
-  const isAdmin = userRole === 'admin'
+  const isManager = user?.role === 'manager'
+  const isAdmin = user?.role === 'admin'
   const canSelectDepartment = isManager || isAdmin
 
   return (
@@ -58,7 +54,7 @@ export function GenerationParameters({
             value={selectedMonth}
             onChange={(e) => onMonthChange(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isGenerating}
+            disabled={false}
           >
             {Array.from({ length: 12 }, (_, i) => {
               const month = (i + 1).toString().padStart(2, '0')
@@ -81,7 +77,7 @@ export function GenerationParameters({
             value={selectedYear}
             onChange={(e) => onYearChange(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isGenerating}
+            disabled={false}
           >
             {Array.from({ length: 3 }, (_, i) => {
               const year = (new Date().getFullYear() + i).toString()
@@ -104,32 +100,16 @@ export function GenerationParameters({
               value={selectedDepartment}
               onChange={(e) => onDepartmentChange(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isGenerating}
+              disabled={false}
             >
-              <option value="LABORATOR">LABORATOR</option>
-              <option value="URGENTA">URGENȚĂ</option>
-              <option value="CHIRURGIE">CHIRURGIE</option>
-              <option value="INTERNA">INTERNĂ</option>
+              <option value="Laborator">Laborator</option>
+              <option value="Urgențe">Urgențe</option>
+              <option value="Chirurgie">Chirurgie</option>
+              <option value="Medicină Internă">Medicină Internă</option>
+              <option value="ATI">ATI</option>
             </select>
           </div>
         )}
-      </div>
-
-      <div className="mt-6">
-        <Button
-          onClick={onGenerate}
-          disabled={isGenerating || !canGenerate || !selectedMonth || !selectedYear}
-          className="w-full md:w-auto"
-        >
-          {isGenerating ? (
-            <span className="flex items-center space-x-2">
-              <LoadingSpinner size="sm" />
-              <span>Se generează...</span>
-            </span>
-          ) : (
-            `Generează Gărzi pentru ${getMonthName(selectedMonth)} ${selectedYear}`
-          )}
-        </Button>
       </div>
     </Card>
   )
