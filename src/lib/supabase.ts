@@ -21,6 +21,7 @@ export type User = {
   name: string
   role: 'STAFF' | 'MANAGER' | 'ADMIN'
   department: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
+  max_shifts_per_month?: number
   created_at: string
 }
 

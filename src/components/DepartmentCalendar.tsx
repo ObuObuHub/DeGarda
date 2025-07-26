@@ -73,11 +73,14 @@ export default function DepartmentCalendar({
         status: 'available' | 'reserved' | 'assigned'
       }> = []
 
-      // Count existing shifts per user for fair distribution
+      // Count existing shifts per user for the current month
       const userShiftCounts: Record<string, number> = {}
       departmentStaff.forEach(staff => {
         userShiftCounts[staff.id] = shifts.filter(
-          s => s.assigned_to === staff.id
+          s => s.assigned_to === staff.id && 
+          new Date(s.shift_date).getMonth() === selectedDate.getMonth() &&
+          new Date(s.shift_date).getFullYear() === selectedDate.getFullYear() &&
+          (s.status === 'assigned' || s.status === 'reserved')
         ).length
       })
 
@@ -103,8 +106,19 @@ export default function DepartmentCalendar({
           continue
         }
 
+        // Get yesterday's date to check for back-to-back shifts
+        const yesterday = new Date(currentDate)
+        yesterday.setDate(yesterday.getDate() - 1)
+        const yesterdayStr = yesterday.toISOString().split('T')[0]
+        
         // Find available staff for this 24h shift
         const availableStaff = departmentStaff.filter(staff => {
+          // Check if user has reached their monthly limit
+          const maxShifts = staff.max_shifts_per_month || 8
+          if (userShiftCounts[staff.id] >= maxShifts) {
+            return false
+          }
+          
           // Check if user is unavailable on this date
           const isUnavailable = unavailableDates.some(
             ud => ud.user_id === staff.id && ud.unavailable_date === dateStr
@@ -114,17 +128,36 @@ export default function DepartmentCalendar({
           const hasShiftToday = shifts.some(
             s => s.assigned_to === staff.id && s.shift_date === dateStr
           )
+          
+          // Check if user worked yesterday (prevent back-to-back)
+          const workedYesterday = shifts.some(
+            s => s.assigned_to === staff.id && s.shift_date === yesterdayStr
+          ) || shiftsToCreate.some(
+            s => s.assigned_to === staff.id && s.shift_date === yesterdayStr
+          )
 
-          return !isUnavailable && !hasShiftToday
+          return !isUnavailable && !hasShiftToday && !workedYesterday
         })
 
         if (availableStaff.length > 0) {
-          // Sort by who has the least shifts (fair distribution)
-          availableStaff.sort((a, b) => 
-            (userShiftCounts[a.id] || 0) - (userShiftCounts[b.id] || 0)
-          )
+          // Check if it's a weekend
+          const dayOfWeek = currentDate.getDay()
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6 // Sunday or Saturday
+          
+          if (isWeekend) {
+            // Randomize for weekends
+            for (let i = availableStaff.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [availableStaff[i], availableStaff[j]] = [availableStaff[j], availableStaff[i]]
+            }
+          } else {
+            // Sort by who has the least shifts (fair distribution) for weekdays
+            availableStaff.sort((a, b) => 
+              (userShiftCounts[a.id] || 0) - (userShiftCounts[b.id] || 0)
+            )
+          }
 
-          // Assign shift to staff with least shifts
+          // Assign shift to the selected staff
           const assignedStaff = availableStaff[0]
           
           shiftsToCreate.push({

@@ -14,6 +14,7 @@ CREATE TABLE users (
     personal_code VARCHAR(20) UNIQUE NOT NULL,
     role VARCHAR CHECK (role IN ('STAFF', 'MANAGER', 'ADMIN')) NOT NULL DEFAULT 'STAFF',
     department VARCHAR CHECK (department IN ('ATI', 'Urgente', 'Chirurgie', 'Medicina Interna')),
+    max_shifts_per_month INTEGER DEFAULT 8,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -55,47 +56,47 @@ CREATE TABLE unavailable_dates (
 );
 
 -- Insert real staff members
-INSERT INTO users (name, personal_code, role, department) VALUES
+INSERT INTO users (name, personal_code, role, department, max_shifts_per_month) VALUES
     -- Chirurgie
-    ('Falub Andreea', 'FAL1', 'STAFF', 'Chirurgie'),
-    ('Gunea Sebastian', 'GUN1', 'STAFF', 'Chirurgie'),
-    ('Rusu Raul', 'RUS1', 'STAFF', 'Chirurgie'),
-    ('Toron Mohannad', 'TOR1', 'STAFF', 'Chirurgie'),
-    ('Mihalcea Sebastian', 'MIH1', 'STAFF', 'Chirurgie'),
-    ('Butunoi Constantin', 'BUT1', 'STAFF', 'Chirurgie'),
-    ('Dumitras Stefana', 'DUM1', 'STAFF', 'Chirurgie'),
-    ('Druta Sandu', 'DRU1', 'STAFF', 'Chirurgie'),
+    ('Falub Andreea', 'FAL1', 'STAFF', 'Chirurgie', 8),
+    ('Gunea Sebastian', 'GUN1', 'STAFF', 'Chirurgie', 8),
+    ('Rusu Raul', 'RUS1', 'STAFF', 'Chirurgie', 6),  -- Fewer shifts
+    ('Toron Mohannad', 'TOR1', 'STAFF', 'Chirurgie', 8),
+    ('Mihalcea Sebastian', 'MIH1', 'STAFF', 'Chirurgie', 8),
+    ('Butunoi Constantin', 'BUT1', 'STAFF', 'Chirurgie', 8),
+    ('Dumitras Stefana', 'DUM1', 'STAFF', 'Chirurgie', 5),  -- Part-time
+    ('Druta Sandu', 'DRU1', 'STAFF', 'Chirurgie', 8),
     
     -- Medicina Interna
-    ('Daraban Ana Maria', 'DAR1', 'STAFF', 'Medicina Interna'),
-    ('Botezatu Olesea', 'BOT1', 'STAFF', 'Medicina Interna'),
-    ('Budacu Sorin', 'BUD1', 'STAFF', 'Medicina Interna'),
-    ('Preda Carla', 'PRE1', 'STAFF', 'Medicina Interna'),
-    ('Gutu Simona', 'GUT1', 'STAFF', 'Medicina Interna'),
-    ('Scintei Marius', 'SCI1', 'STAFF', 'Medicina Interna'),
-    ('Pascariu Luminita', 'PAS1', 'STAFF', 'Medicina Interna'),
-    ('Colbeanu Mihaela', 'COL1', 'STAFF', 'Medicina Interna'),
-    ('Rezmires Anca', 'REZ1', 'STAFF', 'Medicina Interna'),
+    ('Daraban Ana Maria', 'DAR1', 'STAFF', 'Medicina Interna', 8),
+    ('Botezatu Olesea', 'BOT1', 'STAFF', 'Medicina Interna', 8),
+    ('Budacu Sorin', 'BUD1', 'STAFF', 'Medicina Interna', 8),
+    ('Preda Carla', 'PRE1', 'STAFF', 'Medicina Interna', 7),  -- Slightly fewer
+    ('Gutu Simona', 'GUT1', 'STAFF', 'Medicina Interna', 8),
+    ('Scintei Marius', 'SCI1', 'STAFF', 'Medicina Interna', 8),
+    ('Pascariu Luminita', 'PAS1', 'STAFF', 'Medicina Interna', 8),
+    ('Colbeanu Mihaela', 'COL1', 'STAFF', 'Medicina Interna', 8),
+    ('Rezmires Anca', 'REZ1', 'STAFF', 'Medicina Interna', 8),
     
     -- Urgente
-    ('Botezatu Cristina', 'BOC1', 'STAFF', 'Urgente'),
-    ('Stoica Gabriel', 'STO1', 'STAFF', 'Urgente'),
-    ('Lazaroiu Catalina', 'LAZ1', 'STAFF', 'Urgente'),
-    ('Al-Aqil Abdulwali', 'ALA1', 'STAFF', 'Urgente'),
-    ('Apostu Teodora', 'APO1', 'STAFF', 'Urgente'),
-    ('Tilica Angela', 'TIL1', 'STAFF', 'Urgente'),
+    ('Botezatu Cristina', 'BOC1', 'STAFF', 'Urgente', 8),
+    ('Stoica Gabriel', 'STO1', 'STAFF', 'Urgente', 8),
+    ('Lazaroiu Catalina', 'LAZ1', 'STAFF', 'Urgente', 8),
+    ('Al-Aqil Abdulwali', 'ALA1', 'STAFF', 'Urgente', 8),
+    ('Apostu Teodora', 'APO1', 'STAFF', 'Urgente', 6),  -- Part-time
+    ('Tilica Angela', 'TIL1', 'STAFF', 'Urgente', 8),
     
     -- ATI
-    ('Botezatu Viorica', 'BOV1', 'STAFF', 'ATI'),
-    ('Boaca Andreea', 'BOA1', 'STAFF', 'ATI'),
-    ('Grecu Efim', 'GRE1', 'STAFF', 'ATI'),
-    ('Smochina Natalia', 'SMO1', 'STAFF', 'ATI'),
-    ('Calancia Cosmin', 'CAL1', 'STAFF', 'ATI'),
-    ('Paval Alexandra', 'PAV1', 'STAFF', 'ATI'),
-    ('Lupu Cosmina', 'LUP1', 'STAFF', 'ATI'),
+    ('Botezatu Viorica', 'BOV1', 'STAFF', 'ATI', 8),
+    ('Boaca Andreea', 'BOA1', 'STAFF', 'ATI', 8),
+    ('Grecu Efim', 'GRE1', 'STAFF', 'ATI', 8),
+    ('Smochina Natalia', 'SMO1', 'STAFF', 'ATI', 8),
+    ('Calancia Cosmin', 'CAL1', 'STAFF', 'ATI', 8),
+    ('Paval Alexandra', 'PAV1', 'STAFF', 'ATI', 8),
+    ('Lupu Cosmina', 'LUP1', 'STAFF', 'ATI', 4),  -- Half-time,
     
     -- Admin
-    ('Administrator', 'MAN2', 'ADMIN', NULL);
+    ('Administrator', 'MAN2', 'ADMIN', NULL, NULL);  -- No shift limit for admin
 
 -- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
