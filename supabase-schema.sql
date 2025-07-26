@@ -6,14 +6,14 @@ DROP TABLE IF EXISTS swap_requests;
 DROP TABLE IF EXISTS shifts;
 DROP TABLE IF EXISTS users;
 
--- Users table (staff and managers)
+-- Users table (staff, managers, and admin)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR UNIQUE,
     name VARCHAR NOT NULL,
     personal_code VARCHAR(20) UNIQUE NOT NULL,
-    role VARCHAR CHECK (role IN ('STAFF', 'MANAGER')) NOT NULL DEFAULT 'STAFF',
-    department VARCHAR CHECK (department IN ('ATI', 'Urgente', 'Chirurgie', 'Medicina Interna')) NOT NULL,
+    role VARCHAR CHECK (role IN ('STAFF', 'MANAGER', 'ADMIN')) NOT NULL DEFAULT 'STAFF',
+    department VARCHAR CHECK (department IN ('ATI', 'Urgente', 'Chirurgie', 'Medicina Interna')),
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -21,14 +21,14 @@ CREATE TABLE users (
 CREATE TABLE shifts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shift_date DATE NOT NULL,
-    shift_time VARCHAR CHECK (shift_time IN ('morning', 'afternoon', 'night')) NOT NULL,
+    shift_time VARCHAR CHECK (shift_time IN ('24h')) NOT NULL DEFAULT '24h',
     department VARCHAR CHECK (department IN ('ATI', 'Urgente', 'Chirurgie', 'Medicina Interna')) NOT NULL,
     assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
     status VARCHAR CHECK (status IN ('available', 'reserved', 'confirmed')) DEFAULT 'available',
     created_at TIMESTAMP DEFAULT NOW(),
     
-    -- Prevent duplicate shifts
-    UNIQUE(shift_date, shift_time, department)
+    -- Prevent duplicate shifts (only one 24h shift per department per day)
+    UNIQUE(shift_date, department)
 );
 
 -- Swap requests table
@@ -92,7 +92,10 @@ INSERT INTO users (name, personal_code, role, department) VALUES
     ('Smochina Natalia', 'SMO1', 'STAFF', 'ATI'),
     ('Calancia Cosmin', 'CAL1', 'STAFF', 'ATI'),
     ('Paval Alexandra', 'PAV1', 'STAFF', 'ATI'),
-    ('Lupu Cosmina', 'LUP1', 'STAFF', 'ATI');
+    ('Lupu Cosmina', 'LUP1', 'STAFF', 'ATI'),
+    
+    -- Admin
+    ('Administrator', 'MAN2', 'ADMIN', NULL);
 
 -- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;

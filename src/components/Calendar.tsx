@@ -100,11 +100,7 @@ export default function Calendar({
   }
 
   const getShiftIcon = (shift: Shift) => {
-    switch (shift.shift_time) {
-      case 'morning': return '🌅'
-      case 'afternoon': return '☀️' 
-      case 'night': return '🌙'
-    }
+    return '📅' // Single icon for 24-hour shifts
   }
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -238,7 +234,7 @@ export default function Calendar({
                         backgroundColor: DEPARTMENT_COLORS[shift.department] 
                       }}
                       onClick={(e) => handleShiftClick(shift, e)}
-                      title={`${shift.department} - ${shift.shift_time} - ${
+                      title={`${shift.department} - 24 ore - ${
                         shift.user?.name || 'Disponibil'
                       }`}
                     >

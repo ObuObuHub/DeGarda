@@ -19,7 +19,7 @@ export type User = {
   id: string
   email: string
   name: string
-  role: 'STAFF' | 'MANAGER'
+  role: 'STAFF' | 'MANAGER' | 'ADMIN'
   department: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
   created_at: string
 }
@@ -27,7 +27,7 @@ export type User = {
 export type Shift = {
   id: string
   shift_date: string
-  shift_time: 'morning' | 'afternoon' | 'night'
+  shift_time: '24h'
   department: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
   assigned_to?: string
   status: 'available' | 'reserved' | 'confirmed'

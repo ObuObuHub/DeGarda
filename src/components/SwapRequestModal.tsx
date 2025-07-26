@@ -52,8 +52,7 @@ export default function SwapRequestModal({
 
   const formatShift = (shift: Shift) => {
     const date = new Date(shift.shift_date).toLocaleDateString('ro-RO')
-    const time = shift.shift_time === 'morning' ? 'Dimineață' : 
-                 shift.shift_time === 'afternoon' ? 'Amiază' : 'Noapte'
+    const time = '24 ore'
     return `${date} - ${time} - ${shift.department}`
   }
 

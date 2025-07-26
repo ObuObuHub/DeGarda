@@ -240,8 +240,7 @@ export default function DashboardPage() {
       headers.join(','),
       ...monthShifts.map(shift => [
         new Date(shift.shift_date).toLocaleDateString('ro-RO'),
-        shift.shift_time === 'morning' ? 'Dimineață' : 
-        shift.shift_time === 'afternoon' ? 'Amiază' : 'Noapte',
+        '24 ore',
         shift.department,
         shift.user?.name || 'Nedefinit',
         shift.status === 'available' ? 'Disponibil' :
@@ -408,14 +407,12 @@ export default function DashboardPage() {
                     <div>
                       <p className="font-medium">Din:</p>
                       <p>📅 {new Date(request.from_shift?.shift_date || '').toLocaleDateString('ro-RO')}</p>
-                      <p>⏰ {request.from_shift?.shift_time === 'morning' ? 'Dimineață' : 
-                            request.from_shift?.shift_time === 'afternoon' ? 'Amiază' : 'Noapte'}</p>
+                      <p>⏰ 24 ore</p>
                     </div>
                     <div>
                       <p className="font-medium">În:</p>
                       <p>📅 {new Date(request.to_shift?.shift_date || '').toLocaleDateString('ro-RO')}</p>
-                      <p>⏰ {request.to_shift?.shift_time === 'morning' ? 'Dimineață' : 
-                            request.to_shift?.shift_time === 'afternoon' ? 'Amiază' : 'Noapte'}</p>
+                      <p>⏰ 24 ore</p>
                     </div>
                   </div>
 

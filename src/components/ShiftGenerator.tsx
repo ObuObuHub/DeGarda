@@ -72,61 +72,58 @@ export default function ShiftGenerator({
       for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
         const dateStr = date.toISOString().split('T')[0]
         
-        // Check if shifts already exist for this day
-        const existingDayShifts = existingShifts.filter(
+        // Check if a 24h shift already exists for this day and department
+        const existingDayShift = existingShifts.find(
           s => s.shift_date === dateStr && s.department === department
         )
 
-        // For each shift time
-        for (const shiftTime of SHIFT_TIMES) {
-          // Skip if shift already exists
-          if (existingDayShifts.some(s => s.shift_time === shiftTime)) {
-            continue
-          }
+        // Skip if shift already exists for this day
+        if (existingDayShift) {
+          continue
+        }
 
-          // Find available staff for this shift
-          const availableStaff = departmentStaff.filter(staff => {
-            // Check if user is unavailable on this date
-            const isUnavailable = unavailableDates.some(
-              ud => ud.user_id === staff.id && ud.unavailable_date === dateStr
-            )
-            
-            // Check if user already has a shift on this day
-            const hasShiftToday = existingShifts.some(
-              s => s.assigned_to === staff.id && s.shift_date === dateStr
-            )
+        // Find available staff for this 24h shift
+        const availableStaff = departmentStaff.filter(staff => {
+          // Check if user is unavailable on this date
+          const isUnavailable = unavailableDates.some(
+            ud => ud.user_id === staff.id && ud.unavailable_date === dateStr
+          )
+          
+          // Check if user already has a shift on this day
+          const hasShiftToday = existingShifts.some(
+            s => s.assigned_to === staff.id && s.shift_date === dateStr
+          )
 
-            return !isUnavailable && !hasShiftToday
+          return !isUnavailable && !hasShiftToday
+        })
+
+        if (availableStaff.length > 0) {
+          // Sort by who has the least shifts (fair distribution)
+          availableStaff.sort((a, b) => 
+            (userShiftCounts[a.id] || 0) - (userShiftCounts[b.id] || 0)
+          )
+
+          // Assign shift to staff with least shifts
+          const assignedStaff = availableStaff[0]
+          
+          shifts.push({
+            shift_date: dateStr,
+            shift_time: '24h',
+            department: department,
+            assigned_to: assignedStaff.id,
+            status: 'reserved'
           })
 
-          if (availableStaff.length > 0) {
-            // Sort by who has the least shifts (fair distribution)
-            availableStaff.sort((a, b) => 
-              (userShiftCounts[a.id] || 0) - (userShiftCounts[b.id] || 0)
-            )
-
-            // Assign shift to staff with least shifts
-            const assignedStaff = availableStaff[0]
-            
-            shifts.push({
-              shift_date: dateStr,
-              shift_time: shiftTime,
-              department: department,
-              assigned_to: assignedStaff.id,
-              status: 'reserved'
-            })
-
-            // Update count
-            userShiftCounts[assignedStaff.id] = (userShiftCounts[assignedStaff.id] || 0) + 1
-          } else {
-            // Create unassigned shift
-            shifts.push({
-              shift_date: dateStr,
-              shift_time: shiftTime,
-              department: department,
-              status: 'available'
-            })
-          }
+          // Update count
+          userShiftCounts[assignedStaff.id] = (userShiftCounts[assignedStaff.id] || 0) + 1
+        } else {
+          // Create unassigned shift
+          shifts.push({
+            shift_date: dateStr,
+            shift_time: '24h',
+            department: department,
+            status: 'available'
+          })
         }
       }
 
@@ -213,6 +210,7 @@ export default function ShiftGenerator({
           <div className="bg-blue-50 p-4 rounded-lg text-sm">
             <h4 className="font-medium text-blue-900 mb-2">Cum funcționează:</h4>
             <ul className="text-blue-800 space-y-1">
+              <li>• Generează ture de 24 ore pentru fiecare zi</li>
               <li>• Distribuie turele echitabil între personal</li>
               <li>• Respectă zilele de indisponibilitate</li>
               <li>• Nu suprascrie turele existente</li>
