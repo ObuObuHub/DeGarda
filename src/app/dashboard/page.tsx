@@ -30,7 +30,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user) {
       loadShifts()
-      if (user.role === 'MANAGER') {
+      if (user.role === 'MANAGER' || user.role === 'ADMIN') {
         loadManagerData()
       }
     }
@@ -56,7 +56,7 @@ export default function DashboardPage() {
       loadSwapRequests()
     ]
     
-    if (user?.role === 'MANAGER') {
+    if (user?.role === 'MANAGER' || user?.role === 'ADMIN') {
       promises.push(loadUsers())
       promises.push(loadPendingSwapRequests())
     }
@@ -281,7 +281,7 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">🏥 Degarda</h1>
               <p className="text-gray-600">
-                {user.name} - {user.role === 'MANAGER' ? 'Manager' : 'Personal'} ({user.department})
+                {user.name} - {user.role === 'MANAGER' ? 'Manager' : user.role === 'ADMIN' ? 'Admin' : 'Personal'} {user.department ? `(${user.department})` : ''}
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -299,7 +299,7 @@ export default function DashboardPage() {
               >
                 📊 Descarca Excel
               </button>
-              {user.role === 'MANAGER' && (
+              {(user.role === 'MANAGER' || user.role === 'ADMIN') && (
                 <>
                   <button
                     onClick={() => setShowGenerator(true)}
@@ -355,8 +355,8 @@ export default function DashboardPage() {
           }}
         />
 
-        {/* Manager: Shift Generator Modal */}
-        {user?.role === 'MANAGER' && (
+        {/* Manager/Admin: Shift Generator Modal */}
+        {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
           <ShiftGenerator
             isOpen={showGenerator}
             onClose={() => setShowGenerator(false)}
@@ -371,8 +371,8 @@ export default function DashboardPage() {
         )}
       </main>
 
-      {/* Manager: Swap Requests Panel */}
-      {user?.role === 'MANAGER' && showSwapRequests && (
+      {/* Manager/Admin: Swap Requests Panel */}
+      {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && showSwapRequests && (
         <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl border-l z-40 overflow-y-auto">
           <div className="sticky top-0 bg-white border-b p-4">
             <div className="flex items-center justify-between">
