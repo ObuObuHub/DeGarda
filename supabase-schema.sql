@@ -54,12 +54,45 @@ CREATE TABLE unavailable_dates (
     UNIQUE(user_id, unavailable_date)
 );
 
--- Sample data with simple personal codes
+-- Insert real staff members
 INSERT INTO users (name, personal_code, role, department) VALUES
-    ('Dr. Ana Popescu', 'ANA1', 'MANAGER', 'ATI'),
-    ('Asist. Maria Ionescu', 'MAR1', 'STAFF', 'ATI'),
-    ('Asist. Ion Gheorghe', 'ION1', 'STAFF', 'Urgente'),
-    ('Dr. Elena Radu', 'ELE1', 'STAFF', 'Chirurgie');
+    -- Chirurgie
+    ('Falub Andreea', 'FAL1', 'STAFF', 'Chirurgie'),
+    ('Gunea Sebastian', 'GUN1', 'STAFF', 'Chirurgie'),
+    ('Rusu Raul', 'RUS1', 'STAFF', 'Chirurgie'),
+    ('Toron Mohannad', 'TOR1', 'STAFF', 'Chirurgie'),
+    ('Mihalcea Sebastian', 'MIH1', 'STAFF', 'Chirurgie'),
+    ('Butunoi Constantin', 'BUT1', 'STAFF', 'Chirurgie'),
+    ('Dumitras Stefana', 'DUM1', 'STAFF', 'Chirurgie'),
+    ('Druta Sandu', 'DRU1', 'STAFF', 'Chirurgie'),
+    
+    -- Medicina Interna
+    ('Daraban Ana Maria', 'DAR1', 'STAFF', 'Medicina Interna'),
+    ('Botezatu Olesea', 'BOT1', 'STAFF', 'Medicina Interna'),
+    ('Budacu Sorin', 'BUD1', 'STAFF', 'Medicina Interna'),
+    ('Preda Carla', 'PRE1', 'STAFF', 'Medicina Interna'),
+    ('Gutu Simona', 'GUT1', 'STAFF', 'Medicina Interna'),
+    ('Scintei Marius', 'SCI1', 'STAFF', 'Medicina Interna'),
+    ('Pascariu Luminita', 'PAS1', 'STAFF', 'Medicina Interna'),
+    ('Colbeanu Mihaela', 'COL1', 'STAFF', 'Medicina Interna'),
+    ('Rezmires Anca', 'REZ1', 'STAFF', 'Medicina Interna'),
+    
+    -- Urgente
+    ('Botezatu Cristina', 'BOC1', 'STAFF', 'Urgente'),
+    ('Stoica Gabriel', 'STO1', 'STAFF', 'Urgente'),
+    ('Lazaroiu Catalina', 'LAZ1', 'STAFF', 'Urgente'),
+    ('Al-Aqil Abdulwali', 'ALA1', 'STAFF', 'Urgente'),
+    ('Apostu Teodora', 'APO1', 'STAFF', 'Urgente'),
+    ('Tilica Angela', 'TIL1', 'STAFF', 'Urgente'),
+    
+    -- ATI
+    ('Botezatu Viorica', 'BOV1', 'STAFF', 'ATI'),
+    ('Boaca Andreea', 'BOA1', 'STAFF', 'ATI'),
+    ('Grecu Efim', 'GRE1', 'STAFF', 'ATI'),
+    ('Smochina Natalia', 'SMO1', 'STAFF', 'ATI'),
+    ('Calancia Cosmin', 'CAL1', 'STAFF', 'ATI'),
+    ('Paval Alexandra', 'PAV1', 'STAFF', 'ATI'),
+    ('Lupu Cosmina', 'LUP1', 'STAFF', 'ATI');
 
 -- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
