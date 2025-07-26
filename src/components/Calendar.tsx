@@ -280,53 +280,6 @@ export default function Calendar({
         })}
       </div>
 
-      {/* Enhanced Legend */}
-      <div className="mt-6 border-t pt-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-          <div className="space-y-2">
-            <h4 className="font-medium text-gray-700">Departamente:</h4>
-            {Object.entries(DEPARTMENT_COLORS).map(([dept, color]) => (
-              <div key={dept} className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded-sm"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="text-xs text-gray-600">{dept}</span>
-              </div>
-            ))}
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className="font-medium text-gray-700">Ture:</h4>
-            <div className="flex items-center gap-2">
-              <span>📅</span>
-              <span className="text-xs text-gray-600">24 ore</span>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className="font-medium text-gray-700">Status:</h4>
-            <div className="flex items-center gap-2">
-              <div className="w-12 h-4 bg-yellow-300 rounded-sm ring-2 ring-yellow-400"></div>
-              <span className="text-xs text-gray-600">Tura ta</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-12 h-4 bg-gray-300 rounded-sm opacity-80"></div>
-              <span className="text-xs text-gray-600">Disponibil</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>⏳</span>
-              <span className="text-xs text-gray-600">În așteptare</span>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className="font-medium text-gray-700">Acțiuni:</h4>
-            <p className="text-xs text-gray-600">Click pe tură pentru opțiuni</p>
-            <p className="text-xs text-gray-600">Ctrl+Click pe zi pentru disponibilitate</p>
-          </div>
-        </div>
-      </div>
 
       {/* Context Menu */}
       {showContextMenu && selectedShift && (
