@@ -16,6 +16,7 @@ interface CalendarProps {
   selectedDate: Date
   onDateChange: (date: Date) => void
   pendingSwapRequests?: { from_shift_id: string; to_shift_id: string }[]
+  department?: string
 }
 
 export default function Calendar({ 
@@ -29,7 +30,8 @@ export default function Calendar({
   currentUser, 
   selectedDate, 
   onDateChange,
-  pendingSwapRequests = []
+  pendingSwapRequests = [],
+  department
 }: CalendarProps) {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null)
   const [showContextMenu, setShowContextMenu] = useState(false)
@@ -100,9 +102,6 @@ export default function Calendar({
     }
   }
 
-  const getShiftIcon = () => {
-    return '📅' // Single icon for 24-hour shifts
-  }
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     const newDate = new Date(selectedDate)
@@ -148,32 +147,34 @@ export default function Calendar({
   }
 
   return (
-    <div className="card">
-      {/* Calendar Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
-        <button
-          onClick={() => navigateMonth('prev')}
-          className="btn btn-secondary"
-        >
-          ← Luna precedentă
-        </button>
-        
-        <div className="text-center">
-          <h2 className="text-xl font-semibold capitalize">
-            {formatMonth(selectedDate)}
-          </h2>
-          <p className="text-sm text-gray-600">
-            Ai {getUserShiftsCount()} ture luna aceasta
-          </p>
+    <div className={department ? "p-4" : "card"}>
+      {/* Calendar Header - only show if not in department view */}
+      {!department && (
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+          <button
+            onClick={() => navigateMonth('prev')}
+            className="btn btn-secondary"
+          >
+            ← Luna precedentă
+          </button>
+          
+          <div className="text-center">
+            <h2 className="text-xl font-semibold capitalize">
+              {formatMonth(selectedDate)}
+            </h2>
+            <p className="text-sm text-gray-600">
+              Ai {getUserShiftsCount()} ture luna aceasta
+            </p>
+          </div>
+          
+          <button
+            onClick={() => navigateMonth('next')}
+            className="btn btn-secondary"
+          >
+            Luna următoare →
+          </button>
         </div>
-        
-        <button
-          onClick={() => navigateMonth('next')}
-          className="btn btn-secondary"
-        >
-          Luna următoare →
-        </button>
-      </div>
+      )}
 
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
@@ -246,31 +247,32 @@ export default function Calendar({
                         shift.status === 'assigned' ? ' (Asignat)' : ''
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">
-                          {shift.department.substring(0, 3)}
-                        </span>
-                        <span className="text-xs">
-                          {getShiftIcon()}
-                        </span>
-                      </div>
+                      {/* Show staff name or availability */}
+                      {shift.user ? (
+                        <div className="text-sm font-semibold text-white truncate px-1">
+                          {shift.user.name.split(' ')[0]}
+                        </div>
+                      ) : (
+                        <div className="text-sm font-medium text-white/90">Liber</div>
+                      )}
                       
-                      {status === 'your-shift' && (
-                        <div className="text-xs font-bold">TU</div>
-                      )}
-                      {status === 'available' && (
-                        <div className="text-xs opacity-90">Liber</div>
-                      )}
-                      {(status === 'your-shift-pending' || status === 'other-shift-pending') && (
-                        <div className="text-xs">⏳</div>
-                      )}
-                      {/* Show status indicator */}
-                      {shift.status === 'reserved' && (
-                        <div className="text-xs font-semibold">📌</div>
-                      )}
-                      {shift.status === 'assigned' && (
-                        <div className="text-xs font-semibold">✓</div>
-                      )}
+                      {/* Status indicators */}
+                      <div className="flex items-center justify-between mt-1">
+                        <div>
+                          {status === 'your-shift' && (
+                            <span className="text-xs font-bold bg-yellow-300 text-yellow-900 px-1 rounded">TU</span>
+                          )}
+                          {shift.status === 'reserved' && (
+                            <span className="text-xs">📌</span>
+                          )}
+                          {shift.status === 'assigned' && (
+                            <span className="text-xs">✓</span>
+                          )}
+                        </div>
+                        {(status === 'your-shift-pending' || status === 'other-shift-pending') && (
+                          <span className="text-xs">⏳</span>
+                        )}
+                      </div>
                     </div>
                   )
                 })}

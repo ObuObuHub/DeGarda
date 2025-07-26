@@ -5,9 +5,9 @@ import { supabase, type User, type Shift, type UnavailableDate, type SwapRequest
 import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import {} from '@/types'
-import Calendar from '@/components/Calendar'
+import DepartmentCalendar from '@/components/DepartmentCalendar'
 import SwapRequestModal from '@/components/SwapRequestModal'
-import ShiftGenerator from '@/components/ShiftGenerator'
+import { DEPARTMENTS } from '@/types'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -17,7 +17,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showSwapModal, setShowSwapModal] = useState(false)
-  const [showGenerator, setShowGenerator] = useState(false)
   const [showSwapRequests, setShowSwapRequests] = useState(false)
   const [pendingSwapRequests, setPendingSwapRequests] = useState<SwapRequest[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
@@ -370,12 +369,6 @@ export default function DashboardPage() {
               {(user.role === 'MANAGER' || user.role === 'ADMIN') && (
                 <>
                   <button
-                    onClick={() => setShowGenerator(true)}
-                    className="btn btn-primary"
-                  >
-                    ✨ Generator Ture
-                  </button>
-                  <button
                     onClick={() => setShowSwapRequests(!showSwapRequests)}
                     className="btn btn-secondary relative"
                   >
@@ -405,21 +398,64 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Calendar */}
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Calendar
-          shifts={shifts}
-          unavailableDates={unavailableDates}
-          onReserveShift={reserveShift}
-          onCancelShift={cancelShift}
-          onMarkUnavailable={markUnavailable}
-          onRemoveUnavailable={removeUnavailable}
-          onDeleteShift={deleteShift}
-          currentUser={user}
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-          pendingSwapRequests={swapRequests}
-        />
+        {/* Month Navigation */}
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-8 bg-white p-4 rounded-lg shadow-sm">
+          <button
+            onClick={() => {
+              const newDate = new Date(selectedDate)
+              newDate.setMonth(newDate.getMonth() - 1)
+              setSelectedDate(newDate)
+            }}
+            className="btn btn-secondary"
+          >
+            ← Luna precedentă
+          </button>
+          
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold capitalize">
+              {selectedDate.toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' })}
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Ai {userShifts.length} ture luna aceasta
+            </p>
+          </div>
+          
+          <button
+            onClick={() => {
+              const newDate = new Date(selectedDate)
+              newDate.setMonth(newDate.getMonth() + 1)
+              setSelectedDate(newDate)
+            }}
+            className="btn btn-secondary"
+          >
+            Luna următoare →
+          </button>
+        </div>
+
+        {/* Department Calendars */}
+        <div className="space-y-6">
+          {DEPARTMENTS.map(department => (
+            <DepartmentCalendar
+              key={department}
+              department={department}
+              shifts={shifts}
+              unavailableDates={unavailableDates}
+              onReserveShift={reserveShift}
+              onCancelShift={cancelShift}
+              onMarkUnavailable={markUnavailable}
+              onRemoveUnavailable={removeUnavailable}
+              onDeleteShift={deleteShift}
+              currentUser={user}
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              pendingSwapRequests={swapRequests}
+              users={allUsers}
+              onShiftsGenerated={loadShifts}
+            />
+          ))}
+        </div>
 
         <SwapRequestModal
           isOpen={showSwapModal}
@@ -433,21 +469,6 @@ export default function DashboardPage() {
           }}
         />
 
-        {/* Manager/Admin: Shift Generator Modal */}
-        {(user?.role === 'MANAGER' || user?.role === 'ADMIN') && (
-          <ShiftGenerator
-            isOpen={showGenerator}
-            onClose={() => setShowGenerator(false)}
-            onGenerated={() => {
-              loadShifts()
-              setShowGenerator(false)
-            }}
-            existingShifts={shifts}
-            unavailableDates={unavailableDates}
-            users={allUsers}
-            selectedDate={selectedDate}
-          />
-        )}
       </main>
 
       {/* Manager/Admin: Swap Requests Panel */}

@@ -1,0 +1,209 @@
+'use client'
+
+import { useState } from 'react'
+import { type User, type Shift, type UnavailableDate, supabase } from '@/lib/supabase'
+import { type Department, DEPARTMENT_COLORS } from '@/types'
+import Calendar from './Calendar'
+
+interface DepartmentCalendarProps {
+  department: Department
+  shifts: Shift[]
+  unavailableDates: UnavailableDate[]
+  onReserveShift: (shiftId: string) => void
+  onCancelShift: (shiftId: string) => void
+  onMarkUnavailable: (date: Date) => void
+  onRemoveUnavailable: (date: Date) => void
+  onDeleteShift?: (shiftId: string) => void
+  currentUser: User
+  selectedDate: Date
+  onDateChange: (date: Date) => void
+  pendingSwapRequests?: { from_shift_id: string; to_shift_id: string }[]
+  users: User[]
+  onShiftsGenerated: () => void
+}
+
+export default function DepartmentCalendar({
+  department,
+  shifts,
+  unavailableDates,
+  onReserveShift,
+  onCancelShift,
+  onMarkUnavailable,
+  onRemoveUnavailable,
+  onDeleteShift,
+  currentUser,
+  selectedDate,
+  onDateChange,
+  pendingSwapRequests = [],
+  users,
+  onShiftsGenerated
+}: DepartmentCalendarProps) {
+  const [generating, setGenerating] = useState(false)
+
+  // Filter shifts for this department only
+  const departmentShifts = shifts.filter(shift => shift.department === department)
+  
+  // Check if user can generate shifts
+  const canGenerateShifts = currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN'
+
+  const generateShiftsForDepartment = async () => {
+    setGenerating(true)
+
+    try {
+      // Calculate month range from selectedDate
+      const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+      const end = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
+      
+      // Get staff for this department
+      const departmentStaff = users.filter(
+        u => u.department === department && u.role === 'STAFF'
+      )
+
+      if (departmentStaff.length === 0) {
+        alert('Nu există personal în acest departament!')
+        setGenerating(false)
+        return
+      }
+
+      const shiftsToCreate: Array<{
+        shift_date: string
+        shift_time: string
+        department: string
+        assigned_to?: string
+        status: 'available' | 'reserved' | 'assigned'
+      }> = []
+
+      // Count existing shifts per user for fair distribution
+      const userShiftCounts: Record<string, number> = {}
+      departmentStaff.forEach(staff => {
+        userShiftCounts[staff.id] = shifts.filter(
+          s => s.assigned_to === staff.id
+        ).length
+      })
+
+      // Generate shifts for each day
+      let currentDate = new Date(start)
+      while (currentDate <= end) {
+        const dateStr = currentDate.toISOString().split('T')[0]
+        
+        // Check if a 24h shift already exists for this day and department
+        const existingDayShift = shifts.find(
+          s => s.shift_date === dateStr && s.department === department
+        )
+
+        // If shift exists and is reserved, update it to assigned
+        if (existingDayShift) {
+          if (existingDayShift.status === 'reserved' && existingDayShift.assigned_to) {
+            await supabase
+              .from('shifts')
+              .update({ status: 'assigned' })
+              .eq('id', existingDayShift.id)
+          }
+          currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000)
+          continue
+        }
+
+        // Find available staff for this 24h shift
+        const availableStaff = departmentStaff.filter(staff => {
+          // Check if user is unavailable on this date
+          const isUnavailable = unavailableDates.some(
+            ud => ud.user_id === staff.id && ud.unavailable_date === dateStr
+          )
+          
+          // Check if user already has a shift on this day
+          const hasShiftToday = shifts.some(
+            s => s.assigned_to === staff.id && s.shift_date === dateStr
+          )
+
+          return !isUnavailable && !hasShiftToday
+        })
+
+        if (availableStaff.length > 0) {
+          // Sort by who has the least shifts (fair distribution)
+          availableStaff.sort((a, b) => 
+            (userShiftCounts[a.id] || 0) - (userShiftCounts[b.id] || 0)
+          )
+
+          // Assign shift to staff with least shifts
+          const assignedStaff = availableStaff[0]
+          
+          shiftsToCreate.push({
+            shift_date: dateStr,
+            shift_time: '24h',
+            department: department,
+            assigned_to: assignedStaff.id,
+            status: 'assigned'
+          })
+
+          // Update count
+          userShiftCounts[assignedStaff.id] = (userShiftCounts[assignedStaff.id] || 0) + 1
+        } else {
+          // Create unassigned shift
+          shiftsToCreate.push({
+            shift_date: dateStr,
+            shift_time: '24h',
+            department: department,
+            status: 'available'
+          })
+        }
+        
+        // Move to next day
+        currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000)
+      }
+
+      // Insert all shifts
+      if (shiftsToCreate.length > 0) {
+        const { error } = await supabase
+          .from('shifts')
+          .insert(shiftsToCreate)
+
+        if (!error) {
+          onShiftsGenerated()
+        } else {
+          alert('Eroare la generare: ' + error.message)
+        }
+      }
+    } catch (error) {
+      alert('Eroare la generare')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  return (
+    <div className="mb-8">
+      <div 
+        className="flex justify-between items-center p-4 rounded-t-lg text-white font-semibold"
+        style={{ backgroundColor: DEPARTMENT_COLORS[department] }}
+      >
+        <h2 className="text-lg">{department}</h2>
+        {canGenerateShifts && (
+          <button
+            onClick={generateShiftsForDepartment}
+            disabled={generating}
+            className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            {generating ? '🔄 Se generează...' : '✨ Generează Ture'}
+          </button>
+        )}
+      </div>
+      
+      <div className="border border-t-0 rounded-b-lg">
+        <Calendar
+          shifts={departmentShifts}
+          unavailableDates={unavailableDates}
+          onReserveShift={onReserveShift}
+          onCancelShift={onCancelShift}
+          onMarkUnavailable={onMarkUnavailable}
+          onRemoveUnavailable={onRemoveUnavailable}
+          onDeleteShift={onDeleteShift}
+          currentUser={currentUser}
+          selectedDate={selectedDate}
+          onDateChange={onDateChange}
+          pendingSwapRequests={pendingSwapRequests}
+          department={department}
+        />
+      </div>
+    </div>
+  )
+}
