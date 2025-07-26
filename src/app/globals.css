@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 active:scale-95;
+  }
+  
+  .btn-primary {
+    @apply bg-blue-500 text-white hover:bg-blue-600 shadow-sm;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-700 hover:bg-gray-200 border;
+  }
+  
+  .btn-success {
+    @apply bg-green-500 text-white hover:bg-green-600 shadow-sm;
+  }
+  
+  .btn-danger {
+    @apply bg-red-500 text-white hover:bg-red-600 shadow-sm;
+  }
+  
+  .input {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-sm border p-6;
+  }
+  
+  .calendar-day {
+    @apply min-h-[120px] p-2 border border-gray-100;
+  }
+  
+  .shift-badge {
+    @apply text-xs px-2 py-1 rounded-full text-white font-medium mb-1 cursor-pointer transition-all hover:shadow-sm;
+  }
+}
