@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { supabase, type User, type Shift, type UnavailableDate } from '@/lib/supabase'
-import { DEPARTMENTS, SHIFT_TIMES, Department, ShiftTime } from '@/types'
+import { DEPARTMENTS, Department } from '@/types'
 
 interface ShiftGeneratorProps {
   isOpen: boolean
@@ -56,7 +56,7 @@ export default function ShiftGenerator({
         shift_time: string
         department: string
         assigned_to?: string
-        status: 'available' | 'reserved'
+        status: 'available' | 'reserved' | 'assigned'
       }> = []
 
       // Count existing shifts per user for fair distribution

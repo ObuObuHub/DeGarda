@@ -39,7 +39,6 @@ export default function Calendar({
     const year = date.getFullYear()
     const month = date.getMonth()
     const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
     const startDate = new Date(firstDay)
     startDate.setDate(startDate.getDate() - firstDay.getDay()) // Start from Sunday
     
@@ -101,7 +100,7 @@ export default function Calendar({
     }
   }
 
-  const getShiftIcon = (shift: Shift) => {
+  const getShiftIcon = () => {
     return '📅' // Single icon for 24-hour shifts
   }
 
@@ -252,7 +251,7 @@ export default function Calendar({
                           {shift.department.substring(0, 3)}
                         </span>
                         <span className="text-xs">
-                          {getShiftIcon(shift)}
+                          {getShiftIcon()}
                         </span>
                       </div>
                       
@@ -300,16 +299,8 @@ export default function Calendar({
           <div className="space-y-2">
             <h4 className="font-medium text-gray-700">Ture:</h4>
             <div className="flex items-center gap-2">
-              <span>🌅</span>
-              <span className="text-xs text-gray-600">Dimineață</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>☀️</span>
-              <span className="text-xs text-gray-600">Amiază</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>🌙</span>
-              <span className="text-xs text-gray-600">Noapte</span>
+              <span>📅</span>
+              <span className="text-xs text-gray-600">24 ore</span>
             </div>
           </div>
           
