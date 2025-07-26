@@ -235,7 +235,7 @@ export default function DashboardPage() {
                 onClick={exportToCSV}
                 className="btn btn-secondary"
               >
-                📊 Export CSV
+                📊 Descarca Excel
               </button>
               {user.role === 'MANAGER' && (
                 <button
