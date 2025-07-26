@@ -223,6 +223,41 @@ export default function DashboardPage() {
     }
   }
 
+  const deleteShift = async (shiftId: string) => {
+    if (!user || user.role !== 'ADMIN') return
+
+    const { error } = await supabase
+      .from('shifts')
+      .delete()
+      .eq('id', shiftId)
+
+    if (!error) {
+      loadShifts()
+    } else {
+      alert('Nu s-a putut șterge tura.')
+    }
+  }
+
+  const deleteAllShifts = async () => {
+    if (!user || user.role !== 'ADMIN') return
+
+    if (!confirm('Sigur vrei să ștergi TOATE turele? Această acțiune nu poate fi anulată!')) {
+      return
+    }
+
+    const { error } = await supabase
+      .from('shifts')
+      .delete()
+      .gte('id', '00000000-0000-0000-0000-000000000000') // Delete all
+
+    if (!error) {
+      alert('Toate turele au fost șterse!')
+      loadShifts()
+    } else {
+      alert('Eroare la ștergerea turelor: ' + error.message)
+    }
+  }
+
   const exportToCSV = () => {
     if (!user) return
     
@@ -353,6 +388,15 @@ export default function DashboardPage() {
                   </button>
                 </>
               )}
+              {user.role === 'ADMIN' && (
+                <button
+                  onClick={deleteAllShifts}
+                  className="btn btn-danger"
+                  title="Șterge toate turele (doar pentru testare)"
+                >
+                  🗑️ Șterge Tot
+                </button>
+              )}
               <button onClick={handleLogout} className="btn btn-secondary">
                 Ieșire
               </button>
@@ -370,6 +414,7 @@ export default function DashboardPage() {
           onCancelShift={cancelShift}
           onMarkUnavailable={markUnavailable}
           onRemoveUnavailable={removeUnavailable}
+          onDeleteShift={deleteShift}
           currentUser={user}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}

@@ -24,7 +24,7 @@ CREATE TABLE shifts (
     shift_time VARCHAR CHECK (shift_time IN ('24h')) NOT NULL DEFAULT '24h',
     department VARCHAR CHECK (department IN ('ATI', 'Urgente', 'Chirurgie', 'Medicina Interna')) NOT NULL,
     assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
-    status VARCHAR CHECK (status IN ('available', 'reserved', 'confirmed')) DEFAULT 'available',
+    status VARCHAR CHECK (status IN ('available', 'reserved', 'assigned')) DEFAULT 'available',
     created_at TIMESTAMP DEFAULT NOW(),
     
     -- Prevent duplicate shifts (only one 24h shift per department per day)

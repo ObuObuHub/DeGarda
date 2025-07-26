@@ -11,6 +11,7 @@ interface CalendarProps {
   onCancelShift: (shiftId: string) => void
   onMarkUnavailable: (date: Date) => void
   onRemoveUnavailable: (date: Date) => void
+  onDeleteShift?: (shiftId: string) => void
   currentUser: User
   selectedDate: Date
   onDateChange: (date: Date) => void
@@ -24,6 +25,7 @@ export default function Calendar({
   onCancelShift,
   onMarkUnavailable,
   onRemoveUnavailable,
+  onDeleteShift,
   currentUser, 
   selectedDate, 
   onDateChange,
@@ -118,7 +120,11 @@ export default function Calendar({
     
     const status = getShiftStatus(shift)
     
-    if (status === 'your-shift' || status === 'your-shift-pending' || status === 'available') {
+    // Admin can interact with any shift
+    if (currentUser.role === 'ADMIN' || 
+        status === 'your-shift' || 
+        status === 'your-shift-pending' || 
+        status === 'available') {
       setSelectedShift(shift)
       setContextMenuPosition({ x: event.clientX, y: event.clientY })
       setShowContextMenu(true)
@@ -236,6 +242,9 @@ export default function Calendar({
                       onClick={(e) => handleShiftClick(shift, e)}
                       title={`${shift.department} - 24 ore - ${
                         shift.user?.name || 'Disponibil'
+                      }${
+                        shift.status === 'reserved' ? ' (Rezervat)' : 
+                        shift.status === 'assigned' ? ' (Asignat)' : ''
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -255,6 +264,13 @@ export default function Calendar({
                       )}
                       {(status === 'your-shift-pending' || status === 'other-shift-pending') && (
                         <div className="text-xs">⏳</div>
+                      )}
+                      {/* Show status indicator */}
+                      {shift.status === 'reserved' && (
+                        <div className="text-xs font-semibold">📌</div>
+                      )}
+                      {shift.status === 'assigned' && (
+                        <div className="text-xs font-semibold">✓</div>
                       )}
                     </div>
                   )
@@ -335,7 +351,32 @@ export default function Calendar({
               top: `${contextMenuPosition.y}px` 
             }}
           >
-            {getShiftStatus(selectedShift) === 'available' ? (
+            {currentUser.role === 'ADMIN' ? (
+              <>
+                <button
+                  onClick={() => {
+                    if (onDeleteShift) {
+                      onDeleteShift(selectedShift.id)
+                    }
+                    closeContextMenu()
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-red-100 rounded text-sm text-red-600"
+                >
+                  🗑️ Șterge tura
+                </button>
+                {selectedShift.status !== 'assigned' && selectedShift.assigned_to && (
+                  <button
+                    onClick={() => {
+                      // TODO: Implement assign shift
+                      closeContextMenu()
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
+                  >
+                    ✓ Confirmă ca asignat
+                  </button>
+                )}
+              </>
+            ) : getShiftStatus(selectedShift) === 'available' ? (
               <button
                 onClick={() => {
                   onReserveShift(selectedShift.id)

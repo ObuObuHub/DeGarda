@@ -77,8 +77,15 @@ export default function ShiftGenerator({
           s => s.shift_date === dateStr && s.department === department
         )
 
-        // Skip if shift already exists for this day
+        // If shift exists and is reserved, we should update it to assigned
         if (existingDayShift) {
+          if (existingDayShift.status === 'reserved' && existingDayShift.assigned_to) {
+            // Update existing reserved shift to assigned
+            await supabase
+              .from('shifts')
+              .update({ status: 'assigned' })
+              .eq('id', existingDayShift.id)
+          }
           continue
         }
 
@@ -111,7 +118,7 @@ export default function ShiftGenerator({
             shift_time: '24h',
             department: department,
             assigned_to: assignedStaff.id,
-            status: 'reserved'
+            status: 'assigned'
           })
 
           // Update count
