@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import {} from '@/types'
 import Calendar from '@/components/Calendar'
 import SwapRequestModal from '@/components/SwapRequestModal'
+import ShiftGenerator from '@/components/ShiftGenerator'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -16,6 +17,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showSwapModal, setShowSwapModal] = useState(false)
+  const [showGenerator, setShowGenerator] = useState(false)
+  const [showSwapRequests, setShowSwapRequests] = useState(false)
+  const [pendingSwapRequests, setPendingSwapRequests] = useState<SwapRequest[]>([])
+  const [allUsers, setAllUsers] = useState<User[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -25,6 +30,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user) {
       loadShifts()
+      if (user.role === 'MANAGER') {
+        loadManagerData()
+      }
     }
   }, [selectedDate, user])
 
@@ -42,11 +50,18 @@ export default function DashboardPage() {
   }
 
   const loadData = async () => {
-    await Promise.all([
+    const promises = [
       loadShifts(),
       loadUnavailableDates(),
       loadSwapRequests()
-    ])
+    ]
+    
+    if (user?.role === 'MANAGER') {
+      promises.push(loadUsers())
+      promises.push(loadPendingSwapRequests())
+    }
+    
+    await Promise.all(promises)
   }
 
   const loadShifts = async () => {
@@ -84,6 +99,54 @@ export default function DashboardPage() {
       .eq('status', 'pending')
 
     setSwapRequests(data || [])
+  }
+
+  const loadManagerData = async () => {
+    await Promise.all([
+      loadUsers(),
+      loadPendingSwapRequests()
+    ])
+  }
+
+  const loadUsers = async () => {
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .order('name')
+
+    setAllUsers(data || [])
+  }
+
+  const loadPendingSwapRequests = async () => {
+    const { data } = await supabase
+      .from('swap_requests')
+      .select(`
+        *,
+        requester:requester_id(name, department),
+        from_shift:from_shift_id(shift_date, shift_time, department),
+        to_shift:to_shift_id(shift_date, shift_time, department)
+      `)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+
+    setPendingSwapRequests(data || [])
+  }
+
+  const approveSwapRequest = async (requestId: string, approved: boolean) => {
+    if (!user) return
+
+    const { error } = await supabase
+      .from('swap_requests')
+      .update({
+        status: approved ? 'approved' : 'rejected',
+        approved_by: user.id
+      })
+      .eq('id', requestId)
+
+    if (!error) {
+      loadPendingSwapRequests()
+      loadShifts() // Refresh shifts in case they were swapped
+    }
   }
 
   const handleLogout = async () => {
@@ -238,12 +301,25 @@ export default function DashboardPage() {
                 📊 Descarca Excel
               </button>
               {user.role === 'MANAGER' && (
-                <button
-                  onClick={() => router.push('/manager')}
-                  className="btn btn-primary"
-                >
-                  Panou Manager
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowGenerator(true)}
+                    className="btn btn-primary"
+                  >
+                    ✨ Generator Ture
+                  </button>
+                  <button
+                    onClick={() => setShowSwapRequests(!showSwapRequests)}
+                    className="btn btn-secondary relative"
+                  >
+                    🔄 Cereri
+                    {pendingSwapRequests.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {pendingSwapRequests.length}
+                      </span>
+                    )}
+                  </button>
+                </>
               )}
               <button onClick={handleLogout} className="btn btn-secondary">
                 Ieșire
@@ -279,7 +355,90 @@ export default function DashboardPage() {
             // Optionally reload shifts or swap requests
           }}
         />
+
+        {/* Manager: Shift Generator Modal */}
+        {user?.role === 'MANAGER' && (
+          <ShiftGenerator
+            isOpen={showGenerator}
+            onClose={() => setShowGenerator(false)}
+            onGenerated={() => {
+              loadShifts()
+              setShowGenerator(false)
+            }}
+            existingShifts={shifts}
+            unavailableDates={unavailableDates}
+            users={allUsers}
+          />
+        )}
       </main>
+
+      {/* Manager: Swap Requests Panel */}
+      {user?.role === 'MANAGER' && showSwapRequests && (
+        <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl border-l z-40 overflow-y-auto">
+          <div className="sticky top-0 bg-white border-b p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">
+                🔄 Cereri de Schimb ({pendingSwapRequests.length})
+              </h2>
+              <button
+                onClick={() => setShowSwapRequests(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 space-y-4">
+            {pendingSwapRequests.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">
+                Nu există cereri de schimb în așteptare
+              </p>
+            ) : (
+              pendingSwapRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="border rounded-lg p-4 bg-gray-50"
+                >
+                  <h3 className="font-medium text-gray-900 mb-2">
+                    {request.requester?.name} ({request.requester?.department})
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
+                    <div>
+                      <p className="font-medium">Din:</p>
+                      <p>📅 {new Date(request.from_shift?.shift_date || '').toLocaleDateString('ro-RO')}</p>
+                      <p>⏰ {request.from_shift?.shift_time === 'morning' ? 'Dimineață' : 
+                            request.from_shift?.shift_time === 'afternoon' ? 'Amiază' : 'Noapte'}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">În:</p>
+                      <p>📅 {new Date(request.to_shift?.shift_date || '').toLocaleDateString('ro-RO')}</p>
+                      <p>⏰ {request.to_shift?.shift_time === 'morning' ? 'Dimineață' : 
+                            request.to_shift?.shift_time === 'afternoon' ? 'Amiază' : 'Noapte'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => approveSwapRequest(request.id, true)}
+                      className="btn btn-success text-sm flex-1"
+                    >
+                      ✅ Aprobă
+                    </button>
+                    <button
+                      onClick={() => approveSwapRequest(request.id, false)}
+                      className="btn btn-danger text-sm flex-1"
+                    >
+                      ❌ Respinge
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
