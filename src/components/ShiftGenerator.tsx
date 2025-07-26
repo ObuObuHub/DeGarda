@@ -52,7 +52,13 @@ export default function ShiftGenerator({
       // Create date range
       const start = new Date(startDate)
       const end = new Date(endDate)
-      const shifts: any[] = []
+      const shifts: Array<{
+        shift_date: string
+        shift_time: string
+        department: string
+        assigned_to?: string
+        status: 'available' | 'reserved'
+      }> = []
 
       // Count existing shifts per user for fair distribution
       const userShiftCounts: Record<string, number> = {}
