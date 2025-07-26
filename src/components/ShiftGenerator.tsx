@@ -11,6 +11,7 @@ interface ShiftGeneratorProps {
   existingShifts: Shift[]
   unavailableDates: UnavailableDate[]
   users: User[]
+  selectedDate: Date
 }
 
 export default function ShiftGenerator({
@@ -19,25 +20,26 @@ export default function ShiftGenerator({
   onGenerated,
   existingShifts,
   unavailableDates,
-  users
+  users,
+  selectedDate
 }: ShiftGeneratorProps) {
   const [generating, setGenerating] = useState(false)
   const [department, setDepartment] = useState<Department | ''>('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [shiftsPerDay, setShiftsPerDay] = useState(2)
 
   if (!isOpen) return null
 
   const generateFairShifts = async () => {
-    if (!department || !startDate || !endDate) {
-      alert('Completează toate câmpurile!')
+    if (!department) {
+      alert('Selectează un departament!')
       return
     }
 
     setGenerating(true)
 
     try {
+      // Calculate month range from selectedDate
+      const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+      const end = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
       // Get staff for this department
       const departmentStaff = users.filter(
         u => u.department === department && u.role === 'STAFF'
@@ -49,9 +51,6 @@ export default function ShiftGenerator({
         return
       }
 
-      // Create date range
-      const start = new Date(startDate)
-      const end = new Date(endDate)
       const shifts: Array<{
         shift_date: string
         shift_time: string
@@ -69,8 +68,9 @@ export default function ShiftGenerator({
       })
 
       // Generate shifts for each day
-      for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
-        const dateStr = date.toISOString().split('T')[0]
+      let currentDate = new Date(start)
+      while (currentDate <= end) {
+        const dateStr = currentDate.toISOString().split('T')[0]
         
         // Check if a 24h shift already exists for this day and department
         const existingDayShift = existingShifts.find(
@@ -125,6 +125,9 @@ export default function ShiftGenerator({
             status: 'available'
           })
         }
+        
+        // Move to next day
+        currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000)
       }
 
       // Insert all shifts
@@ -139,8 +142,6 @@ export default function ShiftGenerator({
           onClose()
           // Reset form
           setDepartment('')
-          setStartDate('')
-          setEndDate('')
         } else {
           alert('Eroare la generare: ' + error.message)
         }
@@ -154,10 +155,17 @@ export default function ShiftGenerator({
     }
   }
 
+  const monthNames = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 
+                      'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie']
+  const currentMonth = monthNames[selectedDate.getMonth()]
+  const currentYear = selectedDate.getFullYear()
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="card max-w-lg w-full">
-        <h2 className="text-xl font-semibold mb-4">📅 Generator Ture Echitabil</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          📅 Generează Ture pentru {currentMonth} {currentYear}
+        </h2>
         
         <div className="space-y-4">
           <div>
@@ -177,36 +185,6 @@ export default function ShiftGenerator({
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Data început
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="input"
-                required
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Data sfârșit
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="input"
-                required
-                min={startDate || new Date().toISOString().split('T')[0]}
-              />
-            </div>
-          </div>
-
           <div className="bg-blue-50 p-4 rounded-lg text-sm">
             <h4 className="font-medium text-blue-900 mb-2">Cum funcționează:</h4>
             <ul className="text-blue-800 space-y-1">
@@ -222,7 +200,7 @@ export default function ShiftGenerator({
           <div className="flex gap-2 pt-4">
             <button
               onClick={generateFairShifts}
-              disabled={generating || !department || !startDate || !endDate}
+              disabled={generating || !department}
               className="btn btn-primary flex-1"
             >
               {generating ? '🔄 Se generează...' : '✨ Generează Ture'}

@@ -229,23 +229,56 @@ export default function DashboardPage() {
     const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
     const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
     
+    // Get all shifts for the month
     const monthShifts = shifts.filter(shift => {
       const shiftDate = new Date(shift.shift_date)
       return shiftDate >= startOfMonth && shiftDate <= endOfMonth
     })
 
-    // Create CSV content
-    const headers = ['Data', 'Ora', 'Departament', 'Personal', 'Status']
+    // Create a map of shifts by date and department
+    const shiftsByDateAndDept: Record<string, Record<string, string>> = {}
+    
+    // Initialize all dates in the month
+    for (let date = new Date(startOfMonth); date <= endOfMonth; date.setDate(date.getDate() + 1)) {
+      const dateStr = date.toLocaleDateString('ro-RO')
+      shiftsByDateAndDept[dateStr] = {
+        'Medicina Interna': '',
+        'Chirurgie': '',
+        'Urgente': '',
+        'ATI': ''
+      }
+    }
+    
+    // Fill in the assigned staff for each shift
+    monthShifts.forEach(shift => {
+      const dateStr = new Date(shift.shift_date).toLocaleDateString('ro-RO')
+      const staffName = shift.user?.name || 'Neasignat'
+      if (shiftsByDateAndDept[dateStr]) {
+        shiftsByDateAndDept[dateStr][shift.department] = staffName
+      }
+    })
+
+    // Create CSV content with department columns
+    const headers = ['Data', 'Interne', 'Chirurgie', 'CPU', 'ATI']
+    const rows = Object.entries(shiftsByDateAndDept).map(([date, depts]) => [
+      date,
+      depts['Medicina Interna'] || '',
+      depts['Chirurgie'] || '',
+      depts['Urgente'] || '', // CPU is Urgente
+      depts['ATI'] || ''
+    ])
+
+    // Helper function to escape CSV values
+    const escapeCSV = (value: string) => {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`
+      }
+      return value
+    }
+
     const csvContent = [
       headers.join(','),
-      ...monthShifts.map(shift => [
-        new Date(shift.shift_date).toLocaleDateString('ro-RO'),
-        '24 ore',
-        shift.department,
-        shift.user?.name || 'Nedefinit',
-        shift.status === 'available' ? 'Disponibil' :
-        shift.status === 'reserved' ? 'Rezervat' : 'Confirmat'
-      ].join(','))
+      ...rows.map(row => row.map(escapeCSV).join(','))
     ].join('\n')
 
     // Download CSV
@@ -367,6 +400,7 @@ export default function DashboardPage() {
             existingShifts={shifts}
             unavailableDates={unavailableDates}
             users={allUsers}
+            selectedDate={selectedDate}
           />
         )}
       </main>
