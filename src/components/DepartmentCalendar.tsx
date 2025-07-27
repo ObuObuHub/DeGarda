@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { type User, type Shift, type UnavailableDate, supabase } from '@/lib/supabase'
+import { type User, type Shift, type UnavailableDate, type SwapRequest, supabase } from '@/lib/supabase'
 import { type Department, DEPARTMENT_COLORS } from '@/types'
 import Calendar from './Calendar'
 
@@ -9,7 +9,7 @@ interface DepartmentCalendarProps {
   department: Department
   shifts: Shift[]
   unavailableDates: UnavailableDate[]
-  swapRequests?: any[]
+  swapRequests?: SwapRequest[]
   onReserveShift: (shiftId: string) => void
   onCancelShift: (shiftId: string) => void
   onMarkUnavailable: (date: Date) => void

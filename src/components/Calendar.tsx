@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { type User, type Shift, type UnavailableDate } from '@/lib/supabase'
+import { type User, type Shift, type UnavailableDate, type SwapRequest } from '@/lib/supabase'
 import { DEPARTMENT_COLORS } from '@/types'
 
 interface CalendarProps {
   shifts: Shift[]
   unavailableDates: UnavailableDate[]
-  swapRequests?: any[]
+  swapRequests?: SwapRequest[]
   onReserveShift: (shiftId: string) => void
   onCancelShift: (shiftId: string) => void
   onMarkUnavailable: (date: Date) => void
@@ -560,17 +560,6 @@ export default function Calendar({
                   className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
                 >
                   ❌ Anulează tura
-                </button>
-                <button
-                  onClick={() => {
-                    if (onRequestSwap) {
-                      onRequestSwap(selectedShift.id)
-                    }
-                    closeContextMenu()
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
-                >
-                  🔄 Solicită schimb
                 </button>
               </>
             ) : getShiftStatus(selectedShift) === 'available' && 
