@@ -175,6 +175,14 @@ export default function Calendar({
     event.stopPropagation()
     
     const status = getShiftStatus(shift)
+    const incomingRequests = getIncomingSwapRequests(shift.id)
+    
+    // If clicking on a shift with incoming requests, show the swap menu
+    if (incomingRequests.length > 0 && status === 'your-shift') {
+      setContextMenuPosition({ x: event.clientX, y: event.clientY })
+      setShowSwapMenu(shift.id)
+      return
+    }
     
     // If there's a shift selected for swap
     if (selectedForSwap) {
@@ -359,14 +367,23 @@ export default function Calendar({
                 {dayShifts.map((shift, index) => {
                   const status = getShiftStatus(shift)
                   
+                  const incomingRequests = getIncomingSwapRequests(shift.id)
+                  const outgoingRequests = getOutgoingSwapRequests(shift.id)
+                  const hasIncomingRequest = incomingRequests.length > 0
+                  const hasOutgoingRequest = outgoingRequests.length > 0
+                  
                   return (
                     <div
                       key={shift.id}
-                      className={`flex-1 cursor-pointer transition-all ${
+                      className={`flex-1 cursor-pointer transition-all relative overflow-visible ${
                         selectedForSwap?.id === shift.id
                           ? 'ring-4 ring-purple-500 ring-offset-2 animate-pulse' 
                           : selectedTargetShifts.has(shift.id)
                           ? 'ring-4 ring-green-500 ring-offset-2'
+                          : hasIncomingRequest
+                          ? 'ring-4 ring-red-500 ring-offset-2 animate-pulse shadow-lg'
+                          : hasOutgoingRequest
+                          ? 'ring-4 ring-blue-500 ring-offset-2'
                           : status === 'your-shift' 
                           ? 'ring-4 ring-yellow-500 ring-offset-2' 
                           : status === 'pending-swap'
@@ -380,6 +397,10 @@ export default function Calendar({
                           ? '#A855F7' // Purple for selected for swap
                           : selectedTargetShifts.has(shift.id)
                           ? '#86EFAC' // Light green for selected targets
+                          : hasIncomingRequest
+                          ? '#FEE2E2' // Light red background for incoming requests
+                          : hasOutgoingRequest
+                          ? '#DBEAFE' // Light blue for outgoing
                           : status === 'your-shift' 
                           ? '#FCD34D' // Yellow for user's shifts
                           : status === 'pending-swap'
@@ -396,20 +417,40 @@ export default function Calendar({
                         shift.status === 'assigned' ? ' (Asignat)' : ''
                       }${
                         selectedForSwap?.id === shift.id ? ' (Selectat pentru schimb)' : ''
+                      }${
+                        hasIncomingRequest ? ` - ${incomingRequests.length} cereri de schimb!` : ''
                       }`}
                     >
                       {/* Show staff name or availability */}
                       {shift.user ? (
-                        <div className="flex items-center justify-center h-full">
+                        <div className="flex items-center justify-center h-full relative">
                           <div className={`text-xs font-semibold ${
                             selectedForSwap?.id === shift.id
                               ? 'text-white'
+                              : hasIncomingRequest
+                              ? 'text-red-900'
                               : status === 'your-shift' || status === 'pending-swap' 
                               ? 'text-gray-800' 
                               : 'text-white'
                           }`}>
                             {shift.user.name.split(' ')[0]}
                           </div>
+                          {/* Prominent overlay for incoming swap requests */}
+                          {hasIncomingRequest && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded animate-pulse transform -rotate-12">
+                                CERERE
+                              </div>
+                            </div>
+                          )}
+                          {/* Overlay for outgoing requests */}
+                          {hasOutgoingRequest && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">
+                                TRIMIS
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="flex items-center justify-center h-full">
@@ -425,33 +466,10 @@ export default function Calendar({
                         {selectedTargetShifts.has(shift.id) && (
                           <span className="text-lg">✅</span>
                         )}
-                        {/* Incoming swap requests indicator */}
-                        {getIncomingSwapRequests(shift.id).length > 0 && !selectedForSwap && (
-                          <span 
-                            className="text-sm animate-pulse cursor-pointer bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setContextMenuPosition({ x: e.clientX, y: e.clientY })
-                              setShowSwapMenu(shift.id)
-                            }}
-                            title={`${getIncomingSwapRequests(shift.id).length} cereri de schimb`}
-                          >
-                            🔔
-                          </span>
-                        )}
-                        {/* Outgoing swap requests indicator */}
-                        {getOutgoingSwapRequests(shift.id).length > 0 && !selectedForSwap && (
-                          <span 
-                            className="text-sm cursor-pointer"
-                            title={`Ai ${getOutgoingSwapRequests(shift.id).length} cereri trimise`}
-                          >
-                            ⏳
-                          </span>
-                        )}
-                        {shift.status === 'reserved' && !selectedForSwap?.id && !selectedTargetShifts.has(shift.id) && getIncomingSwapRequests(shift.id).length === 0 && (
+                        {shift.status === 'reserved' && !selectedForSwap?.id && !selectedTargetShifts.has(shift.id) && !hasIncomingRequest && (
                           <span className="text-xs bg-white/20 rounded px-0.5">R</span>
                         )}
-                        {shift.status === 'assigned' && !selectedForSwap?.id && !selectedTargetShifts.has(shift.id) && getIncomingSwapRequests(shift.id).length === 0 && (
+                        {shift.status === 'assigned' && !selectedForSwap?.id && !selectedTargetShifts.has(shift.id) && !hasIncomingRequest && (
                           <span className="text-xs text-white">✓</span>
                         )}
                         {shift.status === 'pending_swap' && !selectedForSwap?.id && !selectedTargetShifts.has(shift.id) && (

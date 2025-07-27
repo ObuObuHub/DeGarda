@@ -91,20 +91,34 @@ export default function DashboardPage() {
   const loadSwapRequests = async () => {
     if (!user) return
     
-    // Load swap requests where user is either requester or target
-    const { data } = await supabase
+    // First try simple query
+    const { data: simpleData, error: simpleError } = await supabase
+      .from('swap_requests')
+      .select('*')
+      .or(`requester_id.eq.${user.id},target_user_id.eq.${user.id}`)
+      .eq('status', 'pending')
+    
+    console.log('Simple swap requests:', simpleData)
+    console.log('Simple error:', simpleError)
+    
+    // Then try with joins (might fail)
+    const { data, error } = await supabase
       .from('swap_requests')
       .select(`
         *,
-        requester:requester_id(name, department),
-        target_user:target_user_id(name, department),
-        requester_shift:requester_shift_id(shift_date, department),
-        target_shift:target_shift_id(shift_date, department)
+        requester:users!requester_id(name, department),
+        target_user:users!target_user_id(name, department),
+        requester_shift:shifts!requester_shift_id(shift_date, department),
+        target_shift:shifts!target_shift_id(shift_date, department)
       `)
       .or(`requester_id.eq.${user.id},target_user_id.eq.${user.id}`)
       .eq('status', 'pending')
 
-    setSwapRequests(data || [])
+    console.log('Swap requests with joins:', data)
+    console.log('Join error:', error)
+    
+    // Use simple data for now if joins fail
+    setSwapRequests(data || simpleData || [])
   }
 
 
