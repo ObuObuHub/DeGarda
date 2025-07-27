@@ -40,6 +40,22 @@
   }
   
   .shift-badge {
-    @apply relative min-h-[48px] px-2 py-2 rounded-lg text-white font-medium cursor-pointer transition-all hover:shadow-sm;
+    @apply relative text-white font-medium cursor-pointer transition-all hover:shadow-sm;
+  }
+  
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(251, 191, 36, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+    }
+  }
+  
+  .animate-pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }

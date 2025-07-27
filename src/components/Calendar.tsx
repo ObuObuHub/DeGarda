@@ -220,14 +220,14 @@ export default function Calendar({
             <div
               key={date.toISOString()}
               data-date={date.toISOString().split('T')[0]}
-              className={`calendar-day bg-white relative ${
+              className={`calendar-day bg-white relative overflow-hidden ${
                 !isCurrentMonthDay ? 'opacity-40' : ''
               } ${isToday(date) ? 'bg-blue-50 border-2 border-blue-300' : ''} ${
                 unavailable ? 'bg-gray-100' : ''
               } ${isPastDate ? 'opacity-60' : ''}`}
               onClick={(e) => handleDateClick(date, e)}
             >
-              <div className="flex justify-between items-start mb-2">
+              <div className="absolute top-1 left-2 z-10 flex justify-between items-start w-full pr-4">
                 <span className={`text-sm font-medium ${
                   isToday(date) ? 'text-blue-700' : 'text-gray-900'
                 }`}>
@@ -240,16 +240,17 @@ export default function Calendar({
                 )}
               </div>
               
-              <div className="space-y-1">
-                {dayShifts.map((shift) => {
+              <div className="absolute inset-0 flex flex-col">
+                {dayShifts.map((shift, index) => {
                   const status = getShiftStatus(shift)
+                  const shiftCount = dayShifts.length
                   
                   return (
                     <div
                       key={shift.id}
-                      className={`shift-badge cursor-pointer transition-all ${
+                      className={`flex-1 cursor-pointer transition-all ${
                         status === 'your-shift' 
-                          ? 'ring-2 ring-yellow-400 shadow-lg' 
+                          ? 'ring-2 ring-yellow-400 shadow-lg animate-pulse-ring' 
                           : status === 'your-shift-pending'
                           ? 'ring-2 ring-orange-400 shadow-md opacity-90'
                           : status === 'available'
@@ -257,7 +258,7 @@ export default function Calendar({
                           : status === 'other-shift-pending'
                           ? 'opacity-60'
                           : ''
-                      }`}
+                      } ${index > 0 ? 'border-t-2 border-white' : ''}`}
                       style={{ 
                         backgroundColor: status === 'your-shift' || status === 'your-shift-pending' 
                           ? '#FCD34D' // Yellow for user's shifts
@@ -281,7 +282,7 @@ export default function Calendar({
                               ? 'text-gray-800' 
                               : 'text-white'
                           }`}>
-                            {shift.user.name.split(' ').slice(1).join(' ')} {shift.user.name.split(' ')[0][0]}.
+                            {shift.user.name.split(' ')[0]} {shift.user.name.split(' ').slice(1).map(n => n[0]).join('')}.
                           </div>
                           <div className={`text-xs ${
                             status === 'your-shift' || status === 'your-shift-pending' 
@@ -315,24 +316,25 @@ export default function Calendar({
                   )
                 })}
                 
-                {/* Add reservation button for empty cells */}
-                {dayShifts.length === 0 && 
-                 isCurrentMonthDay && 
-                 !isPastDate && 
-                 onCreateReservation && 
-                 currentUser.department && (
-                  <button
-                    className="add-reservation-btn w-full min-h-[48px] border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all flex items-center justify-center group"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onCreateReservation(date)
-                    }}
-                    title="Rezervă această dată"
-                  >
-                    <span className="text-gray-400 group-hover:text-gray-600 text-2xl">+</span>
-                  </button>
-                )}
               </div>
+              
+              {/* Add reservation button for empty cells */}
+              {dayShifts.length === 0 && 
+               isCurrentMonthDay && 
+               !isPastDate && 
+               onCreateReservation && 
+               currentUser.department && (
+                <button
+                  className="absolute inset-0 border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all flex items-center justify-center group"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onCreateReservation(date)
+                  }}
+                  title="Rezervă această dată"
+                >
+                  <span className="text-gray-400 group-hover:text-gray-600 text-3xl mt-4">+</span>
+                </button>
+              )}
             </div>
           )
         })}

@@ -311,14 +311,16 @@ export default function DashboardPage() {
     const shiftsByDateAndDept: Record<string, Record<string, string>> = {}
     
     // Initialize all dates in the month
-    for (let date = new Date(startOfMonth); date <= endOfMonth; date.setDate(date.getDate() + 1)) {
-      const dateStr = date.toLocaleDateString('ro-RO')
+    const currentDate = new Date(startOfMonth)
+    while (currentDate <= endOfMonth) {
+      const dateStr = currentDate.toLocaleDateString('ro-RO')
       shiftsByDateAndDept[dateStr] = {
         'Medicina Interna': '',
         'Chirurgie': '',
         'Urgente': '',
         'ATI': ''
       }
+      currentDate.setDate(currentDate.getDate() + 1)
     }
     
     // Fill in the assigned staff for each shift
