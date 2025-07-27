@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { type User, type Shift, type UnavailableDate } from '@/lib/supabase'
 import { DEPARTMENT_COLORS } from '@/types'
-import SwapRequestModal from './SwapRequestModal'
 
 interface CalendarProps {
   shifts: Shift[]
@@ -14,11 +13,14 @@ interface CalendarProps {
   onRemoveUnavailable: (date: Date) => void
   onDeleteShift?: (shiftId: string) => void
   onCreateReservation?: (date: Date) => void
+  onRequestSwap?: (shiftId: string) => void
+  onAssignShift?: (shiftId: string, userId: string | null) => void
   currentUser: User
   selectedDate: Date
   onDateChange: (date: Date) => void
   pendingSwapRequests?: { from_shift_id: string; to_shift_id: string }[]
   department?: string
+  users?: User[]
 }
 
 export default function Calendar({ 
@@ -30,16 +32,19 @@ export default function Calendar({
   onRemoveUnavailable,
   onDeleteShift,
   onCreateReservation,
+  onRequestSwap,
+  onAssignShift,
   currentUser, 
   selectedDate, 
   onDateChange,
   pendingSwapRequests = [],
-  department
+  department,
+  users = []
 }: CalendarProps) {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null)
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
-  const [showSwapModal, setShowSwapModal] = useState(false)
+  const [showAssignMenu, setShowAssignMenu] = useState(false)
   
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
@@ -105,16 +110,16 @@ export default function Calendar({
   }
 
   const getShiftStatus = (shift: Shift) => {
-    const isPending = pendingSwapRequests.some(
-      req => req.from_shift_id === shift.id || req.to_shift_id === shift.id
-    )
+    if (shift.status === 'pending_swap') {
+      return 'pending-swap'
+    }
     
     if (shift.assigned_to === currentUser.id) {
-      return isPending ? 'your-shift-pending' : 'your-shift'
+      return 'your-shift'
     } else if (shift.status === 'available') {
       return 'available'
     } else {
-      return isPending ? 'other-shift-pending' : 'other-shift'
+      return 'other-shift'
     }
   }
 
@@ -251,17 +256,17 @@ export default function Calendar({
                       className={`flex-1 cursor-pointer transition-all ${
                         status === 'your-shift' 
                           ? 'ring-4 ring-yellow-500 ring-offset-2' 
-                          : status === 'your-shift-pending'
-                          ? 'ring-2 ring-orange-400 shadow-md opacity-90'
+                          : status === 'pending-swap'
+                          ? 'ring-2 ring-orange-500 shadow-md animate-pulse'
                           : status === 'available'
                           ? 'hover:shadow-md hover:scale-105 border-2 border-dashed border-gray-300'
-                          : status === 'other-shift-pending'
-                          ? 'opacity-60'
                           : ''
                       } ${index > 0 ? 'border-t-2 border-white' : ''}`}
                       style={{ 
-                        backgroundColor: status === 'your-shift' || status === 'your-shift-pending' 
+                        backgroundColor: status === 'your-shift' 
                           ? '#FCD34D' // Yellow for user's shifts
+                          : status === 'pending-swap'
+                          ? '#FB923C' // Orange for pending swap
                           : status === 'available' 
                           ? 'transparent'
                           : DEPARTMENT_COLORS[shift.department] 
@@ -292,7 +297,7 @@ export default function Calendar({
                       )}
                       
                       {/* Status indicators - small corner badges */}
-                      {(shift.status === 'reserved' || shift.status === 'assigned' || status === 'your-shift-pending' || status === 'other-shift-pending') && (
+                      {(shift.status === 'reserved' || shift.status === 'assigned' || shift.status === 'pending_swap') && (
                         <div className="absolute top-0.5 right-0.5">
                           {shift.status === 'reserved' && (
                             <span className="text-xs bg-white/20 rounded px-0.5">R</span>
@@ -300,8 +305,8 @@ export default function Calendar({
                           {shift.status === 'assigned' && (
                             <span className="text-xs text-white">✓</span>
                           )}
-                          {(status === 'your-shift-pending' || status === 'other-shift-pending') && (
-                            <span className="text-xs animate-pulse">⏳</span>
+                          {shift.status === 'pending_swap' && (
+                            <span className="text-xs animate-pulse">🔄</span>
                           )}
                         </div>
                       )}
@@ -348,42 +353,56 @@ export default function Calendar({
               top: `${contextMenuPosition.y}px` 
             }}
           >
-            {currentUser.role === 'ADMIN' ? (
+            {(currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER') ? (
               <>
-                <button
-                  onClick={() => {
-                    if (onDeleteShift) {
-                      onDeleteShift(selectedShift.id)
-                    }
-                    closeContextMenu()
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-red-100 rounded text-sm text-red-600"
-                >
-                  🗑️ Șterge tura
-                </button>
-                {selectedShift.status !== 'assigned' && selectedShift.assigned_to && (
+                {selectedShift.assigned_to && (
                   <button
                     onClick={() => {
-                      // TODO: Implement assign shift
+                      setShowAssignMenu(true)
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
+                  >
+                    👥 Reasignează tura
+                  </button>
+                )}
+                {!selectedShift.assigned_to && (
+                  <button
+                    onClick={() => {
+                      setShowAssignMenu(true)
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
+                  >
+                    👥 Asignează tura
+                  </button>
+                )}
+                {selectedShift.assigned_to && (
+                  <button
+                    onClick={() => {
+                      if (onAssignShift) {
+                        onAssignShift(selectedShift.id, null)
+                      }
                       closeContextMenu()
                     }}
                     className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
                   >
-                    ✓ Confirmă ca asignat
+                    🔓 Marchează disponibil
+                  </button>
+                )}
+                {currentUser.role === 'ADMIN' && (
+                  <button
+                    onClick={() => {
+                      if (onDeleteShift) {
+                        onDeleteShift(selectedShift.id)
+                      }
+                      closeContextMenu()
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-red-100 rounded text-sm text-red-600"
+                  >
+                    🗑️ Șterge tura
                   </button>
                 )}
               </>
-            ) : getShiftStatus(selectedShift) === 'available' ? (
-              <button
-                onClick={() => {
-                  onReserveShift(selectedShift.id)
-                  closeContextMenu()
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
-              >
-                ✅ Rezervă tura
-              </button>
-            ) : (
+            ) : getShiftStatus(selectedShift) === 'your-shift' ? (
               <>
                 <button
                   onClick={() => {
@@ -395,32 +414,70 @@ export default function Calendar({
                   ❌ Anulează tura
                 </button>
                 <button
-                  className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
                   onClick={() => {
-                    setShowSwapModal(true)
+                    if (onRequestSwap) {
+                      onRequestSwap(selectedShift.id)
+                    }
                     closeContextMenu()
                   }}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
                 >
                   🔄 Solicită schimb
                 </button>
               </>
-            )}
+            ) : getShiftStatus(selectedShift) === 'available' ? (
+              <button
+                onClick={() => {
+                  onReserveShift(selectedShift.id)
+                  closeContextMenu()
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
+              >
+                ✅ Rezervă tura
+              </button>
+            ) : null}
           </div>
         </>
       )}
       
-      {/* Swap Request Modal */}
-      <SwapRequestModal
-        isOpen={showSwapModal}
-        onClose={() => setShowSwapModal(false)}
-        currentUser={currentUser}
-        userShifts={shifts.filter(s => s.assigned_to === currentUser.id)}
-        targetShifts={shifts.filter(s => s.assigned_to !== currentUser.id && s.assigned_to !== null)}
-        onSwapRequested={() => {
-          // Refresh will be handled by parent component
-          setShowSwapModal(false)
-        }}
-      />
+      {/* Staff Assignment Menu */}
+      {showAssignMenu && selectedShift && (
+        <>
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => {
+              setShowAssignMenu(false)
+              closeContextMenu()
+            }}
+          />
+          <div
+            className="fixed bg-white rounded-lg shadow-lg border p-4 z-50 min-w-[200px] max-h-80 overflow-y-auto"
+            style={{ 
+              left: `${contextMenuPosition.x + 190}px`, 
+              top: `${contextMenuPosition.y}px` 
+            }}
+          >
+            <h3 className="font-medium text-gray-900 mb-2">Alege personal:</h3>
+            <div className="space-y-1">
+              {users.filter(u => u.role === 'STAFF').map(user => (
+                <button
+                  key={user.id}
+                  onClick={() => {
+                    if (onAssignShift) {
+                      onAssignShift(selectedShift.id, user.id)
+                    }
+                    setShowAssignMenu(false)
+                    closeContextMenu()
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
+                >
+                  {user.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

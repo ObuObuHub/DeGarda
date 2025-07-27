@@ -15,6 +15,8 @@ interface DepartmentCalendarProps {
   onRemoveUnavailable: (date: Date) => void
   onDeleteShift?: (shiftId: string) => void
   onCreateReservation?: (date: Date) => void
+  onRequestSwap?: (shiftId: string) => void
+  onAssignShift?: (shiftId: string, userId: string | null) => void
   currentUser: User
   selectedDate: Date
   onDateChange: (date: Date) => void
@@ -33,6 +35,8 @@ export default function DepartmentCalendar({
   onRemoveUnavailable,
   onDeleteShift,
   onCreateReservation,
+  onRequestSwap,
+  onAssignShift,
   currentUser,
   selectedDate,
   onDateChange,
@@ -233,11 +237,14 @@ export default function DepartmentCalendar({
           onRemoveUnavailable={onRemoveUnavailable}
           onDeleteShift={onDeleteShift}
           onCreateReservation={onCreateReservation}
+          onRequestSwap={onRequestSwap}
+          onAssignShift={onAssignShift}
           currentUser={currentUser}
           selectedDate={selectedDate}
           onDateChange={onDateChange}
           pendingSwapRequests={pendingSwapRequests}
           department={department}
+          users={users.filter(u => u.department === department)}
         />
       </div>
     </div>

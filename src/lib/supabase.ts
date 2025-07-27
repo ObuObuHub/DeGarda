@@ -31,7 +31,7 @@ export type Shift = {
   shift_time: '24h'
   department: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
   assigned_to?: string
-  status: 'available' | 'reserved' | 'assigned'
+  status: 'available' | 'reserved' | 'assigned' | 'pending_swap'
   created_at: string
   user?: User
 }
