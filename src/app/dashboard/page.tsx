@@ -189,6 +189,44 @@ export default function DashboardPage() {
     }
   }
 
+  const createReservation = async (date: Date) => {
+    if (!user || !user.department) return
+
+    // Get reserved shifts count for this month
+    const month = date.getMonth()
+    const year = date.getFullYear()
+    const reservedCount = shifts.filter(shift => {
+      const shiftDate = new Date(shift.shift_date)
+      return shift.assigned_to === user.id &&
+             shift.status === 'reserved' &&
+             shiftDate.getMonth() === month &&
+             shiftDate.getFullYear() === year
+    }).length
+
+    // Check if user has reached the limit
+    if (reservedCount >= 2) {
+      alert('Poți rezerva maxim 2 ture pe lună!')
+      return
+    }
+
+    // Create new shift
+    const { error } = await supabase
+      .from('shifts')
+      .insert({
+        shift_date: date.toISOString().split('T')[0],
+        department: user.department,
+        assigned_to: user.id,
+        status: 'reserved',
+        shift_time: '24h'
+      })
+
+    if (!error) {
+      loadShifts()
+    } else {
+      alert('Nu s-a putut crea rezervarea.')
+    }
+  }
+
   const markUnavailable = async (date: Date) => {
     if (!user) return
 
@@ -447,6 +485,7 @@ export default function DashboardPage() {
               onMarkUnavailable={markUnavailable}
               onRemoveUnavailable={removeUnavailable}
               onDeleteShift={deleteShift}
+              onCreateReservation={createReservation}
               currentUser={user}
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}

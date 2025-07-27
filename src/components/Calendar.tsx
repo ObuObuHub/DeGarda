@@ -13,6 +13,7 @@ interface CalendarProps {
   onMarkUnavailable: (date: Date) => void
   onRemoveUnavailable: (date: Date) => void
   onDeleteShift?: (shiftId: string) => void
+  onCreateReservation?: (date: Date) => void
   currentUser: User
   selectedDate: Date
   onDateChange: (date: Date) => void
@@ -28,6 +29,7 @@ export default function Calendar({
   onMarkUnavailable,
   onRemoveUnavailable,
   onDeleteShift,
+  onCreateReservation,
   currentUser, 
   selectedDate, 
   onDateChange,
@@ -88,6 +90,18 @@ export default function Calendar({
 
   const getUserShiftsCount = () => {
     return shifts.filter(shift => shift.assigned_to === currentUser.id).length
+  }
+
+  const getReservedShiftsCount = () => {
+    const month = selectedDate.getMonth()
+    const year = selectedDate.getFullYear()
+    return shifts.filter(shift => {
+      const shiftDate = new Date(shift.shift_date)
+      return shift.assigned_to === currentUser.id &&
+             shift.status === 'reserved' &&
+             shiftDate.getMonth() === month &&
+             shiftDate.getFullYear() === year
+    }).length
   }
 
   const getShiftStatus = (shift: Shift) => {
@@ -167,6 +181,11 @@ export default function Calendar({
             <p className="text-sm text-gray-600">
               Ai {getUserShiftsCount()} ture luna aceasta
             </p>
+            {onCreateReservation && (
+              <p className="text-sm text-gray-600">
+                Rezervări: {getReservedShiftsCount()}/2
+              </p>
+            )}
           </div>
           
           <button
@@ -200,6 +219,7 @@ export default function Calendar({
           return (
             <div
               key={date.toISOString()}
+              data-date={date.toISOString().split('T')[0]}
               className={`calendar-day bg-white relative ${
                 !isCurrentMonthDay ? 'opacity-40' : ''
               } ${isToday(date) ? 'bg-blue-50 border-2 border-blue-300' : ''} ${
@@ -278,6 +298,24 @@ export default function Calendar({
                     </div>
                   )
                 })}
+                
+                {/* Add reservation button for empty cells */}
+                {dayShifts.length === 0 && 
+                 isCurrentMonthDay && 
+                 !isPastDate && 
+                 onCreateReservation && 
+                 currentUser.department && (
+                  <button
+                    className="add-reservation-btn w-full py-2 border-2 border-dashed border-gray-300 rounded-md hover:border-gray-400 hover:bg-gray-50 transition-all flex items-center justify-center group"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onCreateReservation(date)
+                    }}
+                    title="Rezervă această dată"
+                  >
+                    <span className="text-gray-400 group-hover:text-gray-600 text-xl">+</span>
+                  </button>
+                )}
               </div>
             </div>
           )

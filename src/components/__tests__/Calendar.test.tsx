@@ -152,3 +152,47 @@ describe('Calendar - Swap Request', () => {
     expect(mockSetShowSwapModal).toHaveBeenCalledWith(true)
   })
 })
+
+describe('Calendar - Empty Cell Reservation', () => {
+  test('clicking empty cell creates reservation', () => {
+    // Test data
+    const mockOnCreateReservation = jest.fn()
+    const testDate = new Date('2025-08-14')
+    
+    const currentUser = {
+      id: 'user-1',
+      name: 'Test User',
+      role: 'STAFF',
+      department: 'ATI'
+    }
+    
+    // Render calendar with no shifts for test date
+    const { container } = render(
+      <Calendar
+        shifts={[]}
+        unavailableDates={[]}
+        onReserveShift={jest.fn()}
+        onCancelShift={jest.fn()}
+        onMarkUnavailable={jest.fn()}
+        onRemoveUnavailable={jest.fn()}
+        onCreateReservation={mockOnCreateReservation}
+        currentUser={currentUser}
+        selectedDate={testDate}
+        onDateChange={jest.fn()}
+      />
+    )
+    
+    // Find the cell for August 14
+    const dayCell = container.querySelector('[data-date="2025-08-14"]')
+    expect(dayCell).toBeTruthy()
+    
+    // Find and click the + button
+    const addButton = dayCell.querySelector('.add-reservation-btn')
+    fireEvent.click(addButton)
+    
+    // Verify onCreateReservation was called with the date
+    expect(mockOnCreateReservation).toHaveBeenCalledWith(expect.any(Date))
+    const calledDate = mockOnCreateReservation.mock.calls[0][0]
+    expect(calledDate.toISOString().split('T')[0]).toBe('2025-08-14')
+  })
+})
