@@ -8,7 +8,7 @@ interface SwapRequestModalProps {
   onClose: () => void
   currentUser: User
   userShifts: Shift[]
-  availableShifts: Shift[]
+  targetShifts: Shift[]
   onSwapRequested: () => void
 }
 
@@ -17,7 +17,7 @@ export default function SwapRequestModal({
   onClose,
   currentUser,
   userShifts,
-  availableShifts,
+  targetShifts,
   onSwapRequested
 }: SwapRequestModalProps) {
   const [fromShiftId, setFromShiftId] = useState('')
@@ -53,7 +53,9 @@ export default function SwapRequestModal({
   const formatShift = (shift: Shift) => {
     const date = new Date(shift.shift_date).toLocaleDateString('ro-RO')
     const time = '24 ore'
-    return `${date} - ${time} - ${shift.department}`
+    const owner = shift.user?.name || 'Necunoscut'
+    const status = shift.status === 'assigned' ? 'Asignat' : 'Rezervat'
+    return `${date} - ${shift.department} - ${owner} (${status})`
   }
 
   return (
@@ -92,7 +94,7 @@ export default function SwapRequestModal({
               required
             >
               <option value="">Selectează tura dorită</option>
-              {availableShifts.map(shift => (
+              {targetShifts.map(shift => (
                 <option key={shift.id} value={shift.id}>
                   {formatShift(shift)}
                 </option>

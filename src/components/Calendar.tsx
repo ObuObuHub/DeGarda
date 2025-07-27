@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { type User, type Shift, type UnavailableDate } from '@/lib/supabase'
 import { DEPARTMENT_COLORS } from '@/types'
+import SwapRequestModal from './SwapRequestModal'
 
 interface CalendarProps {
   shifts: Shift[]
@@ -36,6 +37,7 @@ export default function Calendar({
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null)
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
+  const [showSwapModal, setShowSwapModal] = useState(false)
   
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
@@ -346,7 +348,7 @@ export default function Calendar({
                 <button
                   className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
                   onClick={() => {
-                    // Will implement swap request
+                    setShowSwapModal(true)
                     closeContextMenu()
                   }}
                 >
@@ -357,6 +359,19 @@ export default function Calendar({
           </div>
         </>
       )}
+      
+      {/* Swap Request Modal */}
+      <SwapRequestModal
+        isOpen={showSwapModal}
+        onClose={() => setShowSwapModal(false)}
+        currentUser={currentUser}
+        userShifts={shifts.filter(s => s.assigned_to === currentUser.id)}
+        targetShifts={shifts.filter(s => s.assigned_to !== currentUser.id && s.assigned_to !== null)}
+        onSwapRequested={() => {
+          // Refresh will be handled by parent component
+          setShowSwapModal(false)
+        }}
+      />
     </div>
   )
 }
