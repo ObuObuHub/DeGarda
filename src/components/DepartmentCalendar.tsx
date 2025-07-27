@@ -14,7 +14,7 @@ interface DepartmentCalendarProps {
   onMarkUnavailable: (date: Date) => void
   onRemoveUnavailable: (date: Date) => void
   onDeleteShift?: (shiftId: string) => void
-  onCreateReservation?: (date: Date) => void
+  onCreateReservation?: (date: Date, department?: string) => void
   onRequestSwap?: (shiftId: string) => void
   onAssignShift?: (shiftId: string, userId: string | null) => void
   currentUser: User

@@ -12,7 +12,7 @@ interface CalendarProps {
   onMarkUnavailable: (date: Date) => void
   onRemoveUnavailable: (date: Date) => void
   onDeleteShift?: (shiftId: string) => void
-  onCreateReservation?: (date: Date) => void
+  onCreateReservation?: (date: Date, department?: string) => void
   onRequestSwap?: (shiftId: string) => void
   onAssignShift?: (shiftId: string, userId: string | null) => void
   currentUser: User
@@ -319,12 +319,12 @@ export default function Calendar({
                isCurrentMonthDay && 
                !isPastDate && 
                onCreateReservation && 
-               currentUser.department && (
+               (currentUser.department || currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN') && (
                 <button
                   className="absolute inset-0 border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all flex items-center justify-center group"
                   onClick={(e) => {
                     e.stopPropagation()
-                    onCreateReservation(date)
+                    onCreateReservation(date, department)
                   }}
                   title="Rezervă această dată"
                 >
