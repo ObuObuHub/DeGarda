@@ -171,10 +171,15 @@ export default function Calendar({
   const weekDays = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Săm']
   
   // Helper function to format date for display
-  const formatDateForDisplay = (dateStr: string) => {
+  const formatDateForDisplay = (dateStr: string, addDay: boolean = false) => {
     // Parse the date string and add time to avoid timezone issues
     const [year, month, day] = dateStr.split('-').map(Number)
     const date = new Date(year, month - 1, day, 12, 0, 0) // Set to noon to avoid timezone issues
+    
+    // Sneaky fix: add 1 day for swap notifications to match calendar display
+    if (addDay) {
+      date.setDate(date.getDate() + 1)
+    }
     
     const dayNames = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă']
     const monthNames = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 
@@ -684,7 +689,7 @@ export default function Calendar({
                       <p className="text-sm font-medium">{request.requester?.name || 'Necunoscut'}</p>
                       <p className="text-xs text-gray-600">
                         Vrea să schimbe: {request.requester_shift?.shift_date 
-                          ? formatDateForDisplay(request.requester_shift.shift_date)
+                          ? formatDateForDisplay(request.requester_shift.shift_date, true)
                           : 'Data necunoscută'}
                       </p>
                     <div className="flex gap-2 mt-2">
