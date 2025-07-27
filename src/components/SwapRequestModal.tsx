@@ -52,7 +52,6 @@ export default function SwapRequestModal({
 
   const formatShift = (shift: Shift) => {
     const date = new Date(shift.shift_date).toLocaleDateString('ro-RO')
-    const time = '24 ore'
     const owner = shift.user?.name || 'Necunoscut'
     const status = shift.status === 'assigned' ? 'Asignat' : 'Rezervat'
     return `${date} - ${shift.department} - ${owner} (${status})`

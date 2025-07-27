@@ -462,7 +462,7 @@ export default function DashboardPage() {
           onClose={() => setShowSwapModal(false)}
           currentUser={user}
           userShifts={userShifts}
-          availableShifts={availableShifts}
+          targetShifts={shifts.filter(s => s.assigned_to !== user.id && s.assigned_to !== null)}
           onSwapRequested={() => {
             alert('Cererea de schimb a fost trimisă!')
             // Optionally reload shifts or swap requests
