@@ -301,10 +301,12 @@ export default function DashboardPage() {
     const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
     const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
     
-    // Get all shifts for the month
+    // Get all shifts for the month using string comparison to avoid timezone issues
+    const startDateStr = startOfMonth.toISOString().split('T')[0]
+    const endDateStr = endOfMonth.toISOString().split('T')[0]
+    
     const monthShifts = shifts.filter(shift => {
-      const shiftDate = new Date(shift.shift_date)
-      return shiftDate >= startOfMonth && shiftDate <= endOfMonth
+      return shift.shift_date >= startDateStr && shift.shift_date <= endDateStr
     })
 
     // Create a map of shifts by date and department
@@ -333,7 +335,9 @@ export default function DashboardPage() {
     
     // Fill in the assigned staff for each shift
     monthShifts.forEach(shift => {
-      const shiftDate = new Date(shift.shift_date)
+      // Parse the date components from the ISO string to avoid timezone issues
+      const [year, month, day] = shift.shift_date.split('-').map(Number)
+      const shiftDate = new Date(year, month - 1, day)
       const dateStr = formatDateForCSV(shiftDate)
       const staffName = shift.user?.name || 'Neasignat'
       if (shiftsByDateAndDept[dateStr]) {
