@@ -36,19 +36,6 @@ export type Shift = {
   user?: User
 }
 
-export type SwapRequest = {
-  id: string
-  requester_id: string
-  from_shift_id: string
-  to_shift_id: string
-  status: 'pending' | 'approved' | 'rejected'
-  approved_by?: string
-  created_at: string
-  requester?: User
-  from_shift?: Shift
-  to_shift?: Shift
-}
-
 export type UnavailableDate = {
   id: string
   user_id: string
