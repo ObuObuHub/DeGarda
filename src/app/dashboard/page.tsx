@@ -111,6 +111,21 @@ export default function DashboardPage() {
   const reserveShift = async (shiftId: string) => {
     if (!user) return
 
+    // For staff, check if they can reserve this shift
+    if (user.role === 'STAFF') {
+      // First, get the shift to check its department
+      const { data: shiftData } = await supabase
+        .from('shifts')
+        .select('department')
+        .eq('id', shiftId)
+        .single()
+
+      if (!shiftData || shiftData.department !== user.department) {
+        alert('Poți rezerva doar ture din departamentul tău!')
+        return
+      }
+    }
+
     const { error } = await supabase
       .from('shifts')
       .update({ 

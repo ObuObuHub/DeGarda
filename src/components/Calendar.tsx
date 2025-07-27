@@ -137,12 +137,12 @@ export default function Calendar({
     
     const status = getShiftStatus(shift)
     
-    // Admin/Manager can interact with any shift, staff with their own or available
+    // Admin/Manager can interact with any shift, staff with their own or available in their department
     if (currentUser.role === 'ADMIN' || 
         currentUser.role === 'MANAGER' ||
         status === 'your-shift' || 
         status === 'pending-swap' || 
-        status === 'available') {
+        (status === 'available' && (currentUser.role !== 'STAFF' || shift.department === currentUser.department))) {
       setSelectedShift(shift)
       setContextMenuPosition({ x: event.clientX, y: event.clientY })
       setShowContextMenu(true)
@@ -423,7 +423,8 @@ export default function Calendar({
                   🔄 Solicită schimb
                 </button>
               </>
-            ) : getShiftStatus(selectedShift) === 'available' ? (
+            ) : getShiftStatus(selectedShift) === 'available' && 
+                (currentUser.role !== 'STAFF' || selectedShift.department === currentUser.department) ? (
               <button
                 onClick={() => {
                   onReserveShift(selectedShift.id)
