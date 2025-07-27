@@ -276,20 +276,13 @@ export default function Calendar({
                     >
                       {/* Show staff name or availability */}
                       {shift.user ? (
-                        <div className="flex flex-col items-center justify-center h-full">
+                        <div className="flex items-center justify-center h-full">
                           <div className={`text-xs font-semibold ${
                             status === 'your-shift' || status === 'your-shift-pending' 
                               ? 'text-gray-800' 
                               : 'text-white'
                           }`}>
-                            {shift.user.name.split(' ')[0]} {shift.user.name.split(' ').slice(1).map(n => n[0]).join('')}.
-                          </div>
-                          <div className={`text-xs ${
-                            status === 'your-shift' || status === 'your-shift-pending' 
-                              ? 'text-gray-600' 
-                              : 'text-white/80'
-                          }`}>
-                            {shift.department.split(' ').map(word => word.slice(0, 3).toUpperCase()).join(' ')}
+                            {shift.user.name.split(' ')[0]}
                           </div>
                         </div>
                       ) : (
