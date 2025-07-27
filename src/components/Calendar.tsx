@@ -179,11 +179,11 @@ export default function Calendar({
               {formatMonth(selectedDate)}
             </h2>
             <p className="text-sm text-gray-600">
-              Ai {getUserShiftsCount()} ture luna aceasta
+              Turele tale: {getUserShiftsCount()} din {currentUser.max_shifts_per_month || 8}
             </p>
             {onCreateReservation && (
               <p className="text-sm text-gray-600">
-                Rezervări: {getReservedShiftsCount()}/2
+                Rezervări: {getReservedShiftsCount()} din 2
               </p>
             )}
           </div>
@@ -203,7 +203,7 @@ export default function Calendar({
         {weekDays.map((day) => (
           <div
             key={day}
-            className="bg-gray-100 px-3 py-2 text-center text-sm font-medium text-gray-700"
+            className="bg-gray-100 px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-700"
           >
             {day}
           </div>
@@ -249,17 +249,21 @@ export default function Calendar({
                       key={shift.id}
                       className={`shift-badge cursor-pointer transition-all ${
                         status === 'your-shift' 
-                          ? 'ring-2 ring-yellow-500 shadow-lg scale-105 font-bold' 
+                          ? 'ring-2 ring-yellow-400 shadow-lg' 
                           : status === 'your-shift-pending'
                           ? 'ring-2 ring-orange-400 shadow-md opacity-90'
                           : status === 'available'
-                          ? 'hover:shadow-md hover:scale-105'
+                          ? 'hover:shadow-md hover:scale-105 border-2 border-dashed border-gray-300'
                           : status === 'other-shift-pending'
                           ? 'opacity-60'
-                          : 'opacity-80'
+                          : ''
                       }`}
                       style={{ 
-                        backgroundColor: DEPARTMENT_COLORS[shift.department] 
+                        backgroundColor: status === 'your-shift' || status === 'your-shift-pending' 
+                          ? '#FCD34D' // Yellow for user's shifts
+                          : status === 'available' 
+                          ? 'transparent'
+                          : DEPARTMENT_COLORS[shift.department] 
                       }}
                       onClick={(e) => handleShiftClick(shift, e)}
                       title={`${shift.department} - 24 ore - ${
@@ -271,27 +275,42 @@ export default function Calendar({
                     >
                       {/* Show staff name or availability */}
                       {shift.user ? (
-                        <div className="text-sm font-semibold text-white truncate px-1">
-                          {shift.user.name.split(' ')[0]}
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <div className={`text-xs font-semibold ${
+                            status === 'your-shift' || status === 'your-shift-pending' 
+                              ? 'text-gray-800' 
+                              : 'text-white'
+                          }`}>
+                            {shift.user.name.split(' ').slice(1).join(' ')} {shift.user.name.split(' ')[0][0]}.
+                          </div>
+                          <div className={`text-xs ${
+                            status === 'your-shift' || status === 'your-shift-pending' 
+                              ? 'text-gray-600' 
+                              : 'text-white/80'
+                          }`}>
+                            {shift.department.split(' ').map(word => word.slice(0, 3).toUpperCase()).join(' ')}
+                          </div>
                         </div>
                       ) : (
-                        <div className="text-sm font-medium text-white/90">Liber</div>
+                        <div className="flex items-center justify-center h-full">
+                          <span className="text-2xl text-gray-400">+</span>
+                        </div>
                       )}
                       
-                      {/* Status indicators */}
-                      <div className="flex items-center justify-between mt-1">
-                        <div>
+                      {/* Status indicators - small corner badges */}
+                      {(shift.status === 'reserved' || shift.status === 'assigned' || status === 'your-shift-pending' || status === 'other-shift-pending') && (
+                        <div className="absolute top-0.5 right-0.5">
                           {shift.status === 'reserved' && (
-                            <span className="text-xs">📌</span>
+                            <span className="text-xs bg-white/20 rounded px-0.5">R</span>
                           )}
                           {shift.status === 'assigned' && (
-                            <span className="text-xs">✓</span>
+                            <span className="text-xs text-white">✓</span>
+                          )}
+                          {(status === 'your-shift-pending' || status === 'other-shift-pending') && (
+                            <span className="text-xs animate-pulse">⏳</span>
                           )}
                         </div>
-                        {(status === 'your-shift-pending' || status === 'other-shift-pending') && (
-                          <span className="text-xs">⏳</span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   )
                 })}
@@ -303,14 +322,14 @@ export default function Calendar({
                  onCreateReservation && 
                  currentUser.department && (
                   <button
-                    className="add-reservation-btn w-full py-2 border-2 border-dashed border-gray-300 rounded-md hover:border-gray-400 hover:bg-gray-50 transition-all flex items-center justify-center group"
+                    className="add-reservation-btn w-full min-h-[48px] border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all flex items-center justify-center group"
                     onClick={(e) => {
                       e.stopPropagation()
                       onCreateReservation(date)
                     }}
                     title="Rezervă această dată"
                   >
-                    <span className="text-gray-400 group-hover:text-gray-600 text-xl">+</span>
+                    <span className="text-gray-400 group-hover:text-gray-600 text-2xl">+</span>
                   </button>
                 )}
               </div>

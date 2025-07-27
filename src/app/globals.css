@@ -36,10 +36,10 @@
   }
   
   .calendar-day {
-    @apply min-h-[100px] p-2 border border-gray-100;
+    @apply min-h-[120px] md:min-h-[140px] p-2 md:p-3 border border-gray-100;
   }
   
   .shift-badge {
-    @apply text-xs px-2 py-2 rounded-lg text-white font-medium cursor-pointer transition-all hover:shadow-sm;
+    @apply relative min-h-[48px] px-2 py-2 rounded-lg text-white font-medium cursor-pointer transition-all hover:shadow-sm;
   }
 }
