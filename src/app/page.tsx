@@ -41,8 +41,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="card w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">🏥 Degarda</h1>
-          <p className="text-gray-600">Programare ture spital</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">🏥 DeGardă</h1>
+          <p className="text-gray-600">Programare Gărzi</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
@@ -81,11 +81,8 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">Coduri demo:</p>
-          <p className="text-xs text-gray-500 font-mono">
-            • Manager: <strong>ANA1</strong><br/>
-            • Staff: <strong>MAR1</strong>, <strong>ION1</strong>, <strong>ELE1</strong>
-          </p>
+          <p className="text-sm text-gray-600 mb-2">App construit de Dr. Chiper în sprijinul colegilor săi.</p>
+          <p className="text-sm text-gray-600">Contact: <a href="mailto:drchiperleferman@gmail.com" className="text-blue-600 hover:underline">drchiperleferman@gmail.com</a></p>
         </div>
       </div>
     </div>
