@@ -81,7 +81,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">App construit de Dr. Chiper în sprijinul colegilor săi.</p>
+          <p className="text-sm text-gray-600 mb-2">Aplicație creată de Dr. Chiper în sprijinul colegilor.</p>
           <p className="text-sm text-gray-600">Contact: <a href="mailto:drchiperleferman@gmail.com" className="text-blue-600 hover:underline">drchiperleferman@gmail.com</a></p>
         </div>
       </div>
