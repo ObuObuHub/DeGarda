@@ -693,7 +693,8 @@ export default function Calendar({
                       </button>
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </>
