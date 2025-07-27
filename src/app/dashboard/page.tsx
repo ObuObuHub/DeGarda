@@ -306,7 +306,9 @@ export default function DashboardPage() {
     // Create rows for each day
     const rows = []
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      // Create a proper Date object for this day (using the same approach as Calendar component)
+      const date = new Date(year, month, day)
+      const dateStr = date.toISOString().split('T')[0]
       
       // Find shifts for this exact date
       const dayShifts = shifts.filter(s => s.shift_date === dateStr)
