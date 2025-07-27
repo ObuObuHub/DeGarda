@@ -249,9 +249,9 @@ export default function Calendar({
                       key={shift.id}
                       className={`shift-badge cursor-pointer transition-all ${
                         status === 'your-shift' 
-                          ? 'ring-2 ring-yellow-400 shadow-md' 
+                          ? 'ring-2 ring-yellow-500 shadow-lg scale-105 font-bold' 
                           : status === 'your-shift-pending'
-                          ? 'ring-2 ring-orange-400 shadow-md opacity-80'
+                          ? 'ring-2 ring-orange-400 shadow-md opacity-90'
                           : status === 'available'
                           ? 'hover:shadow-md hover:scale-105'
                           : status === 'other-shift-pending'
@@ -281,9 +281,6 @@ export default function Calendar({
                       {/* Status indicators */}
                       <div className="flex items-center justify-between mt-1">
                         <div>
-                          {status === 'your-shift' && (
-                            <span className="text-xs font-bold bg-yellow-300 text-yellow-900 px-1 rounded">TU</span>
-                          )}
                           {shift.status === 'reserved' && (
                             <span className="text-xs">📌</span>
                           )}
