@@ -26,6 +26,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user) {
       loadShifts()
+      loadSwapRequests() // Load swap requests when date changes too
       if (user.role === 'MANAGER' || user.role === 'ADMIN') {
         loadManagerData()
       }
@@ -347,33 +348,55 @@ export default function DashboardPage() {
 
     // Get the swap request details
     const swapRequest = swapRequests.find(sr => sr.id === swapRequestId)
-    if (!swapRequest) return
-
-    // Perform the swap in a transaction-like manner
-    const { error: error1 } = await supabase
-      .from('shifts')
-      .update({ assigned_to: swapRequest.target_user_id })
-      .eq('id', swapRequest.requester_shift_id)
-
-    if (error1) {
-      alert('Eroare la schimbarea turelor.')
+    if (!swapRequest) {
+      console.error('Swap request not found:', swapRequestId)
       return
     }
 
-    const { error: error2 } = await supabase
+    console.log('Accepting swap request:', swapRequest)
+
+    // Perform the swap in a transaction-like manner
+    // Update requester's shift to go to target user
+    const { data: data1, error: error1 } = await supabase
       .from('shifts')
-      .update({ assigned_to: swapRequest.requester_id })
+      .update({ 
+        assigned_to: swapRequest.target_user_id,
+        status: 'assigned' // Ensure status is updated
+      })
+      .eq('id', swapRequest.requester_shift_id)
+      .select()
+
+    if (error1) {
+      console.error('Error updating requester shift:', error1)
+      alert(`Eroare la schimbarea turei requester: ${error1.message}`)
+      return
+    }
+    console.log('Updated requester shift:', data1)
+
+    // Update target's shift to go to requester
+    const { data: data2, error: error2 } = await supabase
+      .from('shifts')
+      .update({ 
+        assigned_to: swapRequest.requester_id,
+        status: 'assigned' // Ensure status is updated
+      })
       .eq('id', swapRequest.target_shift_id)
+      .select()
 
     if (error2) {
+      console.error('Error updating target shift:', error2)
       // Try to rollback the first update
       await supabase
         .from('shifts')
-        .update({ assigned_to: swapRequest.requester_id })
+        .update({ 
+          assigned_to: swapRequest.requester_id,
+          status: 'assigned'
+        })
         .eq('id', swapRequest.requester_shift_id)
-      alert('Eroare la schimbarea turelor.')
+      alert(`Eroare la schimbarea turei target: ${error2.message}`)
       return
     }
+    console.log('Updated target shift:', data2)
 
     // Update swap request status
     const { error: error3 } = await supabase

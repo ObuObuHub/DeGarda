@@ -641,6 +641,8 @@ export default function Calendar({
         if (!shift) return null
         
         const incomingRequests = getIncomingSwapRequests(showSwapMenu)
+        console.log('Showing swap menu for shift:', showSwapMenu)
+        console.log('Incoming requests:', incomingRequests)
         
         return (
           <>
@@ -651,18 +653,21 @@ export default function Calendar({
             <div
               className="fixed bg-white rounded-lg shadow-lg border p-4 z-50 min-w-[250px] max-h-96 overflow-y-auto"
               style={{ 
-                left: `${contextMenuPosition.x}px`, 
-                top: `${contextMenuPosition.y}px` 
+                left: `${Math.min(contextMenuPosition.x, window.innerWidth - 300)}px`, 
+                top: `${Math.min(contextMenuPosition.y, window.innerHeight - 200)}px` 
               }}
             >
               <h3 className="font-semibold mb-3">Cereri de schimb primite:</h3>
               <div className="space-y-2">
-                {incomingRequests.map(request => (
-                  <div key={request.id} className="border p-2 rounded">
-                    <p className="text-sm font-medium">{request.requester?.name}</p>
-                    <p className="text-xs text-gray-600">
-                      Vrea să schimbe: {request.requester_shift?.shift_date}
-                    </p>
+                {incomingRequests.length === 0 ? (
+                  <p className="text-sm text-gray-500">Nu sunt cereri de schimb.</p>
+                ) : (
+                  incomingRequests.map(request => (
+                    <div key={request.id} className="border p-2 rounded">
+                      <p className="text-sm font-medium">{request.requester?.name || 'Necunoscut'}</p>
+                      <p className="text-xs text-gray-600">
+                        Vrea să schimbe: {request.requester_shift?.shift_date || 'Data necunoscută'}
+                      </p>
                     <div className="flex gap-2 mt-2">
                       <button
                         onClick={() => {
