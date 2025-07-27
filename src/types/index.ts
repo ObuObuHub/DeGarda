@@ -12,7 +12,7 @@ export const SHIFT_TIME_LABELS: Record<ShiftTime, string> = {
 }
 
 export const DEPARTMENT_COLORS: Record<Department, string> = {
-  'ATI': '#92400e',           // brown-800
+  'ATI': '#9ca3af',           // gray-400 (light grey)
   'Urgente': '#3b82f6',       // blue-500  
   'Chirurgie': '#10b981',     // emerald-500
   'Medicina Interna': '#f59e0b' // amber-500
