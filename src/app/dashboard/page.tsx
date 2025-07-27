@@ -298,91 +298,52 @@ export default function DashboardPage() {
   const exportToCSV = () => {
     if (!user) return
     
-    const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-    const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
+    // Get year and month from selected date
+    const year = selectedDate.getFullYear()
+    const month = selectedDate.getMonth()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
     
-    // Get all shifts for the month using string comparison to avoid timezone issues
-    const startDateStr = startOfMonth.toISOString().split('T')[0]
-    const endDateStr = endOfMonth.toISOString().split('T')[0]
-    
-    const monthShifts = shifts.filter(shift => {
-      return shift.shift_date >= startDateStr && shift.shift_date <= endDateStr
-    })
-
-    // Create a map of shifts by date and department
-    const shiftsByDateAndDept: Record<string, Record<string, string>> = {}
-    
-    // Helper function to format date consistently
-    const formatDateForCSV = (date: Date) => {
-      const day = date.getDate().toString().padStart(2, '0')
-      const month = (date.getMonth() + 1).toString().padStart(2, '0')
-      const year = date.getFullYear()
-      return `${day}.${month}.${year}`
-    }
-    
-    // Initialize all dates in the month
-    const currentDate = new Date(startOfMonth)
-    while (currentDate <= endOfMonth) {
-      const dateStr = formatDateForCSV(currentDate)
-      shiftsByDateAndDept[dateStr] = {
-        'Medicina Interna': '',
-        'Chirurgie': '',
-        'Urgente': '',
-        'ATI': ''
+    // Create rows for each day
+    const rows = []
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      
+      // Find shifts for this exact date
+      const dayShifts = shifts.filter(s => s.shift_date === dateStr)
+      
+      // Build row
+      const row = {
+        date: `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`,
+        medicina: '',
+        chirurgie: '',
+        urgente: '',
+        ati: ''
       }
-      currentDate.setDate(currentDate.getDate() + 1)
-    }
-    
-    // Fill in the assigned staff for each shift
-    monthShifts.forEach(shift => {
-      // Parse the date components from the ISO string to avoid timezone issues
-      const [year, month, day] = shift.shift_date.split('-').map(Number)
-      const shiftDate = new Date(year, month - 1, day)
-      const dateStr = formatDateForCSV(shiftDate)
-      const staffName = shift.user?.name || 'Neasignat'
-      if (shiftsByDateAndDept[dateStr]) {
-        shiftsByDateAndDept[dateStr][shift.department] = staffName
-      }
-    })
-
-    // Create CSV content with department columns
-    const headers = ['Data', 'Interne', 'Chirurgie', 'CPU', 'ATI']
-    const rows = Object.entries(shiftsByDateAndDept)
-      .sort(([a], [b]) => {
-        // Sort by date (DD.MM.YYYY format)
-        const [dayA, monthA, yearA] = a.split('.').map(Number)
-        const [dayB, monthB, yearB] = b.split('.').map(Number)
-        return new Date(yearA, monthA - 1, dayA).getTime() - new Date(yearB, monthB - 1, dayB).getTime()
+      
+      // Fill in staff names
+      dayShifts.forEach(shift => {
+        if (shift.department === 'Medicina Interna') row.medicina = shift.user?.name || ''
+        if (shift.department === 'Chirurgie') row.chirurgie = shift.user?.name || ''
+        if (shift.department === 'Urgente') row.urgente = shift.user?.name || ''
+        if (shift.department === 'ATI') row.ati = shift.user?.name || ''
       })
-      .map(([date, depts]) => [
-        date,
-        depts['Medicina Interna'] || '',
-        depts['Chirurgie'] || '',
-        depts['Urgente'] || '', // CPU is Urgente
-        depts['ATI'] || ''
-      ])
-
-    // Helper function to escape CSV values
-    const escapeCSV = (value: string) => {
-      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-        return `"${value.replace(/"/g, '""')}"`
-      }
-      return value
+      
+      rows.push(row)
     }
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(escapeCSV).join(','))
+    
+    // Create CSV
+    const csv = [
+      'Data,Interne,Chirurgie,CPU,ATI',
+      ...rows.map(r => `${r.date},${r.medicina},${r.chirurgie},${r.urgente},${r.ati}`)
     ].join('\n')
-
-    // Download CSV
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     const monthNames = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 
                        'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie']
-    const monthName = monthNames[selectedDate.getMonth()]
-    link.download = `Garzi ${monthName} ${selectedDate.getFullYear()}.csv`
+    link.download = `Garzi ${monthNames[month]} ${year}.csv`
     link.click()
   }
 
