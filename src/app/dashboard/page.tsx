@@ -359,7 +359,10 @@ export default function DashboardPage() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `ture-${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}.csv`
+    const monthNames = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 
+                       'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie']
+    const monthName = monthNames[selectedDate.getMonth()]
+    link.download = `Garzi ${monthName} ${selectedDate.getFullYear()}.csv`
     link.click()
   }
 
