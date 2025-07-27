@@ -43,3 +43,18 @@ export type UnavailableDate = {
   reason?: string
   created_at: string
 }
+
+export type SwapRequest = {
+  id: string
+  requester_id: string
+  requester_shift_id: string
+  target_user_id: string
+  target_shift_id: string
+  status: 'pending' | 'accepted' | 'rejected' | 'cancelled'
+  created_at: string
+  updated_at: string
+  requester?: User
+  target_user?: User
+  requester_shift?: Shift
+  target_shift?: Shift
+}

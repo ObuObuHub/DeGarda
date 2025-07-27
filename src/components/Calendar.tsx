@@ -1,20 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { type User, type Shift, type UnavailableDate } from '@/lib/supabase'
 import { DEPARTMENT_COLORS } from '@/types'
 
 interface CalendarProps {
   shifts: Shift[]
   unavailableDates: UnavailableDate[]
+  swapRequests?: any[]
   onReserveShift: (shiftId: string) => void
   onCancelShift: (shiftId: string) => void
   onMarkUnavailable: (date: Date) => void
   onRemoveUnavailable: (date: Date) => void
   onDeleteShift?: (shiftId: string) => void
   onCreateReservation?: (date: Date, department?: string) => void
-  onRequestSwap?: (shiftId: string) => void
+  onRequestSwap?: (requesterShiftId: string, targetShiftIds: string[]) => void
   onAssignShift?: (shiftId: string, userId: string | null) => void
+  onAcceptSwap?: (swapRequestId: string) => void
+  onRejectSwap?: (swapRequestId: string) => void
   currentUser: User
   selectedDate: Date
   onDateChange: (date: Date) => void
@@ -25,6 +28,7 @@ interface CalendarProps {
 export default function Calendar({ 
   shifts,
   unavailableDates,
+  swapRequests = [],
   onReserveShift,
   onCancelShift,
   onMarkUnavailable,
@@ -33,6 +37,8 @@ export default function Calendar({
   onCreateReservation,
   onRequestSwap,
   onAssignShift,
+  onAcceptSwap,
+  onRejectSwap,
   currentUser, 
   selectedDate, 
   onDateChange,
@@ -43,6 +49,39 @@ export default function Calendar({
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
   const [showAssignMenu, setShowAssignMenu] = useState(false)
+  const [selectedForSwap, setSelectedForSwap] = useState<Shift | null>(null)
+  const [selectedTargetShifts, setSelectedTargetShifts] = useState<Set<string>>(new Set())
+  const [showSwapMenu, setShowSwapMenu] = useState<string | null>(null)
+  
+  // Helper functions for swap requests
+  const getIncomingSwapRequests = (shiftId: string) => {
+    return swapRequests.filter(sr => 
+      sr.target_shift_id === shiftId && 
+      sr.target_user_id === currentUser.id &&
+      sr.status === 'pending'
+    )
+  }
+  
+  const getOutgoingSwapRequests = (shiftId: string) => {
+    return swapRequests.filter(sr => 
+      sr.requester_shift_id === shiftId && 
+      sr.requester_id === currentUser.id &&
+      sr.status === 'pending'
+    )
+  }
+  
+  // Add keyboard listener for Escape key to cancel swap
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedForSwap) {
+        setSelectedForSwap(null)
+        setSelectedTargetShifts(new Set())
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedForSwap])
   
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
@@ -131,18 +170,74 @@ export default function Calendar({
   const days = getDaysInMonth(selectedDate)
   const weekDays = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Săm']
 
-  const handleShiftClick = (shift: Shift, event: React.MouseEvent) => {
+  const handleShiftClick = async (shift: Shift, event: React.MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
     
     const status = getShiftStatus(shift)
     
-    // Admin/Manager can interact with any shift, staff with their own or available in their department
-    if (currentUser.role === 'ADMIN' || 
-        currentUser.role === 'MANAGER' ||
-        status === 'your-shift' || 
-        status === 'pending-swap' || 
-        (status === 'available' && (currentUser.role !== 'STAFF' || shift.department === currentUser.department))) {
+    // If there's a shift selected for swap
+    if (selectedForSwap) {
+      // Can't swap with the same shift
+      if (selectedForSwap.id === shift.id) {
+        // If user clicks their selected shift again, confirm sending requests
+        if (selectedTargetShifts.size > 0) {
+          if (confirm(`Trimite cereri de schimb către ${selectedTargetShifts.size} ture?`)) {
+            // Send swap requests to all selected shifts
+            if (onRequestSwap) {
+              onRequestSwap(selectedForSwap.id, Array.from(selectedTargetShifts))
+              setSelectedForSwap(null)
+              setSelectedTargetShifts(new Set())
+            }
+          }
+        } else {
+          // Just deselect if no targets selected
+          setSelectedForSwap(null)
+        }
+        return
+      }
+      
+      // Handle swap logic
+      if (status === 'available') {
+        // Direct swap with available shift
+        if (onAssignShift) {
+          // Move current user to the available shift
+          await onAssignShift(shift.id, currentUser.id)
+          // Make the original shift available
+          await onAssignShift(selectedForSwap.id, null)
+          setSelectedForSwap(null)
+          setSelectedTargetShifts(new Set())
+          alert('Schimb realizat cu succes!')
+        }
+      } else if (shift.assigned_to && shift.assigned_to !== currentUser.id) {
+        // Toggle selection for this shift
+        const newSelectedTargets = new Set(selectedTargetShifts)
+        if (newSelectedTargets.has(shift.id)) {
+          newSelectedTargets.delete(shift.id)
+        } else {
+          newSelectedTargets.add(shift.id)
+        }
+        setSelectedTargetShifts(newSelectedTargets)
+      }
+      return
+    }
+    
+    // Normal click behavior for admins/managers
+    if (currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER') {
+      setSelectedShift(shift)
+      setContextMenuPosition({ x: event.clientX, y: event.clientY })
+      setShowContextMenu(true)
+      return
+    }
+    
+    // For staff - if clicking own shift, select it for swap
+    if (status === 'your-shift' && shift.status !== 'pending_swap') {
+      setSelectedForSwap(shift)
+      return
+    }
+    
+    // For staff - can reserve available shifts in their department
+    if (status === 'available' && shift.department === currentUser.department) {
       setSelectedShift(shift)
       setContextMenuPosition({ x: event.clientX, y: event.clientY })
       setShowContextMenu(true)
@@ -168,6 +263,22 @@ export default function Calendar({
 
   return (
     <div className={department ? "p-4" : "card"}>
+      {/* Show swap hint when a shift is selected */}
+      {selectedForSwap && (
+        <div className="mb-4 p-3 bg-purple-100 border border-purple-300 rounded-lg text-sm">
+          <span className="font-semibold">↔️ Schimb selectat:</span> {selectedForSwap.shift_date} - {selectedForSwap.department}
+          <br />
+          <span className="text-gray-600">
+            Click pe mai multe ture pentru a trimite cereri multiple • 
+            {selectedTargetShifts.size > 0 && (
+              <span className="font-semibold text-green-700"> {selectedTargetShifts.size} ture selectate</span>
+            )}
+            {selectedTargetShifts.size > 0 && ' • Click pe tura ta pentru a trimite • '}
+            ESC pentru a anula
+          </span>
+        </div>
+      )}
+      
       {/* Calendar Header - only show if not in department view */}
       {!department && (
         <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
@@ -252,7 +363,11 @@ export default function Calendar({
                     <div
                       key={shift.id}
                       className={`flex-1 cursor-pointer transition-all ${
-                        status === 'your-shift' 
+                        selectedForSwap?.id === shift.id
+                          ? 'ring-4 ring-purple-500 ring-offset-2 animate-pulse' 
+                          : selectedTargetShifts.has(shift.id)
+                          ? 'ring-4 ring-green-500 ring-offset-2'
+                          : status === 'your-shift' 
                           ? 'ring-4 ring-yellow-500 ring-offset-2' 
                           : status === 'pending-swap'
                           ? 'ring-2 ring-orange-500 shadow-md animate-pulse'
@@ -261,7 +376,11 @@ export default function Calendar({
                           : ''
                       } ${index > 0 ? 'border-t-2 border-white' : ''}`}
                       style={{ 
-                        backgroundColor: status === 'your-shift' 
+                        backgroundColor: selectedForSwap?.id === shift.id
+                          ? '#A855F7' // Purple for selected for swap
+                          : selectedTargetShifts.has(shift.id)
+                          ? '#86EFAC' // Light green for selected targets
+                          : status === 'your-shift' 
                           ? '#FCD34D' // Yellow for user's shifts
                           : status === 'pending-swap'
                           ? '#FB923C' // Orange for pending swap
@@ -275,13 +394,17 @@ export default function Calendar({
                       }${
                         shift.status === 'reserved' ? ' (Rezervat)' : 
                         shift.status === 'assigned' ? ' (Asignat)' : ''
+                      }${
+                        selectedForSwap?.id === shift.id ? ' (Selectat pentru schimb)' : ''
                       }`}
                     >
                       {/* Show staff name or availability */}
                       {shift.user ? (
                         <div className="flex items-center justify-center h-full">
                           <div className={`text-xs font-semibold ${
-                            status === 'your-shift' || status === 'pending-swap' 
+                            selectedForSwap?.id === shift.id
+                              ? 'text-white'
+                              : status === 'your-shift' || status === 'pending-swap' 
                               ? 'text-gray-800' 
                               : 'text-white'
                           }`}>
@@ -295,19 +418,46 @@ export default function Calendar({
                       )}
                       
                       {/* Status indicators - small corner badges */}
-                      {(shift.status === 'reserved' || shift.status === 'assigned' || shift.status === 'pending_swap') && (
-                        <div className="absolute top-0.5 right-0.5">
-                          {shift.status === 'reserved' && (
-                            <span className="text-xs bg-white/20 rounded px-0.5">R</span>
-                          )}
-                          {shift.status === 'assigned' && (
-                            <span className="text-xs text-white">✓</span>
-                          )}
-                          {shift.status === 'pending_swap' && (
-                            <span className="text-xs animate-pulse">🔄</span>
-                          )}
-                        </div>
-                      )}
+                      <div className="absolute top-0.5 right-0.5 flex gap-0.5">
+                        {selectedForSwap?.id === shift.id && (
+                          <span className="text-lg animate-bounce">↔️</span>
+                        )}
+                        {selectedTargetShifts.has(shift.id) && (
+                          <span className="text-lg">✅</span>
+                        )}
+                        {/* Incoming swap requests indicator */}
+                        {getIncomingSwapRequests(shift.id).length > 0 && !selectedForSwap && (
+                          <span 
+                            className="text-sm animate-pulse cursor-pointer bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setContextMenuPosition({ x: e.clientX, y: e.clientY })
+                              setShowSwapMenu(shift.id)
+                            }}
+                            title={`${getIncomingSwapRequests(shift.id).length} cereri de schimb`}
+                          >
+                            🔔
+                          </span>
+                        )}
+                        {/* Outgoing swap requests indicator */}
+                        {getOutgoingSwapRequests(shift.id).length > 0 && !selectedForSwap && (
+                          <span 
+                            className="text-sm cursor-pointer"
+                            title={`Ai ${getOutgoingSwapRequests(shift.id).length} cereri trimise`}
+                          >
+                            ⏳
+                          </span>
+                        )}
+                        {shift.status === 'reserved' && !selectedForSwap?.id && !selectedTargetShifts.has(shift.id) && getIncomingSwapRequests(shift.id).length === 0 && (
+                          <span className="text-xs bg-white/20 rounded px-0.5">R</span>
+                        )}
+                        {shift.status === 'assigned' && !selectedForSwap?.id && !selectedTargetShifts.has(shift.id) && getIncomingSwapRequests(shift.id).length === 0 && (
+                          <span className="text-xs text-white">✓</span>
+                        )}
+                        {shift.status === 'pending_swap' && !selectedForSwap?.id && !selectedTargetShifts.has(shift.id) && (
+                          <span className="text-xs animate-pulse">🔄</span>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
@@ -477,6 +627,66 @@ export default function Calendar({
           </div>
         </>
       )}
+      
+      {/* Inline Swap Request Menu */}
+      {showSwapMenu && (() => {
+        const shift = shifts.find(s => s.id === showSwapMenu)
+        if (!shift) return null
+        
+        const incomingRequests = getIncomingSwapRequests(showSwapMenu)
+        
+        return (
+          <>
+            <div 
+              className="fixed inset-0 z-40" 
+              onClick={() => setShowSwapMenu(null)}
+            />
+            <div
+              className="fixed bg-white rounded-lg shadow-lg border p-4 z-50 min-w-[250px] max-h-96 overflow-y-auto"
+              style={{ 
+                left: `${contextMenuPosition.x}px`, 
+                top: `${contextMenuPosition.y}px` 
+              }}
+            >
+              <h3 className="font-semibold mb-3">Cereri de schimb primite:</h3>
+              <div className="space-y-2">
+                {incomingRequests.map(request => (
+                  <div key={request.id} className="border p-2 rounded">
+                    <p className="text-sm font-medium">{request.requester?.name}</p>
+                    <p className="text-xs text-gray-600">
+                      Vrea să schimbe: {request.requester_shift?.shift_date}
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => {
+                          if (onAcceptSwap) {
+                            onAcceptSwap(request.id)
+                            setShowSwapMenu(null)
+                          }
+                        }}
+                        className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                      >
+                        ✅ Acceptă
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (onRejectSwap) {
+                            onRejectSwap(request.id)
+                            setShowSwapMenu(null)
+                          }
+                        }}
+                        className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                      >
+                        ❌ Refuză
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )
+      })()}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, type User, type Shift, type UnavailableDate } from '@/lib/supabase'
+import { supabase, type User, type Shift, type UnavailableDate, type SwapRequest } from '@/lib/supabase'
 import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import {} from '@/types'
@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [shifts, setShifts] = useState<Shift[]>([])
   const [unavailableDates, setUnavailableDates] = useState<UnavailableDate[]>([])
+  const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [allUsers, setAllUsers] = useState<User[]>([])
@@ -48,7 +49,8 @@ export default function DashboardPage() {
   const loadData = async () => {
     const promises = [
       loadShifts(),
-      loadUnavailableDates()
+      loadUnavailableDates(),
+      loadSwapRequests()
     ]
     
     if (user?.role === 'MANAGER' || user?.role === 'ADMIN') {
@@ -84,6 +86,25 @@ export default function DashboardPage() {
       .eq('user_id', user.id)
 
     setUnavailableDates(data || [])
+  }
+
+  const loadSwapRequests = async () => {
+    if (!user) return
+    
+    // Load swap requests where user is either requester or target
+    const { data } = await supabase
+      .from('swap_requests')
+      .select(`
+        *,
+        requester:requester_id(name, department),
+        target_user:target_user_id(name, department),
+        requester_shift:requester_shift_id(shift_date, department),
+        target_shift:target_shift_id(shift_date, department)
+      `)
+      .or(`requester_id.eq.${user.id},target_user_id.eq.${user.id}`)
+      .eq('status', 'pending')
+
+    setSwapRequests(data || [])
   }
 
 
@@ -254,20 +275,38 @@ export default function DashboardPage() {
     }
   }
 
-  const requestSwap = async (shiftId: string) => {
+  const requestSwap = async (requesterShiftId: string, targetShiftIds: string[]) => {
     if (!user) return
 
+    // Create swap requests for each target shift
+    const swapRequestsToCreate = targetShiftIds.map(targetShiftId => {
+      // Find the target shift to get the user ID
+      const targetShift = shifts.find(s => s.id === targetShiftId)
+      if (!targetShift || !targetShift.assigned_to) return null
+      
+      return {
+        requester_id: user.id,
+        requester_shift_id: requesterShiftId,
+        target_user_id: targetShift.assigned_to,
+        target_shift_id: targetShiftId,
+        status: 'pending'
+      }
+    }).filter(Boolean)
+
+    if (swapRequestsToCreate.length === 0) {
+      alert('Nu s-au putut crea cererile de schimb.')
+      return
+    }
+
     const { error } = await supabase
-      .from('shifts')
-      .update({ status: 'pending_swap' })
-      .eq('id', shiftId)
-      .eq('assigned_to', user.id)
+      .from('swap_requests')
+      .insert(swapRequestsToCreate)
 
     if (!error) {
-      loadShifts()
-      alert('Cererea de schimb a fost înregistrată. Un manager va reasigna tura.')
+      await loadSwapRequests()
+      alert(`${swapRequestsToCreate.length} cereri de schimb trimise!`)
     } else {
-      alert('Nu s-a putut înregistra cererea de schimb.')
+      alert('Nu s-au putut înregistra cererile de schimb.')
     }
   }
 
@@ -286,6 +325,73 @@ export default function DashboardPage() {
       loadShifts()
     } else {
       alert('Nu s-a putut asigna tura.')
+    }
+  }
+
+  const acceptSwapRequest = async (swapRequestId: string) => {
+    if (!user) return
+
+    // Get the swap request details
+    const swapRequest = swapRequests.find(sr => sr.id === swapRequestId)
+    if (!swapRequest) return
+
+    // Perform the swap in a transaction-like manner
+    const { error: error1 } = await supabase
+      .from('shifts')
+      .update({ assigned_to: swapRequest.target_user_id })
+      .eq('id', swapRequest.requester_shift_id)
+
+    if (error1) {
+      alert('Eroare la schimbarea turelor.')
+      return
+    }
+
+    const { error: error2 } = await supabase
+      .from('shifts')
+      .update({ assigned_to: swapRequest.requester_id })
+      .eq('id', swapRequest.target_shift_id)
+
+    if (error2) {
+      // Try to rollback the first update
+      await supabase
+        .from('shifts')
+        .update({ assigned_to: swapRequest.requester_id })
+        .eq('id', swapRequest.requester_shift_id)
+      alert('Eroare la schimbarea turelor.')
+      return
+    }
+
+    // Update swap request status
+    const { error: error3 } = await supabase
+      .from('swap_requests')
+      .update({ status: 'accepted' })
+      .eq('id', swapRequestId)
+
+    // Cancel all other pending requests for the same requester shift
+    await supabase
+      .from('swap_requests')
+      .update({ status: 'cancelled' })
+      .eq('requester_shift_id', swapRequest.requester_shift_id)
+      .eq('status', 'pending')
+      .neq('id', swapRequestId)
+
+    if (!error3) {
+      await Promise.all([loadShifts(), loadSwapRequests()])
+      alert('Schimb acceptat cu succes!')
+    }
+  }
+
+  const rejectSwapRequest = async (swapRequestId: string) => {
+    if (!user) return
+
+    const { error } = await supabase
+      .from('swap_requests')
+      .update({ status: 'rejected' })
+      .eq('id', swapRequestId)
+
+    if (!error) {
+      await loadSwapRequests()
+      alert('Cerere de schimb refuzată.')
     }
   }
 
@@ -463,6 +569,7 @@ export default function DashboardPage() {
                 department={department}
                 shifts={shifts}
                 unavailableDates={unavailableDates}
+                swapRequests={swapRequests}
                 onReserveShift={reserveShift}
                 onCancelShift={cancelShift}
                 onMarkUnavailable={markUnavailable}
@@ -471,10 +578,13 @@ export default function DashboardPage() {
                 onCreateReservation={createReservation}
                 onRequestSwap={requestSwap}
                 onAssignShift={assignShift}
+                onAcceptSwap={acceptSwapRequest}
+                onRejectSwap={rejectSwapRequest}
                 currentUser={user}
                 selectedDate={selectedDate}
                 onDateChange={setSelectedDate}
                 users={allUsers}
+                onShiftsGenerated={loadShifts}
               />
             ))}
         </div>
