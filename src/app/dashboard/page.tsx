@@ -310,10 +310,18 @@ export default function DashboardPage() {
     // Create a map of shifts by date and department
     const shiftsByDateAndDept: Record<string, Record<string, string>> = {}
     
+    // Helper function to format date consistently
+    const formatDateForCSV = (date: Date) => {
+      const day = date.getDate().toString().padStart(2, '0')
+      const month = (date.getMonth() + 1).toString().padStart(2, '0')
+      const year = date.getFullYear()
+      return `${day}.${month}.${year}`
+    }
+    
     // Initialize all dates in the month
     const currentDate = new Date(startOfMonth)
     while (currentDate <= endOfMonth) {
-      const dateStr = currentDate.toLocaleDateString('ro-RO')
+      const dateStr = formatDateForCSV(currentDate)
       shiftsByDateAndDept[dateStr] = {
         'Medicina Interna': '',
         'Chirurgie': '',
@@ -325,7 +333,8 @@ export default function DashboardPage() {
     
     // Fill in the assigned staff for each shift
     monthShifts.forEach(shift => {
-      const dateStr = new Date(shift.shift_date).toLocaleDateString('ro-RO')
+      const shiftDate = new Date(shift.shift_date)
+      const dateStr = formatDateForCSV(shiftDate)
       const staffName = shift.user?.name || 'Neasignat'
       if (shiftsByDateAndDept[dateStr]) {
         shiftsByDateAndDept[dateStr][shift.department] = staffName
@@ -334,13 +343,20 @@ export default function DashboardPage() {
 
     // Create CSV content with department columns
     const headers = ['Data', 'Interne', 'Chirurgie', 'CPU', 'ATI']
-    const rows = Object.entries(shiftsByDateAndDept).map(([date, depts]) => [
-      date,
-      depts['Medicina Interna'] || '',
-      depts['Chirurgie'] || '',
-      depts['Urgente'] || '', // CPU is Urgente
-      depts['ATI'] || ''
-    ])
+    const rows = Object.entries(shiftsByDateAndDept)
+      .sort(([a], [b]) => {
+        // Sort by date (DD.MM.YYYY format)
+        const [dayA, monthA, yearA] = a.split('.').map(Number)
+        const [dayB, monthB, yearB] = b.split('.').map(Number)
+        return new Date(yearA, monthA - 1, dayA).getTime() - new Date(yearB, monthB - 1, dayB).getTime()
+      })
+      .map(([date, depts]) => [
+        date,
+        depts['Medicina Interna'] || '',
+        depts['Chirurgie'] || '',
+        depts['Urgente'] || '', // CPU is Urgente
+        depts['ATI'] || ''
+      ])
 
     // Helper function to escape CSV values
     const escapeCSV = (value: string) => {
