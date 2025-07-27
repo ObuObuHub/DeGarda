@@ -452,27 +452,32 @@ export default function DashboardPage() {
 
         {/* Department Calendars */}
         <div className="space-y-6">
-          {DEPARTMENTS.map(department => (
-            <DepartmentCalendar
-              key={department}
-              department={department}
-              shifts={shifts}
-              unavailableDates={unavailableDates}
-              onReserveShift={reserveShift}
-              onCancelShift={cancelShift}
-              onMarkUnavailable={markUnavailable}
-              onRemoveUnavailable={removeUnavailable}
-              onDeleteShift={deleteShift}
-              onCreateReservation={createReservation}
-              onRequestSwap={requestSwap}
-              onAssignShift={assignShift}
-              currentUser={user}
-              selectedDate={selectedDate}
-              onDateChange={setSelectedDate}
-              users={allUsers}
-              onShiftsGenerated={loadShifts}
-            />
-          ))}
+          {DEPARTMENTS
+            .filter(department => 
+              // Staff only see their own department, managers/admins see all
+              user.role === 'MANAGER' || user.role === 'ADMIN' || department === user.department
+            )
+            .map(department => (
+              <DepartmentCalendar
+                key={department}
+                department={department}
+                shifts={shifts}
+                unavailableDates={unavailableDates}
+                onReserveShift={reserveShift}
+                onCancelShift={cancelShift}
+                onMarkUnavailable={markUnavailable}
+                onRemoveUnavailable={removeUnavailable}
+                onDeleteShift={deleteShift}
+                onCreateReservation={createReservation}
+                onRequestSwap={requestSwap}
+                onAssignShift={assignShift}
+                currentUser={user}
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+                users={allUsers}
+                onShiftsGenerated={loadShifts}
+              />
+            ))}
         </div>
 
       </main>
