@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, type User, type Shift, type UnavailableDate, type SwapRequest } from '@/lib/supabase'
+import { supabase, type User, type Shift, type UnavailableDate } from '@/lib/supabase'
 import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import {} from '@/types'
@@ -12,7 +12,6 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [shifts, setShifts] = useState<Shift[]>([])
   const [unavailableDates, setUnavailableDates] = useState<UnavailableDate[]>([])
-  const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [allUsers, setAllUsers] = useState<User[]>([])
@@ -20,6 +19,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     checkUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   useEffect(() => {
@@ -29,6 +29,7 @@ export default function DashboardPage() {
         loadManagerData()
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, user])
 
   const checkUser = async () => {
@@ -47,8 +48,7 @@ export default function DashboardPage() {
   const loadData = async () => {
     const promises = [
       loadShifts(),
-      loadUnavailableDates(),
-      loadSwapRequests()
+      loadUnavailableDates()
     ]
     
     if (user?.role === 'MANAGER' || user?.role === 'ADMIN') {
@@ -86,14 +86,6 @@ export default function DashboardPage() {
     setUnavailableDates(data || [])
   }
 
-  const loadSwapRequests = async () => {
-    const { data } = await supabase
-      .from('swap_requests')
-      .select('*')
-      .eq('status', 'pending')
-
-    setSwapRequests(data || [])
-  }
 
   const loadManagerData = async () => {
     await Promise.all([
@@ -348,7 +340,6 @@ export default function DashboardPage() {
   }
 
   const userShifts = shifts.filter(shift => shift.assigned_to === user?.id)
-  const availableShifts = shifts.filter(shift => shift.status === 'available')
 
   if (loading) {
     return (
@@ -454,7 +445,6 @@ export default function DashboardPage() {
               currentUser={user}
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
-              pendingSwapRequests={swapRequests}
               users={allUsers}
               onShiftsGenerated={loadShifts}
             />

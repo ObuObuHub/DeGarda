@@ -20,7 +20,6 @@ interface DepartmentCalendarProps {
   currentUser: User
   selectedDate: Date
   onDateChange: (date: Date) => void
-  pendingSwapRequests?: { from_shift_id: string; to_shift_id: string }[]
   users: User[]
   onShiftsGenerated: () => void
 }
@@ -40,7 +39,6 @@ export default function DepartmentCalendar({
   currentUser,
   selectedDate,
   onDateChange,
-  pendingSwapRequests = [],
   users,
   onShiftsGenerated
 }: DepartmentCalendarProps) {
@@ -202,7 +200,7 @@ export default function DepartmentCalendar({
           alert('Eroare la generare: ' + error.message)
         }
       }
-    } catch (error) {
+    } catch {
       alert('Eroare la generare')
     } finally {
       setGenerating(false)
@@ -242,7 +240,6 @@ export default function DepartmentCalendar({
           currentUser={currentUser}
           selectedDate={selectedDate}
           onDateChange={onDateChange}
-          pendingSwapRequests={pendingSwapRequests}
           department={department}
           users={users.filter(u => u.department === department)}
         />

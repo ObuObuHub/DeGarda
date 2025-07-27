@@ -18,7 +18,6 @@ interface CalendarProps {
   currentUser: User
   selectedDate: Date
   onDateChange: (date: Date) => void
-  pendingSwapRequests?: { from_shift_id: string; to_shift_id: string }[]
   department?: string
   users?: User[]
 }
@@ -37,7 +36,6 @@ export default function Calendar({
   currentUser, 
   selectedDate, 
   onDateChange,
-  pendingSwapRequests = [],
   department,
   users = []
 }: CalendarProps) {
@@ -139,10 +137,11 @@ export default function Calendar({
     
     const status = getShiftStatus(shift)
     
-    // Admin can interact with any shift
+    // Admin/Manager can interact with any shift, staff with their own or available
     if (currentUser.role === 'ADMIN' || 
+        currentUser.role === 'MANAGER' ||
         status === 'your-shift' || 
-        status === 'your-shift-pending' || 
+        status === 'pending-swap' || 
         status === 'available') {
       setSelectedShift(shift)
       setContextMenuPosition({ x: event.clientX, y: event.clientY })
@@ -248,7 +247,6 @@ export default function Calendar({
               <div className="absolute inset-0 flex flex-col">
                 {dayShifts.map((shift, index) => {
                   const status = getShiftStatus(shift)
-                  const shiftCount = dayShifts.length
                   
                   return (
                     <div
@@ -283,7 +281,7 @@ export default function Calendar({
                       {shift.user ? (
                         <div className="flex items-center justify-center h-full">
                           <div className={`text-xs font-semibold ${
-                            status === 'your-shift' || status === 'your-shift-pending' 
+                            status === 'your-shift' || status === 'pending-swap' 
                               ? 'text-gray-800' 
                               : 'text-white'
                           }`}>

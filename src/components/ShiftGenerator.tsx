@@ -155,7 +155,7 @@ export default function ShiftGenerator({
       } else {
         alert('Nu sunt ture noi de generat pentru această perioadă.')
       }
-    } catch (error) {
+    } catch {
       alert('Eroare la generare')
     } finally {
       setGenerating(false)
