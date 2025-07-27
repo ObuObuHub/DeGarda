@@ -250,7 +250,7 @@ export default function Calendar({
                       key={shift.id}
                       className={`flex-1 cursor-pointer transition-all ${
                         status === 'your-shift' 
-                          ? 'ring-2 ring-yellow-400 shadow-lg animate-pulse-ring' 
+                          ? 'ring-4 ring-yellow-500 ring-offset-2' 
                           : status === 'your-shift-pending'
                           ? 'ring-2 ring-orange-400 shadow-md opacity-90'
                           : status === 'available'
