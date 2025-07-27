@@ -169,6 +169,23 @@ export default function Calendar({
 
   const days = getDaysInMonth(selectedDate)
   const weekDays = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Săm']
+  
+  // Helper function to format date for display
+  const formatDateForDisplay = (dateStr: string) => {
+    // Parse the date string and add time to avoid timezone issues
+    const [year, month, day] = dateStr.split('-').map(Number)
+    const date = new Date(year, month - 1, day, 12, 0, 0) // Set to noon to avoid timezone issues
+    
+    const dayNames = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă']
+    const monthNames = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 
+                       'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie']
+    
+    const dayName = dayNames[date.getDay()]
+    const dayNum = date.getDate()
+    const monthName = monthNames[date.getMonth()]
+    
+    return `${dayName}, ${dayNum} ${monthName}`
+  }
 
   const handleShiftClick = async (shift: Shift, event: React.MouseEvent) => {
     event.preventDefault()
@@ -666,7 +683,9 @@ export default function Calendar({
                     <div key={request.id} className="border p-2 rounded">
                       <p className="text-sm font-medium">{request.requester?.name || 'Necunoscut'}</p>
                       <p className="text-xs text-gray-600">
-                        Vrea să schimbe: {request.requester_shift?.shift_date || 'Data necunoscută'}
+                        Vrea să schimbe: {request.requester_shift?.shift_date 
+                          ? formatDateForDisplay(request.requester_shift.shift_date)
+                          : 'Data necunoscută'}
                       </p>
                     <div className="flex gap-2 mt-2">
                       <button
