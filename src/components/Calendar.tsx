@@ -254,8 +254,9 @@ export default function Calendar({
       return
     }
     
-    // For staff - if clicking own shift, select it for swap
-    if (status === 'your-shift' && shift.status !== 'pending_swap') {
+    // For staff - if clicking own ASSIGNED shift, select it for swap
+    // Reserved shifts should cycle back to empty, not enter swap mode
+    if (status === 'your-shift' && shift.status === 'assigned') {
       setSelectedForSwap(shift)
       return
     }
