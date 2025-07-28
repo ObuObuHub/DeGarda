@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { type User, type Shift, type UnavailableDate, type SwapRequest, supabase } from '@/lib/supabase'
 import { type Department, DEPARTMENT_COLORS } from '@/types'
+import { parseISODate, formatDateForDB, addDays } from '@/lib/dateUtils'
 import Calendar from './Calendar'
 
 interface DepartmentCalendarProps {
@@ -88,8 +89,8 @@ export default function DepartmentCalendar({
       departmentStaff.forEach(staff => {
         userShiftCounts[staff.id] = shifts.filter(
           s => s.assigned_to === staff.id && 
-          new Date(s.shift_date).getMonth() === selectedDate.getMonth() &&
-          new Date(s.shift_date).getFullYear() === selectedDate.getFullYear() &&
+          parseISODate(s.shift_date).getMonth() === selectedDate.getMonth() &&
+          parseISODate(s.shift_date).getFullYear() === selectedDate.getFullYear() &&
           (s.status === 'assigned' || s.status === 'reserved')
         ).length
       })
@@ -97,7 +98,7 @@ export default function DepartmentCalendar({
       // Generate shifts for each day
       let currentDate = new Date(start)
       while (currentDate <= end) {
-        const dateStr = currentDate.toISOString().split('T')[0]
+        const dateStr = formatDateForDB(currentDate)
         
         // Check if a 24h shift already exists for this day and department
         const existingDayShift = shifts.find(
@@ -112,14 +113,13 @@ export default function DepartmentCalendar({
               .update({ status: 'assigned' })
               .eq('id', existingDayShift.id)
           }
-          currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000)
+          currentDate = addDays(currentDate, 1)
           continue
         }
 
         // Get yesterday's date to check for back-to-back shifts
-        const yesterday = new Date(currentDate)
-        yesterday.setDate(yesterday.getDate() - 1)
-        const yesterdayStr = yesterday.toISOString().split('T')[0]
+        const yesterday = addDays(currentDate, -1)
+        const yesterdayStr = formatDateForDB(yesterday)
         
         // Find available staff for this 24h shift
         const availableStaff = departmentStaff.filter(staff => {
@@ -191,7 +191,7 @@ export default function DepartmentCalendar({
         }
         
         // Move to next day
-        currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000)
+        currentDate = addDays(currentDate, 1)
       }
 
       // Insert all shifts

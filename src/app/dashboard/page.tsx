@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import {} from '@/types'
 import DepartmentCalendar from '@/components/DepartmentCalendar'
 import { DEPARTMENTS } from '@/types'
+import { parseISODate, formatDateForDB, getFirstDayOfMonth, getLastDayOfMonth } from '@/lib/dateUtils'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -62,8 +63,8 @@ export default function DashboardPage() {
   }
 
   const loadShifts = async () => {
-    const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-    const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
+    const startOfMonth = getFirstDayOfMonth(selectedDate)
+    const endOfMonth = getLastDayOfMonth(selectedDate)
 
     const { data } = await supabase
       .from('shifts')
@@ -71,8 +72,8 @@ export default function DashboardPage() {
         *,
         user:assigned_to(name, department, role)
       `)
-      .gte('shift_date', startOfMonth.toISOString().split('T')[0])
-      .lte('shift_date', endOfMonth.toISOString().split('T')[0])
+      .gte('shift_date', formatDateForDB(startOfMonth))
+      .lte('shift_date', formatDateForDB(endOfMonth))
       .order('shift_date')
 
     setShifts(data || [])
@@ -206,7 +207,7 @@ export default function DashboardPage() {
       const month = date.getMonth()
       const year = date.getFullYear()
       const reservedCount = shifts.filter(shift => {
-        const shiftDate = new Date(shift.shift_date)
+        const shiftDate = parseISODate(shift.shift_date)
         return shift.assigned_to === user.id &&
                shift.status === 'reserved' &&
                shiftDate.getMonth() === month &&
@@ -228,7 +229,7 @@ export default function DashboardPage() {
     const { error } = await supabase
       .from('shifts')
       .insert({
-        shift_date: date.toISOString().split('T')[0],
+        shift_date: formatDateForDB(date),
         department: targetDepartment,
         assigned_to: user.role === 'STAFF' ? user.id : null,
         status: user.role === 'STAFF' ? 'reserved' : 'available',
@@ -245,7 +246,7 @@ export default function DashboardPage() {
   const markUnavailable = async (date: Date) => {
     if (!user) return
 
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDateForDB(date)
     
     const { error } = await supabase
       .from('unavailable_dates')
@@ -262,7 +263,7 @@ export default function DashboardPage() {
   const removeUnavailable = async (date: Date) => {
     if (!user) return
 
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDateForDB(date)
     
     const { error } = await supabase
       .from('unavailable_dates')
@@ -463,9 +464,9 @@ export default function DashboardPage() {
     // Create rows for each day
     const rows = []
     for (let day = 1; day <= daysInMonth; day++) {
-      // Create a proper Date object for this day (using the same approach as Calendar component)
-      const date = new Date(year, month, day)
-      const dateStr = date.toISOString().split('T')[0]
+      // Create a proper Date object for this day at noon to avoid timezone issues
+      const date = new Date(year, month, day, 12, 0, 0)
+      const dateStr = formatDateForDB(date)
       
       // Find shifts for this exact date
       const dayShifts = shifts.filter(s => s.shift_date === dateStr)

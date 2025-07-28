@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { type User, type Shift, type UnavailableDate, type SwapRequest } from '@/lib/supabase'
 import { DEPARTMENT_COLORS } from '@/types'
+import { parseISODate, formatDateForDB } from '@/lib/dateUtils'
 
 interface CalendarProps {
   shifts: Shift[]
@@ -103,7 +104,7 @@ export default function Calendar({
   }
 
   const getShiftsForDay = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDateForDB(date)
     return shifts.filter(shift => shift.shift_date === dateStr)
   }
 
@@ -124,7 +125,7 @@ export default function Calendar({
   }
 
   const isUnavailable = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDateForDB(date)
     return unavailableDates.some(
       ud => ud.user_id === currentUser.id && ud.unavailable_date === dateStr
     )
@@ -138,7 +139,7 @@ export default function Calendar({
     const month = selectedDate.getMonth()
     const year = selectedDate.getFullYear()
     return shifts.filter(shift => {
-      const shiftDate = new Date(shift.shift_date)
+      const shiftDate = parseISODate(shift.shift_date)
       return shift.assigned_to === currentUser.id &&
              shift.status === 'reserved' &&
              shiftDate.getMonth() === month &&
@@ -171,15 +172,8 @@ export default function Calendar({
   const weekDays = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Săm']
   
   // Helper function to format date for display
-  const formatDateForDisplay = (dateStr: string, addDay: boolean = false) => {
-    // Parse the date string and add time to avoid timezone issues
-    const [year, month, day] = dateStr.split('-').map(Number)
-    const date = new Date(year, month - 1, day, 12, 0, 0) // Set to noon to avoid timezone issues
-    
-    // Sneaky fix: add 1 day for swap notifications to match calendar display
-    if (addDay) {
-      date.setDate(date.getDate() + 1)
-    }
+  const formatDateForDisplay = (dateStr: string) => {
+    const date = parseISODate(dateStr)
     
     const dayNames = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă']
     const monthNames = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 
@@ -364,7 +358,7 @@ export default function Calendar({
           return (
             <div
               key={date.toISOString()}
-              data-date={date.toISOString().split('T')[0]}
+              data-date={formatDateForDB(date)}
               className={`calendar-day bg-white relative overflow-hidden ${
                 !isCurrentMonthDay ? 'opacity-40' : ''
               } ${isToday(date) ? 'bg-blue-50 border-2 border-blue-300' : ''} ${
@@ -689,7 +683,7 @@ export default function Calendar({
                       <p className="text-sm font-medium">{request.requester?.name || 'Necunoscut'}</p>
                       <p className="text-xs text-gray-600">
                         Vrea să schimbe: {request.requester_shift?.shift_date 
-                          ? formatDateForDisplay(request.requester_shift.shift_date, true)
+                          ? formatDateForDisplay(request.requester_shift.shift_date)
                           : 'Data necunoscută'}
                       </p>
                     <div className="flex gap-2 mt-2">
