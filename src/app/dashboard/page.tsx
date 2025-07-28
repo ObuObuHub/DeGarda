@@ -225,21 +225,47 @@ export default function DashboardPage() {
     const targetDepartment = department || user.department
     if (!targetDepartment) return
 
-    // Create new shift
-    const { error } = await supabase
-      .from('shifts')
-      .insert({
-        shift_date: formatDateForDB(date),
-        department: targetDepartment,
-        assigned_to: user.role === 'STAFF' ? user.id : null,
-        status: user.role === 'STAFF' ? 'reserved' : 'available',
-        shift_time: '24h'
-      })
-
-    if (!error) {
-      loadShifts()
+    const dateStr = formatDateForDB(date)
+    
+    // CHECK FOR EXISTING AVAILABLE SHIFT FIRST!
+    const existingShift = shifts.find(s => 
+      s.shift_date === dateStr && 
+      s.department === targetDepartment &&
+      s.status === 'available'
+    )
+    
+    if (existingShift) {
+      // Reserve the existing shift instead of creating new one
+      const { error } = await supabase
+        .from('shifts')
+        .update({ 
+          assigned_to: user.id,
+          status: 'reserved'
+        })
+        .eq('id', existingShift.id)
+        
+      if (!error) {
+        loadShifts()
+      } else {
+        alert('Nu s-a putut rezerva tura.')
+      }
     } else {
-      alert('Nu s-a putut crea rezervarea.')
+      // Only create new shift if none exists
+      const { error } = await supabase
+        .from('shifts')
+        .insert({
+          shift_date: dateStr,
+          department: targetDepartment,
+          assigned_to: user.role === 'STAFF' ? user.id : null,
+          status: user.role === 'STAFF' ? 'reserved' : 'available',
+          shift_time: '24h'
+        })
+
+      if (!error) {
+        loadShifts()
+      } else {
+        alert('Nu s-a putut crea rezervarea.')
+      }
     }
   }
 

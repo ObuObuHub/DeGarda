@@ -505,9 +505,12 @@ export default function Calendar({
                           )}
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <span className="text-2xl text-gray-400">+</span>
-                        </div>
+                        // Don't show + for available shifts when staff are cycling
+                        currentUser.role !== 'STAFF' ? (
+                          <div className="flex items-center justify-center h-full">
+                            <span className="text-2xl text-gray-400">+</span>
+                          </div>
+                        ) : null
                       )}
                       
                       {/* Status indicators - small corner badges */}
