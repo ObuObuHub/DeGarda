@@ -269,11 +269,10 @@ export default function Calendar({
       return
     }
     
-    // For staff - can reserve available shifts in their department
-    if (status === 'available' && shift.department === currentUser.department) {
-      setSelectedShift(shift)
-      setContextMenuPosition({ x: event.clientX, y: event.clientY })
-      setShowContextMenu(true)
+    // For staff - directly reserve available shifts in their department
+    if (status === 'available' && shift.department === currentUser.department && currentUser.role === 'STAFF') {
+      onReserveShift(shift.id)
+      return
     }
   }
 
