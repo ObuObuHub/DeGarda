@@ -283,38 +283,32 @@ export default function Calendar({
     // Only staff can use the cycling system
     if (currentUser.role !== 'STAFF') return
     
-    // const dateStr = formatDateForDB(date) // Kept for future use
     const dayShifts = getShiftsForDay(date)
-    const isDateUnavailable = isUnavailable(date)
-    const hasReservation = dayShifts.some(s => 
+    const userReservation = dayShifts.find(s => 
       s.assigned_to === currentUser.id && 
       s.status === 'reserved' &&
       s.department === currentUser.department
     )
+    const isDateUnavailable = isUnavailable(date)
     
-    // Cycle through states: Empty → Unavailable → Reserved → Empty → Unavailable...
-    if (hasReservation) {
-      // Reserved → Empty (cancel reservation AND remove unavailable flag)
-      const reservation = dayShifts.find(s => 
-        s.assigned_to === currentUser.id && 
-        s.status === 'reserved' &&
-        s.department === currentUser.department
-      )
-      if (reservation) {
-        await onCancelShift(reservation.id)
-        // MUST remove unavailable flag to truly go back to empty
-        if (isDateUnavailable) {
-          await onRemoveUnavailable(date)
-        }
+    // SIMPLE TOGGLE CYCLE: Empty → Unavailable → Reserved → Empty
+    if (userReservation) {
+      // STATE 3: Reserved → Empty
+      // Cancel shift (will be deleted) and remove unavailable
+      await onCancelShift(userReservation.id)
+      if (isDateUnavailable) {
+        await onRemoveUnavailable(date)
       }
     } else if (isDateUnavailable) {
-      // Unavailable → Reserved (keep unavailable flag)
+      // STATE 2: Unavailable → Reserved
+      // Create reservation (keep unavailable flag)
       if (onCreateReservation) {
-        onCreateReservation(date, currentUser.department)
+        await onCreateReservation(date, currentUser.department)
       }
     } else {
-      // Empty → Unavailable
-      onMarkUnavailable(date)
+      // STATE 1: Empty → Unavailable
+      // Mark as unavailable
+      await onMarkUnavailable(date)
     }
   }
 

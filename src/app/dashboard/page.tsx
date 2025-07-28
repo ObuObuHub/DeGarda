@@ -182,17 +182,34 @@ export default function DashboardPage() {
   const cancelShift = async (shiftId: string) => {
     if (!user) return
 
-    const { error } = await supabase
-      .from('shifts')
-      .update({ 
-        assigned_to: null, 
-        status: 'available' 
-      })
-      .eq('id', shiftId)
-      .eq('assigned_to', user.id)
+    // For staff canceling their own reserved shifts, DELETE the shift entirely
+    // This ensures the toggle cycle works properly: Reserved → Empty
+    const shift = shifts.find(s => s.id === shiftId)
+    
+    if (shift && shift.status === 'reserved' && shift.assigned_to === user.id && user.role === 'STAFF') {
+      // DELETE the shift for clean toggle cycle
+      const { error } = await supabase
+        .from('shifts')
+        .delete()
+        .eq('id', shiftId)
+        
+      if (!error) {
+        loadShifts()
+      }
+    } else {
+      // For other cases (managers, assigned shifts), just make it available
+      const { error } = await supabase
+        .from('shifts')
+        .update({ 
+          assigned_to: null, 
+          status: 'available' 
+        })
+        .eq('id', shiftId)
+        .eq('assigned_to', user.id)
 
-    if (!error) {
-      loadShifts()
+      if (!error) {
+        loadShifts()
+      }
     }
   }
 
