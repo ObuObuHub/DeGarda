@@ -292,21 +292,9 @@ export default function Calendar({
       s.department === currentUser.department
     )
     
-    // Cycle through states: Empty → Unavailable → Reserved → Empty
-    if (!isDateUnavailable && !hasReservation) {
-      // Empty → Unavailable
-      onMarkUnavailable(date)
-    } else if (isDateUnavailable && !hasReservation) {
-      // Unavailable → Reserved
-      // First remove unavailable
-      await onRemoveUnavailable(date)
-      // Then create reservation
-      if (onCreateReservation) {
-        onCreateReservation(date, currentUser.department)
-      }
-    } else if (hasReservation) {
-      // Reserved → Empty
-      // Find and cancel the reservation
+    // Cycle through states: Empty → Unavailable → Reserved → Empty → Unavailable...
+    if (hasReservation) {
+      // Reserved → Empty (just cancel reservation, keep unavailable flag intact)
       const reservation = dayShifts.find(s => 
         s.assigned_to === currentUser.id && 
         s.status === 'reserved' &&
@@ -315,6 +303,14 @@ export default function Calendar({
       if (reservation) {
         onCancelShift(reservation.id)
       }
+    } else if (isDateUnavailable) {
+      // Unavailable → Reserved (DON'T remove unavailable flag)
+      if (onCreateReservation) {
+        onCreateReservation(date, currentUser.department)
+      }
+    } else {
+      // Empty → Unavailable
+      onMarkUnavailable(date)
     }
   }
 
