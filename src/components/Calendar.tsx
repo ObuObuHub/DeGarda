@@ -187,6 +187,14 @@ export default function Calendar({
   }
 
   const handleShiftClick = async (shift: Shift, event: React.MouseEvent) => {
+    // For staff clicking their own reserved shifts, let date handler cycle them
+    if (shift.status === 'reserved' && 
+        shift.assigned_to === currentUser.id && 
+        currentUser.role === 'STAFF') {
+      // Don't prevent propagation - let it bubble to date click
+      return
+    }
+    
     event.preventDefault()
     event.stopPropagation()
     
@@ -398,23 +406,18 @@ export default function Calendar({
               className={`calendar-day bg-white relative overflow-hidden ${
                 !isCurrentMonthDay ? 'opacity-40' : ''
               } ${isToday(date) ? 'bg-blue-50 border-2 border-blue-300' : ''} ${
-                unavailable ? 'bg-gray-100' : ''
-              } ${isPastDate ? 'opacity-60' : ''} ${
+                isPastDate ? 'opacity-60' : ''
+              } ${
                 currentUser.role === 'STAFF' && isCurrentMonthDay && !isPastDate ? 'cursor-pointer hover:shadow-md transition-all group' : ''
               }`}
               onClick={() => handleDateClick(date)}
             >
-              <div className="absolute top-1 left-2 z-10 flex justify-between items-start w-full pr-4">
+              <div className="absolute top-1 left-2 z-10">
                 <span className={`text-sm font-medium ${
                   isToday(date) ? 'text-blue-700' : 'text-gray-900'
                 }`}>
                   {date.getDate()}
                 </span>
-                {unavailable && (
-                  <span className="text-xs text-gray-500" title="Indisponibil">
-                    🚫
-                  </span>
-                )}
               </div>
               
               <div className="absolute inset-0 flex flex-col">
@@ -544,6 +547,13 @@ export default function Calendar({
                currentUser.department && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <span className="text-gray-300 text-6xl opacity-0 group-hover:opacity-100 transition-opacity">○</span>
+                </div>
+              )}
+              
+              {/* Show unavailable indicator centered */}
+              {unavailable && dayShifts.length === 0 && (
+                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center pointer-events-none">
+                  <span className="text-3xl" title="Indisponibil">🚫</span>
                 </div>
               )}
               
