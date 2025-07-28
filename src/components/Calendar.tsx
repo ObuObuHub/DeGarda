@@ -548,8 +548,12 @@ export default function Calendar({
                 </div>
               )}
               
-              {/* Show unavailable indicator centered */}
-              {unavailable && dayShifts.length === 0 && (
+              {/* Show unavailable indicator centered - show when user doesn't have a reservation */}
+              {unavailable && !dayShifts.some(s => 
+                s.assigned_to === currentUser.id && 
+                s.status === 'reserved' &&
+                s.department === currentUser.department
+              ) && (
                 <div className="absolute inset-0 bg-gray-100 flex items-center justify-center pointer-events-none">
                   <span className="text-3xl" title="Indisponibil">🚫</span>
                 </div>
