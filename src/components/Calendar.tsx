@@ -268,14 +268,44 @@ export default function Calendar({
     }
   }
 
-  const handleDateClick = (date: Date, event: React.MouseEvent) => {
-    if (!isCurrentMonth(date) || date < new Date()) return
+  const handleDateClick = async (date: Date) => {
+    // Only allow clicks on current month and future dates
+    if (!isCurrentMonth(date) || date < new Date(new Date().setHours(0,0,0,0))) return
     
-    if (event.shiftKey || event.ctrlKey) {
-      if (isUnavailable(date)) {
-        onRemoveUnavailable(date)
-      } else {
-        onMarkUnavailable(date)
+    // Only staff can use the cycling system
+    if (currentUser.role !== 'STAFF') return
+    
+    // const dateStr = formatDateForDB(date) // Kept for future use
+    const dayShifts = getShiftsForDay(date)
+    const isDateUnavailable = isUnavailable(date)
+    const hasReservation = dayShifts.some(s => 
+      s.assigned_to === currentUser.id && 
+      s.status === 'reserved' &&
+      s.department === currentUser.department
+    )
+    
+    // Cycle through states: Empty → Unavailable → Reserved → Empty
+    if (!isDateUnavailable && !hasReservation) {
+      // Empty → Unavailable
+      onMarkUnavailable(date)
+    } else if (isDateUnavailable && !hasReservation) {
+      // Unavailable → Reserved
+      // First remove unavailable
+      await onRemoveUnavailable(date)
+      // Then create reservation
+      if (onCreateReservation) {
+        onCreateReservation(date, currentUser.department)
+      }
+    } else if (hasReservation) {
+      // Reserved → Empty
+      // Find and cancel the reservation
+      const reservation = dayShifts.find(s => 
+        s.assigned_to === currentUser.id && 
+        s.status === 'reserved' &&
+        s.department === currentUser.department
+      )
+      if (reservation) {
+        onCancelShift(reservation.id)
       }
     }
   }
@@ -320,10 +350,15 @@ export default function Calendar({
             <p className="text-sm text-gray-600">
               Turele tale: {getUserShiftsCount()} din {currentUser.max_shifts_per_month || 8}
             </p>
-            {onCreateReservation && (
-              <p className="text-sm text-gray-600">
-                Rezervări: {getReservedShiftsCount()} din 2
-              </p>
+            {currentUser.role === 'STAFF' && (
+              <>
+                <p className="text-sm text-gray-600">
+                  Rezervări: {getReservedShiftsCount()} din 2
+                </p>
+                <p className="text-sm text-gray-600">
+                  Zile indisponibile: {unavailableDates.filter(ud => ud.user_id === currentUser.id).length}
+                </p>
+              </>
             )}
           </div>
           
@@ -363,8 +398,10 @@ export default function Calendar({
                 !isCurrentMonthDay ? 'opacity-40' : ''
               } ${isToday(date) ? 'bg-blue-50 border-2 border-blue-300' : ''} ${
                 unavailable ? 'bg-gray-100' : ''
-              } ${isPastDate ? 'opacity-60' : ''}`}
-              onClick={(e) => handleDateClick(date, e)}
+              } ${isPastDate ? 'opacity-60' : ''} ${
+                currentUser.role === 'STAFF' && isCurrentMonthDay && !isPastDate ? 'cursor-pointer hover:shadow-md transition-all group' : ''
+              }`}
+              onClick={() => handleDateClick(date)}
             >
               <div className="absolute top-1 left-2 z-10 flex justify-between items-start w-full pr-4">
                 <span className={`text-sm font-medium ${
@@ -498,22 +535,26 @@ export default function Calendar({
                 
               </div>
               
-              {/* Add reservation button for empty cells */}
+              {/* Visual indicator for empty cells that can be clicked */}
               {dayShifts.length === 0 && 
                isCurrentMonthDay && 
                !isPastDate && 
-               onCreateReservation && 
-               (currentUser.department || currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN') && (
-                <button
-                  className="absolute inset-0 border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all flex items-center justify-center group"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onCreateReservation(date, department)
-                  }}
-                  title="Rezervă această dată"
-                >
-                  <span className="text-gray-400 group-hover:text-gray-600 text-3xl mt-4">+</span>
-                </button>
+               currentUser.role === 'STAFF' && 
+               currentUser.department && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span className="text-gray-300 text-6xl opacity-0 group-hover:opacity-100 transition-opacity">○</span>
+                </div>
+              )}
+              
+              {/* Show reserved indicator for staff reservations */}
+              {dayShifts.some(s => 
+                s.assigned_to === currentUser.id && 
+                s.status === 'reserved' &&
+                s.department === currentUser.department
+              ) && (
+                <div className="absolute inset-0 bg-yellow-100 flex items-center justify-center pointer-events-none">
+                  <span className="text-3xl" title="Rezervat de tine">⭐</span>
+                </div>
               )}
             </div>
           )

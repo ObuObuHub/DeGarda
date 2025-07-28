@@ -37,6 +37,13 @@
   
   .calendar-day {
     @apply min-h-[120px] md:min-h-[140px] p-2 md:p-3 border border-gray-100;
+    /* Ensure minimum touch target size for mobile */
+    @apply min-w-[44px];
+  }
+  
+  /* Add active state for better mobile feedback */
+  .calendar-day:active {
+    @apply scale-95 transition-transform duration-150;
   }
   
   .shift-badge {

@@ -104,10 +104,38 @@ export default function DepartmentCalendar({
         const existingDayShift = shifts.find(
           s => s.shift_date === dateStr && s.department === department
         )
+        
+        // Get all reservations for this date in this department
+        const reservationsForDate = shifts.filter(
+          s => s.shift_date === dateStr && 
+               s.department === department && 
+               s.status === 'reserved'
+        )
 
-        // If shift exists and is reserved, update it to assigned
+        // If shift exists, handle accordingly
         if (existingDayShift) {
-          if (existingDayShift.status === 'reserved' && existingDayShift.assigned_to) {
+          // If there are multiple reservations, randomly pick one
+          if (reservationsForDate.length > 1) {
+            const randomIndex = Math.floor(Math.random() * reservationsForDate.length)
+            const winnerReservation = reservationsForDate[randomIndex]
+            
+            // Update winner to assigned
+            await supabase
+              .from('shifts')
+              .update({ status: 'assigned' })
+              .eq('id', winnerReservation.id)
+            
+            // Delete other reservations
+            for (const reservation of reservationsForDate) {
+              if (reservation.id !== winnerReservation.id) {
+                await supabase
+                  .from('shifts')
+                  .delete()
+                  .eq('id', reservation.id)
+              }
+            }
+          } else if (existingDayShift.status === 'reserved' && existingDayShift.assigned_to) {
+            // Single reservation - just assign it
             await supabase
               .from('shifts')
               .update({ status: 'assigned' })
@@ -122,6 +150,15 @@ export default function DepartmentCalendar({
         const yesterdayStr = formatDateForDB(yesterday)
         
         // Find available staff for this 24h shift
+        // Check if ALL staff marked this day as unavailable
+        const unavailableStaffCount = departmentStaff.filter(staff => 
+          unavailableDates.some(
+            ud => ud.user_id === staff.id && ud.unavailable_date === dateStr
+          )
+        ).length
+        
+        const allStaffUnavailable = unavailableStaffCount === departmentStaff.length
+        
         const availableStaff = departmentStaff.filter(staff => {
           // Check if user has reached their monthly limit
           const maxShifts = staff.max_shifts_per_month || 8
@@ -129,7 +166,16 @@ export default function DepartmentCalendar({
             return false
           }
           
-          // Check if user is unavailable on this date
+          // If ALL staff are unavailable, include everyone for random selection
+          if (allStaffUnavailable) {
+            // Still check for shift limit and existing shifts
+            const hasShiftToday = shifts.some(
+              s => s.assigned_to === staff.id && s.shift_date === dateStr
+            )
+            return !hasShiftToday
+          }
+          
+          // Normal unavailability check
           const isUnavailable = unavailableDates.some(
             ud => ud.user_id === staff.id && ud.unavailable_date === dateStr
           )

@@ -436,20 +436,30 @@ export default function DashboardPage() {
   const deleteAllShifts = async () => {
     if (!user || user.role !== 'ADMIN') return
 
-    if (!confirm('Sigur vrei să ștergi TOATE turele? Această acțiune nu poate fi anulată!')) {
+    if (!confirm('Sigur vrei să ștergi TOATE turele și zilele indisponibile? Această acțiune nu poate fi anulată!')) {
       return
     }
 
-    const { error } = await supabase
+    // Delete all shifts
+    const { error: shiftsError } = await supabase
       .from('shifts')
       .delete()
       .gte('id', '00000000-0000-0000-0000-000000000000') // Delete all
 
-    if (!error) {
-      alert('Toate turele au fost șterse!')
-      loadShifts()
+    // Delete all unavailable dates
+    const { error: unavailableError } = await supabase
+      .from('unavailable_dates')
+      .delete()
+      .gte('id', '00000000-0000-0000-0000-000000000000') // Delete all
+
+    if (!shiftsError && !unavailableError) {
+      alert('Toate turele și zilele indisponibile au fost șterse!')
+      await Promise.all([loadShifts(), loadUnavailableDates()])
     } else {
-      alert('Eroare la ștergerea turelor: ' + error.message)
+      const errors = []
+      if (shiftsError) errors.push(`Ture: ${shiftsError.message}`)
+      if (unavailableError) errors.push(`Zile indisponibile: ${unavailableError.message}`)
+      alert('Eroare la ștergere: ' + errors.join(', '))
     }
   }
 
