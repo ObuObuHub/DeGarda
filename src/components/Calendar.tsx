@@ -294,14 +294,18 @@ export default function Calendar({
     
     // Cycle through states: Empty → Unavailable → Reserved → Empty → Unavailable...
     if (hasReservation) {
-      // Reserved → Empty (just cancel reservation, DON'T remove unavailable flag)
+      // Reserved → Empty (cancel reservation AND remove unavailable flag)
       const reservation = dayShifts.find(s => 
         s.assigned_to === currentUser.id && 
         s.status === 'reserved' &&
         s.department === currentUser.department
       )
       if (reservation) {
-        onCancelShift(reservation.id)
+        await onCancelShift(reservation.id)
+        // MUST remove unavailable flag to truly go back to empty
+        if (isDateUnavailable) {
+          await onRemoveUnavailable(date)
+        }
       }
     } else if (isDateUnavailable) {
       // Unavailable → Reserved (keep unavailable flag)
@@ -504,14 +508,7 @@ export default function Calendar({
                             </div>
                           )}
                         </div>
-                      ) : (
-                        // Show + only for non-staff roles and when shift is available
-                        (currentUser.role !== 'STAFF' && status === 'available') ? (
-                          <div className="flex items-center justify-center h-full">
-                            <span className="text-2xl text-gray-400">+</span>
-                          </div>
-                        ) : null
-                      )}
+                      ) : null}
                       
                       {/* Status indicators - small corner badges */}
                       <div className="absolute top-0.5 right-0.5 flex gap-0.5">
