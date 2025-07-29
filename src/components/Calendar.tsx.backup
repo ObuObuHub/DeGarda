@@ -53,8 +53,6 @@ export default function Calendar({
   const [selectedForSwap, setSelectedForSwap] = useState<Shift | null>(null)
   const [selectedTargetShifts, setSelectedTargetShifts] = useState<Set<string>>(new Set())
   const [showSwapMenu, setShowSwapMenu] = useState<string | null>(null)
-  const [isPortrait, setIsPortrait] = useState(false)
-  const [showRotationHint, setShowRotationHint] = useState(true)
   
   // Helper functions for swap requests
   const getIncomingSwapRequests = (shiftId: string) => {
@@ -85,24 +83,6 @@ export default function Calendar({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedForSwap])
-  
-  // Add orientation detection
-  useEffect(() => {
-    const checkOrientation = () => {
-      const portrait = window.matchMedia('(orientation: portrait)').matches
-      const isMobile = window.innerWidth < 768
-      setIsPortrait(portrait && isMobile)
-    }
-    
-    checkOrientation()
-    window.addEventListener('resize', checkOrientation)
-    window.addEventListener('orientationchange', checkOrientation)
-    
-    return () => {
-      window.removeEventListener('resize', checkOrientation)
-      window.removeEventListener('orientationchange', checkOrientation)
-    }
-  }, [])
   
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
@@ -190,7 +170,6 @@ export default function Calendar({
 
   const days = getDaysInMonth(selectedDate)
   const weekDays = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Săm']
-  const weekDaysMobile = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
   
   // Helper function to format date for display
   const formatDateForDisplay = (dateStr: string) => {
@@ -224,6 +203,7 @@ export default function Calendar({
     
     // If clicking on a shift with incoming requests, show the swap menu
     if (incomingRequests.length > 0 && status === 'your-shift') {
+      setContextMenuPosition({ x: event.clientX, y: event.clientY })
       setShowSwapMenu(shift.id)
       return
     }
@@ -339,22 +319,6 @@ export default function Calendar({
 
   return (
     <div className={department ? "p-4" : "card"}>
-      {/* Show rotation hint for mobile portrait mode */}
-      {isPortrait && showRotationHint && (
-        <div className="mb-4 p-3 bg-blue-100 border border-blue-300 rounded-lg text-sm flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">📱</span>
-            <span>Rotește telefonul pentru o vizualizare mai bună</span>
-          </div>
-          <button
-            onClick={() => setShowRotationHint(false)}
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-      
       {/* Show swap hint when a shift is selected */}
       {selectedForSwap && (
         <div className="mb-4 p-3 bg-purple-100 border border-purple-300 rounded-lg text-sm">
@@ -412,13 +376,12 @@ export default function Calendar({
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
         {/* Week day headers */}
-        {weekDays.map((day, index) => (
+        {weekDays.map((day) => (
           <div
             key={day}
             className="bg-gray-100 px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-700"
           >
-            <span className="hidden sm:inline">{day}</span>
-            <span className="sm:hidden">{weekDaysMobile[index]}</span>
+            {day}
           </div>
         ))}
 
@@ -510,8 +473,8 @@ export default function Calendar({
                     >
                       {/* Show staff name or availability */}
                       {shift.user ? (
-                        <div className="flex items-center justify-center h-full relative px-1">
-                          <div className={`shift-name font-semibold whitespace-nowrap overflow-hidden text-ellipsis ${
+                        <div className="flex items-center justify-center h-full relative">
+                          <div className={`text-xs font-semibold ${
                             selectedForSwap?.id === shift.id
                               ? 'text-white'
                               : hasIncomingRequest
@@ -603,38 +566,30 @@ export default function Calendar({
       </div>
 
 
-      {/* Mobile-friendly Modal instead of context menu */}
+      {/* Context Menu */}
       {showContextMenu && selectedShift && (
         <>
           <div 
-            className="fixed inset-0 z-40 bg-black bg-opacity-50" 
+            className="fixed inset-0 z-40" 
             onClick={closeContextMenu}
           />
           <div
-            className={`fixed z-50 bg-white rounded-lg shadow-xl border ${
-              window.innerWidth < 768 
-                ? 'bottom-0 left-0 right-0 rounded-b-none p-4 animate-slide-up'
-                : 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-4 min-w-[300px]'
-            }`}
+            className="fixed bg-white rounded-lg shadow-lg border p-2 z-50 min-w-[180px]"
+            style={{ 
+              left: `${contextMenuPosition.x}px`, 
+              top: `${contextMenuPosition.y}px` 
+            }}
           >
-            <div className="mb-4">
-              <h3 className="font-semibold text-lg mb-1">Acțiuni pentru tură</h3>
-              <p className="text-sm text-gray-600">
-                {selectedShift.shift_date} - {selectedShift.department}
-                {selectedShift.user && ` - ${selectedShift.user.name}`}
-              </p>
-            </div>
             {(currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER') ? (
-              <div className="space-y-2">
+              <>
                 {selectedShift.assigned_to && (
                   <button
                     onClick={() => {
                       setShowAssignMenu(true)
                     }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-lg text-base flex items-center gap-3 transition-colors"
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
                   >
-                    <span className="text-xl">👥</span>
-                    <span>Reasignează tura</span>
+                    👥 Reasignează tura
                   </button>
                 )}
                 {!selectedShift.assigned_to && (
@@ -642,10 +597,9 @@ export default function Calendar({
                     onClick={() => {
                       setShowAssignMenu(true)
                     }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-lg text-base flex items-center gap-3 transition-colors"
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
                   >
-                    <span className="text-xl">👥</span>
-                    <span>Asignează tura</span>
+                    👥 Asignează tura
                   </button>
                 )}
                 {selectedShift.assigned_to && (
@@ -656,10 +610,9 @@ export default function Calendar({
                       }
                       closeContextMenu()
                     }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-lg text-base flex items-center gap-3 transition-colors"
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
                   >
-                    <span className="text-xl">🔓</span>
-                    <span>Marchează disponibil</span>
+                    🔓 Marchează disponibil
                   </button>
                 )}
                 {currentUser.role === 'ADMIN' && (
@@ -670,26 +623,24 @@ export default function Calendar({
                       }
                       closeContextMenu()
                     }}
-                    className="w-full text-left px-4 py-3 hover:bg-red-100 rounded-lg text-base text-red-600 flex items-center gap-3 transition-colors"
+                    className="w-full text-left px-3 py-2 hover:bg-red-100 rounded text-sm text-red-600"
                   >
-                    <span className="text-xl">🗑️</span>
-                    <span>Șterge tura</span>
+                    🗑️ Șterge tura
                   </button>
                 )}
-              </div>
+              </>
             ) : getShiftStatus(selectedShift) === 'your-shift' ? (
-              <div className="space-y-2">
+              <>
                 <button
                   onClick={() => {
                     onCancelShift(selectedShift.id)
                     closeContextMenu()
                   }}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-lg text-base flex items-center gap-3 transition-colors"
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
                 >
-                  <span className="text-xl">❌</span>
-                  <span>Anulează tura</span>
+                  ❌ Anulează tura
                 </button>
-              </div>
+              </>
             ) : getShiftStatus(selectedShift) === 'available' && 
                 (currentUser.role !== 'STAFF' || selectedShift.department === currentUser.department) ? (
               <button
@@ -697,35 +648,34 @@ export default function Calendar({
                   onReserveShift(selectedShift.id)
                   closeContextMenu()
                 }}
-                className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-lg text-base flex items-center gap-3 transition-colors"
+                className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
               >
-                <span className="text-xl">✅</span>
-                <span>Rezervă tura</span>
+                ✅ Rezervă tura
               </button>
             ) : null}
           </div>
         </>
       )}
       
-      {/* Staff Assignment Menu - Mobile Friendly */}
+      {/* Staff Assignment Menu */}
       {showAssignMenu && selectedShift && (
         <>
           <div 
-            className="fixed inset-0 z-50 bg-black bg-opacity-50" 
+            className="fixed inset-0 z-40" 
             onClick={() => {
               setShowAssignMenu(false)
               closeContextMenu()
             }}
           />
           <div
-            className={`fixed z-50 bg-white rounded-lg shadow-xl border ${
-              window.innerWidth < 768 
-                ? 'bottom-0 left-0 right-0 rounded-b-none p-4 max-h-[70vh] animate-slide-up'
-                : 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-4 min-w-[300px] max-h-[80vh]'
-            } overflow-y-auto`}
+            className="fixed bg-white rounded-lg shadow-lg border p-4 z-50 min-w-[200px] max-h-80 overflow-y-auto"
+            style={{ 
+              left: `${contextMenuPosition.x + 190}px`, 
+              top: `${contextMenuPosition.y}px` 
+            }}
           >
-            <h3 className="font-semibold text-lg mb-4 sticky top-0 bg-white pb-2">Alege personal:</h3>
-            <div className="space-y-2">
+            <h3 className="font-medium text-gray-900 mb-2">Alege personal:</h3>
+            <div className="space-y-1">
               {users.filter(u => u.role === 'STAFF').map(user => (
                 <button
                   key={user.id}
@@ -736,7 +686,7 @@ export default function Calendar({
                     setShowAssignMenu(false)
                     closeContextMenu()
                   }}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-lg text-base transition-colors"
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
                 >
                   {user.name}
                 </button>
@@ -762,11 +712,11 @@ export default function Calendar({
               onClick={() => setShowSwapMenu(null)}
             />
             <div
-              className={`fixed z-50 bg-white rounded-lg shadow-xl border ${
-                window.innerWidth < 768 
-                  ? 'bottom-0 left-0 right-0 rounded-b-none p-4 max-h-[50vh] animate-slide-up'
-                  : 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-4 min-w-[350px] max-h-[80vh]'
-              } overflow-y-auto`}
+              className="fixed bg-white rounded-lg shadow-lg border p-4 z-50 min-w-[250px] max-h-96 overflow-y-auto"
+              style={{ 
+                left: `${Math.min(contextMenuPosition.x, window.innerWidth - 300)}px`, 
+                top: `${Math.min(contextMenuPosition.y, window.innerHeight - 200)}px` 
+              }}
             >
               <h3 className="font-semibold mb-3">Cereri de schimb primite:</h3>
               <div className="space-y-2">

@@ -46,7 +46,44 @@
     @apply scale-95 transition-transform duration-150;
   }
   
+  /* Mobile portrait specific styles */
+  @media (max-width: 768px) and (orientation: portrait) {
+    .calendar-day {
+      @apply min-h-[80px] p-1;
+    }
+    
+    .shift-name {
+      font-size: clamp(0.5rem, 2vw, 0.7rem);
+      line-height: 1.2;
+    }
+  }
+  
+  /* Mobile landscape gets better sizing */
+  @media (max-width: 896px) and (orientation: landscape) {
+    .calendar-day {
+      @apply min-h-[100px] p-2;
+    }
+    
+    .shift-name {
+      font-size: 0.75rem;
+    }
+  }
+  
   .shift-badge {
     @apply relative text-white font-medium cursor-pointer transition-all hover:shadow-sm;
+  }
+  
+  /* Mobile bottom sheet animation */
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
   }
 }
