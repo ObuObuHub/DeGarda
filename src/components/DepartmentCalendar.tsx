@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import { type User, type Shift, type UnavailableDate, type SwapRequest, supabase } from '@/lib/supabase'
-import { type Department, type ShiftType, DEPARTMENT_COLORS } from '@/types'
+import { type ShiftType, DEPARTMENT_COLORS } from '@/types'
 import { parseISODate, formatDateForDB, addDays } from '@/lib/dateUtils'
 import Calendar from './Calendar'
 
 interface DepartmentCalendarProps {
-  department: Department
+  department: string
   shifts: Shift[]
   shiftTypes: ShiftType[]
   unavailableDates: UnavailableDate[]
@@ -27,6 +27,7 @@ interface DepartmentCalendarProps {
   onDateChange: (date: Date) => void
   users: User[]
   onShiftsGenerated: () => void
+  departmentColor?: string
 }
 
 export default function DepartmentCalendar({
@@ -49,7 +50,8 @@ export default function DepartmentCalendar({
   selectedDate,
   onDateChange,
   users,
-  onShiftsGenerated
+  onShiftsGenerated,
+  departmentColor
 }: DepartmentCalendarProps) {
   const [generating, setGenerating] = useState(false)
   const [selectedShiftTypeId, setSelectedShiftTypeId] = useState<string>('')
@@ -289,11 +291,14 @@ export default function DepartmentCalendar({
     }
   }
 
+  // Get the color to use (from prop or fallback to DEPARTMENT_COLORS or default)
+  const headerColor = departmentColor || DEPARTMENT_COLORS[department] || '#6B7280'
+
   return (
     <div className="mb-8">
       <div
         className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-4 rounded-t-lg text-white font-semibold"
-        style={{ backgroundColor: DEPARTMENT_COLORS[department] }}
+        style={{ backgroundColor: headerColor }}
       >
         <h2 className="text-lg">{department}</h2>
         {canGenerateShifts && hospitalShiftTypes.length > 0 && (

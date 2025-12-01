@@ -494,9 +494,9 @@ export default function Calendar({
                           ? '#FCD34D' // Yellow for user's shifts
                           : status === 'pending-swap'
                           ? '#FB923C' // Orange for pending swap
-                          : status === 'available' 
+                          : status === 'available'
                           ? 'transparent'
-                          : DEPARTMENT_COLORS[shift.department] 
+                          : (shift.department ? DEPARTMENT_COLORS[shift.department] : '#6B7280') 
                       }}
                       onClick={(e) => handleShiftClick(shift, e)}
                       title={`${shift.department} - ${

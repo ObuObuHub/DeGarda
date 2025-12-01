@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { type Hospital, type ShiftType } from '@/types'
+import { type Hospital, type ShiftType, type Department } from '@/types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -22,7 +22,9 @@ export type User = {
   name: string
   personal_code: string
   role: 'SUPER_ADMIN' | 'HOSPITAL_ADMIN' | 'DEPARTMENT_MANAGER' | 'STAFF'
-  department?: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
+  department?: string  // Legacy field - kept for backward compatibility
+  department_id?: string
+  department_obj?: Department  // Populated relation
   hospital_id?: string
   hospital?: Hospital
   max_shifts_per_month?: number
@@ -34,7 +36,9 @@ export type Shift = {
   shift_date: string
   shift_type_id: string
   shift_type?: ShiftType
-  department: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
+  department?: string  // Legacy field - kept for backward compatibility
+  department_id?: string
+  department_obj?: Department  // Populated relation
   hospital_id: string
   assigned_to?: string
   status: 'available' | 'reserved' | 'assigned' | 'pending_swap'
@@ -65,4 +69,4 @@ export type SwapRequest = {
   target_shift?: Shift
 }
 
-export { type Hospital, type ShiftType }
+export { type Hospital, type ShiftType, type Department }

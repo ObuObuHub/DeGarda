@@ -2,18 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { supabase, type User } from '@/lib/supabase'
-import { type Hospital, type ShiftType } from '@/types'
+import { type Hospital, type ShiftType, type Department } from '@/types'
 import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import HospitalManagement from '@/components/HospitalManagement'
 import HospitalSelector from '@/components/HospitalSelector'
 import StaffManagement from '@/components/StaffManagement'
 import ShiftTypeManagement from '@/components/ShiftTypeManagement'
+import DepartmentManagement from '@/components/DepartmentManagement'
 
 export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null)
   const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -27,6 +29,7 @@ export default function AdminPage() {
     if (user) {
       loadHospitals()
       loadShiftTypes()
+      loadDepartments()
       loadUsers()
     }
   }, [user, selectedHospitalId])
@@ -80,6 +83,16 @@ export default function AdminPage() {
 
     const { data } = await query
     setAllUsers(data || [])
+  }
+
+  const loadDepartments = async () => {
+    const { data } = await supabase
+      .from('departments')
+      .select('*')
+      .eq('is_active', true)
+      .order('name')
+
+    setDepartments(data || [])
   }
 
   const handleLogout = () => {
@@ -206,6 +219,56 @@ export default function AdminPage() {
     }
 
     await loadShiftTypes()
+    return true
+  }
+
+  // Department CRUD
+  const addDepartment = async (data: Omit<Department, 'id' | 'created_at'>): Promise<boolean> => {
+    const { error } = await supabase
+      .from('departments')
+      .insert(data)
+
+    if (error) {
+      if (error.code === '23505') {
+        alert('Un departament cu acest nume există deja pentru acest spital!')
+      } else {
+        alert(`Eroare: ${error.message}`)
+      }
+      return false
+    }
+
+    await loadDepartments()
+    return true
+  }
+
+  const updateDepartment = async (id: string, data: Partial<Department>): Promise<boolean> => {
+    const { error } = await supabase
+      .from('departments')
+      .update(data)
+      .eq('id', id)
+
+    if (error) {
+      alert(`Eroare: ${error.message}`)
+      return false
+    }
+
+    await loadDepartments()
+    return true
+  }
+
+  const deleteDepartment = async (id: string): Promise<boolean> => {
+    // Soft delete by setting is_active to false
+    const { error } = await supabase
+      .from('departments')
+      .update({ is_active: false })
+      .eq('id', id)
+
+    if (error) {
+      alert(`Eroare: ${error.message}`)
+      return false
+    }
+
+    await loadDepartments()
     return true
   }
 
@@ -342,6 +405,31 @@ export default function AdminPage() {
             </div>
           </div>
 
+          {/* Department Management */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🏢</span>
+                <span className="text-lg font-semibold text-gray-900">
+                  Departamente
+                </span>
+              </div>
+              <HospitalSelector
+                hospitals={hospitals}
+                selectedHospitalId={selectedHospitalId}
+                onSelect={setSelectedHospitalId}
+                showAllOption={false}
+              />
+            </div>
+            <DepartmentManagement
+              departments={departments}
+              selectedHospitalId={selectedHospitalId}
+              onAddDepartment={addDepartment}
+              onUpdateDepartment={updateDepartment}
+              onDeleteDepartment={deleteDepartment}
+            />
+          </div>
+
           {/* User Management Section */}
           <div className="bg-white rounded-lg shadow-sm border">
             <div className="px-6 py-4 border-b flex items-center justify-between">
@@ -362,6 +450,8 @@ export default function AdminPage() {
               <StaffManagement
                 currentUser={user}
                 allUsers={allUsers}
+                hospitals={hospitals}
+                departments={departments}
                 onAddUser={addUser}
                 onUpdateUser={updateUser}
                 onDeleteUser={deleteUser}

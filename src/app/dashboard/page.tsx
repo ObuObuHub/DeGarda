@@ -6,13 +6,14 @@ import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import DepartmentCalendar from '@/components/DepartmentCalendar'
 import StaffManagement from '@/components/StaffManagement'
-import { DEPARTMENTS, type ShiftType } from '@/types'
+import { type ShiftType, type Department } from '@/types'
 import { parseISODate, formatDateForDB, getFirstDayOfMonth, getLastDayOfMonth } from '@/lib/dateUtils'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [shifts, setShifts] = useState<Shift[]>([])
   const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const [unavailableDates, setUnavailableDates] = useState<UnavailableDate[]>([])
   const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -53,6 +54,7 @@ export default function DashboardPage() {
     const promises = [
       loadShifts(),
       loadShiftTypes(),
+      loadDepartments(),
       loadUnavailableDates(),
       loadSwapRequests()
     ]
@@ -106,6 +108,24 @@ export default function DashboardPage() {
 
     const { data } = await query
     setShiftTypes(data || [])
+  }
+
+  const loadDepartments = async () => {
+    if (!user) return
+
+    let query = supabase
+      .from('departments')
+      .select('*')
+      .eq('is_active', true)
+      .order('name')
+
+    // Filter by hospital for non-super-admins
+    if (user.role !== 'SUPER_ADMIN' && user.hospital_id) {
+      query = query.eq('hospital_id', user.hospital_id)
+    }
+
+    const { data } = await query
+    setDepartments(data || [])
   }
 
   const loadUnavailableDates = async () => {
@@ -852,6 +872,7 @@ export default function DashboardPage() {
               }
               return false
             })}
+            departments={departments}
             onAddUser={addUser}
             onUpdateUser={updateUser}
             onDeleteUser={deleteUser}
@@ -860,18 +881,18 @@ export default function DashboardPage() {
 
         {/* Department Calendars */}
         <div className="space-y-6">
-          {DEPARTMENTS
-            .filter(department =>
+          {departments
+            .filter(dept =>
               // Staff only see their own department, managers/admins see all
               user.role === 'SUPER_ADMIN' ||
               user.role === 'HOSPITAL_ADMIN' ||
               user.role === 'DEPARTMENT_MANAGER' ||
-              department === user.department
+              dept.name === user.department
             )
-            .map(department => (
+            .map(dept => (
               <DepartmentCalendar
-                key={department}
-                department={department}
+                key={dept.id}
+                department={dept.name}
                 shifts={shifts}
                 shiftTypes={shiftTypes}
                 unavailableDates={unavailableDates}
@@ -891,6 +912,7 @@ export default function DashboardPage() {
                 onDateChange={setSelectedDate}
                 users={allUsers}
                 onShiftsGenerated={loadShifts}
+                departmentColor={dept.color}
               />
             ))}
         </div>

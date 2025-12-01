@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { type User } from '@/lib/supabase'
-import { DEPARTMENTS, type Department, type UserRole, type Hospital } from '@/types'
+import { type UserRole, type Hospital, type Department } from '@/types'
 
 interface StaffManagementProps {
   currentUser: User
   allUsers: User[]
   hospitals?: Hospital[]
+  departments?: Department[]
   onAddUser: (userData: Omit<User, 'id' | 'created_at'>) => Promise<boolean>
   onUpdateUser: (userId: string, userData: Partial<User>) => Promise<boolean>
   onDeleteUser: (userId: string) => Promise<boolean>
@@ -16,7 +17,7 @@ interface StaffManagementProps {
 interface FormData {
   name: string
   personal_code: string
-  department: Department | ''
+  department: string
   role: UserRole
   hospital_id: string
   max_shifts_per_month: number
@@ -33,6 +34,7 @@ export default function StaffManagement({
   currentUser,
   allUsers,
   hospitals = [],
+  departments = [],
   onAddUser,
   onUpdateUser,
   onDeleteUser
@@ -83,9 +85,9 @@ export default function StaffManagement({
   }
 
   // Determine which departments the current user can assign
-  const getAllowedDepartments = (): Department[] => {
+  const getAllowedDepartments = (): string[] => {
     if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'HOSPITAL_ADMIN') {
-      return DEPARTMENTS
+      return departments.map(d => d.name)
     }
     if (currentUser.role === 'DEPARTMENT_MANAGER' && currentUser.department) {
       return [currentUser.department]
@@ -368,7 +370,7 @@ export default function StaffManagement({
                   </label>
                   <select
                     value={formData.department}
-                    onChange={e => setFormData({ ...formData, department: e.target.value as Department })}
+                    onChange={e => setFormData({ ...formData, department: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   >

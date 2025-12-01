@@ -1,7 +1,19 @@
-export type Department = 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
+// Legacy type for backward compatibility during migration
+export type DepartmentName = 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
 export type UserRole = 'SUPER_ADMIN' | 'HOSPITAL_ADMIN' | 'DEPARTMENT_MANAGER' | 'STAFF'
 
-export const DEPARTMENTS: Department[] = ['ATI', 'Urgente', 'Chirurgie', 'Medicina Interna']
+// Dynamic department from database
+export interface Department {
+  id: string
+  hospital_id: string
+  name: string
+  color: string
+  is_active: boolean
+  created_at: string
+}
+
+// Legacy constant - kept for backward compatibility
+export const DEPARTMENTS: DepartmentName[] = ['ATI', 'Urgente', 'Chirurgie', 'Medicina Interna']
 
 export interface Hospital {
   id: string
@@ -23,9 +35,10 @@ export interface ShiftType {
   created_at: string
 }
 
-export const DEPARTMENT_COLORS: Record<Department, string> = {
-  'ATI': '#9ca3af',
-  'Urgente': '#3b82f6',
-  'Chirurgie': '#10b981',
-  'Medicina Interna': '#f59e0b'
+// Legacy colors - now stored in department.color in database
+export const DEPARTMENT_COLORS: Record<string, string> = {
+  'ATI': '#DC2626',
+  'Urgente': '#2563EB',
+  'Chirurgie': '#16A34A',
+  'Medicina Interna': '#9333EA'
 }
