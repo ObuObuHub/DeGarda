@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { supabase, type User, type Shift, type UnavailableDate, type SwapRequest } from '@/lib/supabase'
 import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
-import {} from '@/types'
 import DepartmentCalendar from '@/components/DepartmentCalendar'
 import { DEPARTMENTS } from '@/types'
 import { parseISODate, formatDateForDB, getFirstDayOfMonth, getLastDayOfMonth } from '@/lib/dateUtils'
@@ -81,30 +80,27 @@ export default function DashboardPage() {
 
   const loadUnavailableDates = async () => {
     if (!user) return
-    
-    const { data } = await supabase
+
+    // Managers and admins need to see ALL staff unavailability to generate shifts properly
+    // Staff only need to see their own unavailable dates
+    const query = supabase
       .from('unavailable_dates')
       .select('*')
-      .eq('user_id', user.id)
+
+    // Only filter by user_id for staff members
+    if (user.role === 'STAFF') {
+      query.eq('user_id', user.id)
+    }
+
+    const { data } = await query
 
     setUnavailableDates(data || [])
   }
 
   const loadSwapRequests = async () => {
     if (!user) return
-    
-    // First try simple query
-    const { data: simpleData, error: simpleError } = await supabase
-      .from('swap_requests')
-      .select('*')
-      .or(`requester_id.eq.${user.id},target_user_id.eq.${user.id}`)
-      .eq('status', 'pending')
-    
-    console.log('Simple swap requests:', simpleData)
-    console.log('Simple error:', simpleError)
-    
-    // Then try with joins (might fail)
-    const { data, error } = await supabase
+
+    const { data } = await supabase
       .from('swap_requests')
       .select(`
         *,
@@ -116,11 +112,7 @@ export default function DashboardPage() {
       .or(`requester_id.eq.${user.id},target_user_id.eq.${user.id}`)
       .eq('status', 'pending')
 
-    console.log('Swap requests with joins:', data)
-    console.log('Join error:', error)
-    
-    // Use simple data for now if joins fail
-    setSwapRequests(data || simpleData || [])
+    setSwapRequests(data || [])
   }
 
 
@@ -390,57 +382,59 @@ export default function DashboardPage() {
   const acceptSwapRequest = async (swapRequestId: string) => {
     if (!user) return
 
-    // Get the swap request details
     const swapRequest = swapRequests.find(sr => sr.id === swapRequestId)
-    if (!swapRequest) {
-      console.error('Swap request not found:', swapRequestId)
+    if (!swapRequest) return
+
+    // Verify authorization - only target user can accept
+    if (swapRequest.target_user_id !== user.id) {
+      alert('Nu ai autorizare pentru această acțiune.')
       return
     }
 
-    console.log('Accepting swap request:', swapRequest)
+    // Verify both shifts still exist
+    const requesterShift = shifts.find(s => s.id === swapRequest.requester_shift_id)
+    const targetShift = shifts.find(s => s.id === swapRequest.target_shift_id)
+    if (!requesterShift || !targetShift) {
+      alert('Una din ture nu mai există.')
+      await loadSwapRequests()
+      return
+    }
 
-    // Perform the swap in a transaction-like manner
     // Update requester's shift to go to target user
-    const { data: data1, error: error1 } = await supabase
+    const { error: error1 } = await supabase
       .from('shifts')
-      .update({ 
+      .update({
         assigned_to: swapRequest.target_user_id,
-        status: 'assigned' // Ensure status is updated
+        status: 'assigned'
       })
       .eq('id', swapRequest.requester_shift_id)
-      .select()
 
     if (error1) {
-      console.error('Error updating requester shift:', error1)
-      alert(`Eroare la schimbarea turei requester: ${error1.message}`)
+      alert(`Eroare la schimbarea turei: ${error1.message}`)
       return
     }
-    console.log('Updated requester shift:', data1)
 
     // Update target's shift to go to requester
-    const { data: data2, error: error2 } = await supabase
+    const { error: error2 } = await supabase
       .from('shifts')
-      .update({ 
+      .update({
         assigned_to: swapRequest.requester_id,
-        status: 'assigned' // Ensure status is updated
+        status: 'assigned'
       })
       .eq('id', swapRequest.target_shift_id)
-      .select()
 
     if (error2) {
-      console.error('Error updating target shift:', error2)
-      // Try to rollback the first update
+      // Rollback the first update
       await supabase
         .from('shifts')
-        .update({ 
+        .update({
           assigned_to: swapRequest.requester_id,
           status: 'assigned'
         })
         .eq('id', swapRequest.requester_shift_id)
-      alert(`Eroare la schimbarea turei target: ${error2.message}`)
+      alert(`Eroare la schimbarea turei: ${error2.message}`)
       return
     }
-    console.log('Updated target shift:', data2)
 
     // Update swap request status
     const { error: error3 } = await supabase
@@ -464,6 +458,15 @@ export default function DashboardPage() {
 
   const rejectSwapRequest = async (swapRequestId: string) => {
     if (!user) return
+
+    // Verify authorization - only target or requester can reject
+    const swapRequest = swapRequests.find(sr => sr.id === swapRequestId)
+    if (!swapRequest) return
+
+    if (swapRequest.target_user_id !== user.id && swapRequest.requester_id !== user.id) {
+      alert('Nu ai autorizare pentru această acțiune.')
+      return
+    }
 
     const { error } = await supabase
       .from('swap_requests')

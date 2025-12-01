@@ -17,10 +17,11 @@ export const supabase = createClient(
 // Types for our database
 export type User = {
   id: string
-  email: string
+  email?: string
   name: string
+  personal_code: string
   role: 'STAFF' | 'MANAGER' | 'ADMIN'
-  department: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
+  department?: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
   max_shifts_per_month?: number
   created_at: string
 }

@@ -36,11 +36,12 @@ CREATE TABLE shifts (
 CREATE TABLE swap_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     requester_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    from_shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
-    to_shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
-    status VARCHAR CHECK (status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
-    approved_by UUID REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT NOW()
+    requester_shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+    target_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    target_shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+    status VARCHAR CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled')) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Unavailable dates table (when staff cannot work)

@@ -145,27 +145,29 @@ export default function DepartmentCalendar({
           continue
         }
 
-        // Get yesterday's date to check for back-to-back shifts
+        // Get yesterday's and tomorrow's dates to check for back-to-back shifts
         const yesterday = addDays(currentDate, -1)
         const yesterdayStr = formatDateForDB(yesterday)
-        
+        const tomorrow = addDays(currentDate, 1)
+        const tomorrowStr = formatDateForDB(tomorrow)
+
         // Find available staff for this 24h shift
         // Check if ALL staff marked this day as unavailable
-        const unavailableStaffCount = departmentStaff.filter(staff => 
+        const unavailableStaffCount = departmentStaff.filter(staff =>
           unavailableDates.some(
             ud => ud.user_id === staff.id && ud.unavailable_date === dateStr
           )
         ).length
-        
+
         const allStaffUnavailable = unavailableStaffCount === departmentStaff.length
-        
+
         const availableStaff = departmentStaff.filter(staff => {
           // Check if user has reached their monthly limit
           const maxShifts = staff.max_shifts_per_month || 8
           if (userShiftCounts[staff.id] >= maxShifts) {
             return false
           }
-          
+
           // If ALL staff are unavailable, include everyone for random selection
           if (allStaffUnavailable) {
             // Still check for shift limit and existing shifts
@@ -174,17 +176,17 @@ export default function DepartmentCalendar({
             )
             return !hasShiftToday
           }
-          
+
           // Normal unavailability check
           const isUnavailable = unavailableDates.some(
             ud => ud.user_id === staff.id && ud.unavailable_date === dateStr
           )
-          
+
           // Check if user already has a shift on this day
           const hasShiftToday = shifts.some(
             s => s.assigned_to === staff.id && s.shift_date === dateStr
           )
-          
+
           // Check if user worked yesterday (prevent back-to-back)
           const workedYesterday = shifts.some(
             s => s.assigned_to === staff.id && s.shift_date === yesterdayStr
@@ -192,7 +194,12 @@ export default function DepartmentCalendar({
             s => s.assigned_to === staff.id && s.shift_date === yesterdayStr
           )
 
-          return !isUnavailable && !hasShiftToday && !workedYesterday
+          // Check if user works tomorrow (prevent back-to-back with existing shifts)
+          const worksTomorrow = shifts.some(
+            s => s.assigned_to === staff.id && s.shift_date === tomorrowStr
+          )
+
+          return !isUnavailable && !hasShiftToday && !workedYesterday && !worksTomorrow
         })
 
         if (availableStaff.length > 0) {

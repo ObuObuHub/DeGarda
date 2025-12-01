@@ -48,7 +48,6 @@ export default function Calendar({
 }: CalendarProps) {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null)
   const [showContextMenu, setShowContextMenu] = useState(false)
-  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
   const [showAssignMenu, setShowAssignMenu] = useState(false)
   const [selectedForSwap, setSelectedForSwap] = useState<Shift | null>(null)
   const [selectedTargetShifts, setSelectedTargetShifts] = useState<Set<string>>(new Set())
@@ -277,7 +276,6 @@ export default function Calendar({
     // Normal click behavior for admins/managers
     if (currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER') {
       setSelectedShift(shift)
-      setContextMenuPosition({ x: event.clientX, y: event.clientY })
       setShowContextMenu(true)
       return
     }
@@ -752,8 +750,6 @@ export default function Calendar({
         if (!shift) return null
         
         const incomingRequests = getIncomingSwapRequests(showSwapMenu)
-        console.log('Showing swap menu for shift:', showSwapMenu)
-        console.log('Incoming requests:', incomingRequests)
         
         return (
           <>
