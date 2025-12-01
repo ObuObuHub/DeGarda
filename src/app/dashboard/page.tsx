@@ -29,6 +29,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user) {
       loadShifts()
+      loadDepartments()
       loadSwapRequests() // Load swap requests when date changes too
       if (user.role !== 'STAFF') {
         loadManagerData()

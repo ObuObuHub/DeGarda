@@ -85,8 +85,14 @@ export default function StaffManagement({
   }
 
   // Determine which departments the current user can assign
+  // Filter by the hospital selected in the form
   const getAllowedDepartments = (): string[] => {
     if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'HOSPITAL_ADMIN') {
+      // Filter departments by the hospital selected in the form
+      const hospitalId = formData.hospital_id || currentUser.hospital_id
+      if (hospitalId) {
+        return departments.filter(d => d.hospital_id === hospitalId).map(d => d.name)
+      }
       return departments.map(d => d.name)
     }
     if (currentUser.role === 'DEPARTMENT_MANAGER' && currentUser.department) {
