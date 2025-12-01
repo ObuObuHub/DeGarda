@@ -1,7 +1,15 @@
 export type Department = 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
-export type UserRole = 'STAFF' | 'MANAGER' | 'ADMIN'
+export type UserRole = 'SUPER_ADMIN' | 'HOSPITAL_ADMIN' | 'DEPARTMENT_MANAGER' | 'STAFF'
 
 export const DEPARTMENTS: Department[] = ['ATI', 'Urgente', 'Chirurgie', 'Medicina Interna']
+
+export interface Hospital {
+  id: string
+  name: string
+  code: string
+  location?: string
+  created_at: string
+}
 
 export const DEPARTMENT_COLORS: Record<Department, string> = {
   'ATI': '#9ca3af',

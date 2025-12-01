@@ -274,7 +274,7 @@ export default function Calendar({
     }
     
     // Normal click behavior for admins/managers
-    if (currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER') {
+    if (currentUser.role !== 'STAFF') {
       setSelectedShift(shift)
       setShowContextMenu(true)
       return
@@ -622,7 +622,7 @@ export default function Calendar({
                 {selectedShift.user && ` - ${selectedShift.user.name}`}
               </p>
             </div>
-            {(currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER') ? (
+            {currentUser.role !== 'STAFF' ? (
               <div className="space-y-2">
                 {selectedShift.assigned_to && (
                   <button
@@ -660,7 +660,7 @@ export default function Calendar({
                     <span>Marchează disponibil</span>
                   </button>
                 )}
-                {currentUser.role === 'ADMIN' && (
+                {(currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'HOSPITAL_ADMIN') && (
                   <button
                     onClick={() => {
                       if (onDeleteShift) {

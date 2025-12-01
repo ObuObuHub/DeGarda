@@ -9,7 +9,7 @@ export const auth = {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('*, hospital:hospitals(id, name, code)')
         .eq('personal_code', personalCode.toUpperCase())
         .single()
 
@@ -19,7 +19,7 @@ export const auth = {
 
       // Store user in localStorage for session management
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data))
-      
+
       return { user: data, error: null }
     } catch {
       return { user: null, error: 'Eroare la conectare' }

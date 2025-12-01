@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
+import { type Hospital } from '@/types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 // Check if environment variables are properly configured
-if (!supabaseUrl || supabaseUrl === 'your_supabase_url_here' || 
+if (!supabaseUrl || supabaseUrl === 'your_supabase_url_here' ||
     !supabaseAnonKey || supabaseAnonKey === 'your_supabase_anon_key_here') {
   console.warn('Supabase environment variables not configured. Please check your .env.local file.')
 }
@@ -20,8 +21,10 @@ export type User = {
   email?: string
   name: string
   personal_code: string
-  role: 'STAFF' | 'MANAGER' | 'ADMIN'
+  role: 'SUPER_ADMIN' | 'HOSPITAL_ADMIN' | 'DEPARTMENT_MANAGER' | 'STAFF'
   department?: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
+  hospital_id?: string
+  hospital?: Hospital
   max_shifts_per_month?: number
   created_at: string
 }
@@ -31,6 +34,7 @@ export type Shift = {
   shift_date: string
   shift_time: '24h'
   department: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
+  hospital_id: string
   assigned_to?: string
   status: 'available' | 'reserved' | 'assigned' | 'pending_swap'
   created_at: string
@@ -59,3 +63,5 @@ export type SwapRequest = {
   requester_shift?: Shift
   target_shift?: Shift
 }
+
+export { type Hospital }

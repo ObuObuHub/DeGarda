@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { type User } from '@/lib/supabase'
-import { DEPARTMENTS, type Department, type UserRole } from '@/types'
+import { DEPARTMENTS, type Department, type UserRole, type Hospital } from '@/types'
 
 interface StaffManagementProps {
   currentUser: User
   allUsers: User[]
+  hospitals?: Hospital[]
   onAddUser: (userData: Omit<User, 'id' | 'created_at'>) => Promise<boolean>
   onUpdateUser: (userId: string, userData: Partial<User>) => Promise<boolean>
   onDeleteUser: (userId: string) => Promise<boolean>
@@ -15,61 +16,92 @@ interface StaffManagementProps {
 interface FormData {
   name: string
   personal_code: string
-  department: Department
+  department: Department | ''
   role: UserRole
+  hospital_id: string
   max_shifts_per_month: number
 }
 
-const EMPTY_FORM: FormData = {
-  name: '',
-  personal_code: '',
-  department: 'ATI',
-  role: 'STAFF',
-  max_shifts_per_month: 8
+const ROLE_LABELS: Record<UserRole, string> = {
+  'SUPER_ADMIN': 'Super Admin',
+  'HOSPITAL_ADMIN': 'Admin Spital',
+  'DEPARTMENT_MANAGER': 'Manager Secție',
+  'STAFF': 'Personal'
 }
 
 export default function StaffManagement({
   currentUser,
   allUsers,
+  hospitals = [],
   onAddUser,
   onUpdateUser,
   onDeleteUser
 }: StaffManagementProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [formData, setFormData] = useState<FormData>(EMPTY_FORM)
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    personal_code: '',
+    department: '',
+    role: 'STAFF',
+    hospital_id: currentUser.hospital_id || '',
+    max_shifts_per_month: 8
+  })
   const [loading, setLoading] = useState(false)
 
   // Filter users based on current user's role
   const visibleUsers = allUsers.filter(u => {
-    if (currentUser.role === 'ADMIN') {
-      return true // Admin sees everyone
+    if (currentUser.role === 'SUPER_ADMIN') {
+      return true // Super Admin sees everyone
     }
-    if (currentUser.role === 'MANAGER') {
-      // Manager sees only STAFF in their department
-      return u.department === currentUser.department && u.role === 'STAFF'
+    if (currentUser.role === 'HOSPITAL_ADMIN') {
+      // Hospital Admin sees all users in their hospital
+      return u.hospital_id === currentUser.hospital_id
+    }
+    if (currentUser.role === 'DEPARTMENT_MANAGER') {
+      // Department Manager sees only STAFF in their department
+      return u.hospital_id === currentUser.hospital_id &&
+             u.department === currentUser.department &&
+             u.role === 'STAFF'
     }
     return false
   })
 
-  // Determine which departments the current user can manage
-  const allowedDepartments: Department[] = currentUser.role === 'ADMIN'
-    ? DEPARTMENTS
-    : currentUser.department
-      ? [currentUser.department]
-      : []
-
   // Determine which roles the current user can assign
-  const allowedRoles: UserRole[] = currentUser.role === 'ADMIN'
-    ? ['STAFF', 'MANAGER', 'ADMIN']
-    : ['STAFF']
+  const getAllowedRoles = (): UserRole[] => {
+    switch (currentUser.role) {
+      case 'SUPER_ADMIN':
+        return ['SUPER_ADMIN', 'HOSPITAL_ADMIN', 'DEPARTMENT_MANAGER', 'STAFF']
+      case 'HOSPITAL_ADMIN':
+        return ['DEPARTMENT_MANAGER', 'STAFF']
+      case 'DEPARTMENT_MANAGER':
+        return ['STAFF']
+      default:
+        return []
+    }
+  }
+
+  // Determine which departments the current user can assign
+  const getAllowedDepartments = (): Department[] => {
+    if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'HOSPITAL_ADMIN') {
+      return DEPARTMENTS
+    }
+    if (currentUser.role === 'DEPARTMENT_MANAGER' && currentUser.department) {
+      return [currentUser.department]
+    }
+    return []
+  }
 
   const openAddModal = () => {
     setEditingUser(null)
     setFormData({
-      ...EMPTY_FORM,
-      department: currentUser.department || 'ATI'
+      name: '',
+      personal_code: '',
+      department: currentUser.department || '',
+      role: 'STAFF',
+      hospital_id: currentUser.hospital_id || '',
+      max_shifts_per_month: 8
     })
     setShowModal(true)
   }
@@ -79,8 +111,9 @@ export default function StaffManagement({
     setFormData({
       name: user.name,
       personal_code: user.personal_code,
-      department: user.department || 'ATI',
+      department: user.department || '',
       role: user.role,
+      hospital_id: user.hospital_id || '',
       max_shifts_per_month: user.max_shifts_per_month || 8
     })
     setShowModal(true)
@@ -89,7 +122,6 @@ export default function StaffManagement({
   const closeModal = () => {
     setShowModal(false)
     setEditingUser(null)
-    setFormData(EMPTY_FORM)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,23 +129,20 @@ export default function StaffManagement({
     setLoading(true)
 
     try {
+      const userData = {
+        name: formData.name,
+        personal_code: formData.personal_code,
+        department: formData.department || undefined,
+        role: formData.role,
+        hospital_id: formData.role === 'SUPER_ADMIN' ? undefined : formData.hospital_id || undefined,
+        max_shifts_per_month: formData.max_shifts_per_month
+      }
+
       if (editingUser) {
-        const success = await onUpdateUser(editingUser.id, {
-          name: formData.name,
-          personal_code: formData.personal_code,
-          department: formData.department,
-          role: formData.role,
-          max_shifts_per_month: formData.max_shifts_per_month
-        })
+        const success = await onUpdateUser(editingUser.id, userData)
         if (success) closeModal()
       } else {
-        const success = await onAddUser({
-          name: formData.name,
-          personal_code: formData.personal_code,
-          department: formData.department,
-          role: formData.role,
-          max_shifts_per_month: formData.max_shifts_per_month
-        })
+        const success = await onAddUser(userData as Omit<User, 'id' | 'created_at'>)
         if (success) closeModal()
       }
     } finally {
@@ -135,12 +164,16 @@ export default function StaffManagement({
   }
 
   // Don't render if user doesn't have permission
-  if (currentUser.role !== 'MANAGER' && currentUser.role !== 'ADMIN') {
+  const canManageUsers = ['SUPER_ADMIN', 'HOSPITAL_ADMIN', 'DEPARTMENT_MANAGER'].includes(currentUser.role)
+  if (!canManageUsers) {
     return null
   }
 
+  const allowedRoles = getAllowedRoles()
+  const allowedDepartments = getAllowedDepartments()
+
   return (
-    <div className="bg-white rounded-lg shadow-sm border mb-6">
+    <div className="bg-white rounded-lg shadow-sm border">
       {/* Header - Collapsible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -188,6 +221,9 @@ export default function StaffManagement({
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Cod</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Departament</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Rol</th>
+                    {currentUser.role === 'SUPER_ADMIN' && (
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">Spital</th>
+                    )}
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Ture/lună</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700">Acțiuni</th>
                   </tr>
@@ -200,13 +236,19 @@ export default function StaffManagement({
                       <td className="py-3 px-4">{user.department || '-'}</td>
                       <td className="py-3 px-4">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          user.role === 'ADMIN' ? 'bg-red-100 text-red-800' :
-                          user.role === 'MANAGER' ? 'bg-blue-100 text-blue-800' :
+                          user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-800' :
+                          user.role === 'HOSPITAL_ADMIN' ? 'bg-red-100 text-red-800' :
+                          user.role === 'DEPARTMENT_MANAGER' ? 'bg-blue-100 text-blue-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {user.role}
+                          {ROLE_LABELS[user.role]}
                         </span>
                       </td>
+                      {currentUser.role === 'SUPER_ADMIN' && (
+                        <td className="py-3 px-4 text-sm text-gray-600">
+                          {user.hospital?.name || '-'}
+                        </td>
+                      )}
                       <td className="py-3 px-4">{user.max_shifts_per_month || 8}</td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex justify-end gap-2">
@@ -279,22 +321,25 @@ export default function StaffManagement({
                 />
               </div>
 
-              {/* Department */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Departament
-                </label>
-                <select
-                  value={formData.department}
-                  onChange={e => setFormData({ ...formData, department: e.target.value as Department })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  {allowedDepartments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Hospital (Super Admin only) */}
+              {currentUser.role === 'SUPER_ADMIN' && hospitals.length > 0 && formData.role !== 'SUPER_ADMIN' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Spital
+                  </label>
+                  <select
+                    value={formData.hospital_id}
+                    onChange={e => setFormData({ ...formData, hospital_id: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Selectează spital</option>
+                    {hospitals.map(h => (
+                      <option key={h.id} value={h.id}>{h.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Role */}
               <div>
@@ -309,26 +354,48 @@ export default function StaffManagement({
                 >
                   {allowedRoles.map(role => (
                     <option key={role} value={role}>
-                      {role === 'ADMIN' ? 'Administrator' : role === 'MANAGER' ? 'Manager' : 'Personal'}
+                      {ROLE_LABELS[role]}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Max shifts per month */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ture maxime pe lună
-                </label>
-                <input
-                  type="number"
-                  value={formData.max_shifts_per_month}
-                  onChange={e => setFormData({ ...formData, max_shifts_per_month: parseInt(e.target.value) || 8 })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  min={1}
-                  max={31}
-                />
-              </div>
+              {/* Department (only for DEPARTMENT_MANAGER and STAFF) */}
+              {(formData.role === 'DEPARTMENT_MANAGER' || formData.role === 'STAFF') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Departament
+                  </label>
+                  <select
+                    value={formData.department}
+                    onChange={e => setFormData({ ...formData, department: e.target.value as Department })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Selectează departament</option>
+                    {allowedDepartments.map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Max shifts per month (only for STAFF) */}
+              {formData.role === 'STAFF' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ture maxime pe lună
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.max_shifts_per_month}
+                    onChange={e => setFormData({ ...formData, max_shifts_per_month: parseInt(e.target.value) || 8 })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    min={1}
+                    max={31}
+                  />
+                </div>
+              )}
 
               {/* Buttons */}
               <div className="flex justify-end gap-3 pt-4">

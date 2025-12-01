@@ -55,7 +55,7 @@ export default function DepartmentCalendar({
   const departmentShifts = shifts.filter(shift => shift.department === department)
   
   // Check if user can generate shifts
-  const canGenerateShifts = currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN'
+  const canGenerateShifts = currentUser.role !== 'STAFF'
 
   const generateShiftsForDepartment = async () => {
     setGenerating(true)

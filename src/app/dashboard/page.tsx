@@ -28,7 +28,7 @@ export default function DashboardPage() {
     if (user) {
       loadShifts()
       loadSwapRequests() // Load swap requests when date changes too
-      if (user.role === 'MANAGER' || user.role === 'ADMIN') {
+      if (user.role !== 'STAFF') {
         loadManagerData()
       }
     }
@@ -54,19 +54,21 @@ export default function DashboardPage() {
       loadUnavailableDates(),
       loadSwapRequests()
     ]
-    
-    if (user?.role === 'MANAGER' || user?.role === 'ADMIN') {
+
+    if (user?.role !== 'STAFF') {
       promises.push(loadUsers())
     }
-    
+
     await Promise.all(promises)
   }
 
   const loadShifts = async () => {
+    if (!user) return
+
     const startOfMonth = getFirstDayOfMonth(selectedDate)
     const endOfMonth = getLastDayOfMonth(selectedDate)
 
-    const { data } = await supabase
+    let query = supabase
       .from('shifts')
       .select(`
         *,
@@ -76,6 +78,12 @@ export default function DashboardPage() {
       .lte('shift_date', formatDateForDB(endOfMonth))
       .order('shift_date')
 
+    // Filter by hospital for non-super-admins
+    if (user.role !== 'SUPER_ADMIN' && user.hospital_id) {
+      query = query.eq('hospital_id', user.hospital_id)
+    }
+
+    const { data } = await query
     setShifts(data || [])
   }
 
@@ -124,11 +132,19 @@ export default function DashboardPage() {
   }
 
   const loadUsers = async () => {
-    const { data } = await supabase
+    if (!user) return
+
+    let query = supabase
       .from('users')
-      .select('*')
+      .select('*, hospital:hospitals(name, code)')
       .order('name')
 
+    // Filter by hospital for non-super-admins
+    if (user.role !== 'SUPER_ADMIN' && user.hospital_id) {
+      query = query.eq('hospital_id', user.hospital_id)
+    }
+
+    const { data } = await query
     setAllUsers(data || [])
   }
 
@@ -313,7 +329,7 @@ export default function DashboardPage() {
   }
 
   const deleteShift = async (shiftId: string) => {
-    if (!user || user.role !== 'ADMIN') return
+    if (!user || user.role === 'STAFF') return
 
     const { error } = await supabase
       .from('shifts')
@@ -363,7 +379,7 @@ export default function DashboardPage() {
   }
 
   const assignShift = async (shiftId: string, userId: string | null) => {
-    if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) return
+    if (!user || user.role === 'STAFF') return
 
     const { error } = await supabase
       .from('shifts')
@@ -481,7 +497,7 @@ export default function DashboardPage() {
   }
 
   const deleteAllShifts = async () => {
-    if (!user || user.role !== 'ADMIN') return
+    if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'HOSPITAL_ADMIN')) return
 
     if (!confirm('Sigur vrei să ștergi TOATE turele și zilele indisponibile? Această acțiune nu poate fi anulată!')) {
       return
@@ -512,18 +528,23 @@ export default function DashboardPage() {
 
   // Staff Management CRUD operations
   const addUser = async (userData: Omit<User, 'id' | 'created_at'>): Promise<boolean> => {
-    if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) return false
+    if (!user || user.role === 'STAFF') return false
 
-    // Authorization check for managers
-    if (user.role === 'MANAGER') {
+    // Authorization check for department managers
+    if (user.role === 'DEPARTMENT_MANAGER') {
       if (userData.role !== 'STAFF') {
-        alert('Managerii pot adăuga doar personal.')
+        alert('Managerii de secție pot adăuga doar personal.')
         return false
       }
       if (userData.department !== user.department) {
         alert('Poți adăuga doar personal în departamentul tău.')
         return false
       }
+    }
+
+    // Hospital admins can only add to their hospital
+    if (user.role === 'HOSPITAL_ADMIN') {
+      userData = { ...userData, hospital_id: user.hospital_id }
     }
 
     const { error } = await supabase
@@ -544,7 +565,7 @@ export default function DashboardPage() {
   }
 
   const updateUser = async (userId: string, userData: Partial<User>): Promise<boolean> => {
-    if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) return false
+    if (!user || user.role === 'STAFF') return false
 
     // Don't allow editing yourself to prevent lockout
     if (userId === user.id && userData.role && userData.role !== user.role) {
@@ -552,15 +573,15 @@ export default function DashboardPage() {
       return false
     }
 
-    // Authorization check for managers
-    if (user.role === 'MANAGER') {
+    // Authorization check for department managers
+    if (user.role === 'DEPARTMENT_MANAGER') {
       const targetUser = allUsers.find(u => u.id === userId)
       if (!targetUser || targetUser.department !== user.department) {
         alert('Poți edita doar personal din departamentul tău.')
         return false
       }
       if (userData.role && userData.role !== 'STAFF') {
-        alert('Managerii pot seta doar rolul de Personal.')
+        alert('Managerii de secție pot seta doar rolul de Personal.')
         return false
       }
       if (userData.department && userData.department !== user.department) {
@@ -588,7 +609,7 @@ export default function DashboardPage() {
   }
 
   const deleteUser = async (userId: string): Promise<boolean> => {
-    if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) return false
+    if (!user || user.role === 'STAFF') return false
 
     // Don't allow deleting yourself
     if (userId === user.id) {
@@ -596,11 +617,20 @@ export default function DashboardPage() {
       return false
     }
 
-    // Authorization check for managers
-    if (user.role === 'MANAGER') {
+    // Authorization check for department managers
+    if (user.role === 'DEPARTMENT_MANAGER') {
       const targetUser = allUsers.find(u => u.id === userId)
       if (!targetUser || targetUser.department !== user.department || targetUser.role !== 'STAFF') {
         alert('Poți șterge doar personal din departamentul tău.')
+        return false
+      }
+    }
+
+    // Hospital admins can only delete users from their hospital
+    if (user.role === 'HOSPITAL_ADMIN') {
+      const targetUser = allUsers.find(u => u.id === userId)
+      if (!targetUser || targetUser.hospital_id !== user.hospital_id) {
+        alert('Poți șterge doar utilizatori din spitalul tău.')
         return false
       }
     }
@@ -697,7 +727,11 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">🏥 Degarda</h1>
               <p className="text-gray-600">
-                {user.name} - {user.role === 'MANAGER' ? 'Manager' : user.role === 'ADMIN' ? 'Admin' : 'Personal'} {user.department ? `(${user.department})` : ''}
+                {user.name} - {
+                  user.role === 'SUPER_ADMIN' ? 'Super Admin' :
+                  user.role === 'HOSPITAL_ADMIN' ? 'Admin Spital' :
+                  user.role === 'DEPARTMENT_MANAGER' ? 'Manager Secție' : 'Personal'
+                } {user.department ? `(${user.department})` : ''}
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -707,7 +741,7 @@ export default function DashboardPage() {
               >
                 📊 Descarcă Excel
               </button>
-              {user.role === 'ADMIN' && (
+              {(user.role === 'SUPER_ADMIN' || user.role === 'HOSPITAL_ADMIN') && (
                 <button
                   onClick={deleteAllShifts}
                   className="btn btn-danger"
@@ -715,6 +749,14 @@ export default function DashboardPage() {
                 >
                   🗑️ Șterge Tot
                 </button>
+              )}
+              {user.role === 'SUPER_ADMIN' && (
+                <a
+                  href="/admin"
+                  className="btn btn-secondary"
+                >
+                  ⚙️ Admin
+                </a>
               )}
               <button onClick={handleLogout} className="btn btn-secondary">
                 Ieșire
@@ -760,11 +802,21 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Staff Management - Only visible to MANAGER/ADMIN */}
-        {(user.role === 'MANAGER' || user.role === 'ADMIN') && (
+        {/* Staff Management - Visible to managers and admins */}
+        {user.role !== 'STAFF' && (
           <StaffManagement
             currentUser={user}
-            allUsers={allUsers}
+            allUsers={allUsers.filter(u => {
+              // Filter users based on current user's role and hospital
+              if (user.role === 'SUPER_ADMIN') return true
+              if (user.role === 'HOSPITAL_ADMIN') return u.hospital_id === user.hospital_id
+              if (user.role === 'DEPARTMENT_MANAGER') {
+                return u.hospital_id === user.hospital_id &&
+                       u.department === user.department &&
+                       u.role === 'STAFF'
+              }
+              return false
+            })}
             onAddUser={addUser}
             onUpdateUser={updateUser}
             onDeleteUser={deleteUser}
@@ -774,9 +826,12 @@ export default function DashboardPage() {
         {/* Department Calendars */}
         <div className="space-y-6">
           {DEPARTMENTS
-            .filter(department => 
+            .filter(department =>
               // Staff only see their own department, managers/admins see all
-              user.role === 'MANAGER' || user.role === 'ADMIN' || department === user.department
+              user.role === 'SUPER_ADMIN' ||
+              user.role === 'HOSPITAL_ADMIN' ||
+              user.role === 'DEPARTMENT_MANAGER' ||
+              department === user.department
             )
             .map(department => (
               <DepartmentCalendar
