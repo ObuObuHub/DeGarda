@@ -5,6 +5,7 @@ import { supabase, type User, type Shift, type UnavailableDate, type SwapRequest
 import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import DepartmentCalendar from '@/components/DepartmentCalendar'
+import StaffManagement from '@/components/StaffManagement'
 import { DEPARTMENTS } from '@/types'
 import { parseISODate, formatDateForDB, getFirstDayOfMonth, getLastDayOfMonth } from '@/lib/dateUtils'
 
@@ -509,6 +510,115 @@ export default function DashboardPage() {
     }
   }
 
+  // Staff Management CRUD operations
+  const addUser = async (userData: Omit<User, 'id' | 'created_at'>): Promise<boolean> => {
+    if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) return false
+
+    // Authorization check for managers
+    if (user.role === 'MANAGER') {
+      if (userData.role !== 'STAFF') {
+        alert('Managerii pot adăuga doar personal.')
+        return false
+      }
+      if (userData.department !== user.department) {
+        alert('Poți adăuga doar personal în departamentul tău.')
+        return false
+      }
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .insert(userData)
+
+    if (error) {
+      if (error.code === '23505') {
+        alert('Codul personal există deja!')
+      } else {
+        alert(`Eroare: ${error.message}`)
+      }
+      return false
+    }
+
+    await loadUsers()
+    return true
+  }
+
+  const updateUser = async (userId: string, userData: Partial<User>): Promise<boolean> => {
+    if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) return false
+
+    // Don't allow editing yourself to prevent lockout
+    if (userId === user.id && userData.role && userData.role !== user.role) {
+      alert('Nu îți poți schimba propriul rol.')
+      return false
+    }
+
+    // Authorization check for managers
+    if (user.role === 'MANAGER') {
+      const targetUser = allUsers.find(u => u.id === userId)
+      if (!targetUser || targetUser.department !== user.department) {
+        alert('Poți edita doar personal din departamentul tău.')
+        return false
+      }
+      if (userData.role && userData.role !== 'STAFF') {
+        alert('Managerii pot seta doar rolul de Personal.')
+        return false
+      }
+      if (userData.department && userData.department !== user.department) {
+        alert('Poți seta doar departamentul tău.')
+        return false
+      }
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update(userData)
+      .eq('id', userId)
+
+    if (error) {
+      if (error.code === '23505') {
+        alert('Codul personal există deja!')
+      } else {
+        alert(`Eroare: ${error.message}`)
+      }
+      return false
+    }
+
+    await loadUsers()
+    return true
+  }
+
+  const deleteUser = async (userId: string): Promise<boolean> => {
+    if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) return false
+
+    // Don't allow deleting yourself
+    if (userId === user.id) {
+      alert('Nu te poți șterge pe tine însuți.')
+      return false
+    }
+
+    // Authorization check for managers
+    if (user.role === 'MANAGER') {
+      const targetUser = allUsers.find(u => u.id === userId)
+      if (!targetUser || targetUser.department !== user.department || targetUser.role !== 'STAFF') {
+        alert('Poți șterge doar personal din departamentul tău.')
+        return false
+      }
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId)
+
+    if (error) {
+      alert(`Eroare la ștergere: ${error.message}`)
+      return false
+    }
+
+    await loadUsers()
+    return true
+  }
+
   const exportToCSV = () => {
     if (!user) return
     
@@ -649,6 +759,17 @@ export default function DashboardPage() {
             Luna următoare →
           </button>
         </div>
+
+        {/* Staff Management - Only visible to MANAGER/ADMIN */}
+        {(user.role === 'MANAGER' || user.role === 'ADMIN') && (
+          <StaffManagement
+            currentUser={user}
+            allUsers={allUsers}
+            onAddUser={addUser}
+            onUpdateUser={updateUser}
+            onDeleteUser={deleteUser}
+          />
+        )}
 
         {/* Department Calendars */}
         <div className="space-y-6">
