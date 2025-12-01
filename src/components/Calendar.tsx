@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { type User, type Shift, type UnavailableDate, type SwapRequest } from '@/lib/supabase'
-import { DEPARTMENT_COLORS } from '@/types'
+import { type ShiftType, DEPARTMENT_COLORS } from '@/types'
 import { parseISODate, formatDateForDB } from '@/lib/dateUtils'
 
 interface CalendarProps {
   shifts: Shift[]
+  shiftTypes?: ShiftType[]
   unavailableDates: UnavailableDate[]
   swapRequests?: SwapRequest[]
   onReserveShift: (shiftId: string) => void
@@ -14,7 +15,7 @@ interface CalendarProps {
   onMarkUnavailable: (date: Date) => void
   onRemoveUnavailable: (date: Date) => void
   onDeleteShift?: (shiftId: string) => void
-  onCreateReservation?: (date: Date, department?: string) => void
+  onCreateReservation?: (date: Date, department?: string, shiftTypeId?: string) => void
   onRequestSwap?: (requesterShiftId: string, targetShiftIds: string[]) => void
   onAssignShift?: (shiftId: string, userId: string | null) => void
   onAcceptSwap?: (swapRequestId: string) => void
@@ -24,10 +25,12 @@ interface CalendarProps {
   onDateChange: (date: Date) => void
   department?: string
   users?: User[]
+  defaultShiftTypeId?: string
 }
 
-export default function Calendar({ 
+export default function Calendar({
   shifts,
+  shiftTypes = [],
   unavailableDates,
   swapRequests = [],
   onReserveShift,
@@ -40,11 +43,12 @@ export default function Calendar({
   onAssignShift,
   onAcceptSwap,
   onRejectSwap,
-  currentUser, 
-  selectedDate, 
+  currentUser,
+  selectedDate,
   onDateChange,
   department,
-  users = []
+  users = [],
+  defaultShiftTypeId
 }: CalendarProps) {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null)
   const [showContextMenu, setShowContextMenu] = useState(false)
@@ -321,7 +325,7 @@ export default function Calendar({
       // STATE 2: Unavailable → Reserved
       // Create reservation (keep unavailable flag)
       if (onCreateReservation) {
-        await onCreateReservation(date, currentUser.department)
+        await onCreateReservation(date, currentUser.department, defaultShiftTypeId)
       }
     } else {
       // STATE 1: Empty → Unavailable
@@ -495,10 +499,16 @@ export default function Calendar({
                           : DEPARTMENT_COLORS[shift.department] 
                       }}
                       onClick={(e) => handleShiftClick(shift, e)}
-                      title={`${shift.department} - 24 ore - ${
+                      title={`${shift.department} - ${
+                        shift.shift_type?.name || shiftTypes.find(st => st.id === shift.shift_type_id)?.name || '24h'
+                      } (${
+                        shift.shift_type?.start_time?.slice(0, 5) || shiftTypes.find(st => st.id === shift.shift_type_id)?.start_time?.slice(0, 5) || '00:00'
+                      }-${
+                        shift.shift_type?.end_time?.slice(0, 5) || shiftTypes.find(st => st.id === shift.shift_type_id)?.end_time?.slice(0, 5) || '00:00'
+                      }) - ${
                         shift.user?.name || 'Disponibil'
                       }${
-                        shift.status === 'reserved' ? ' (Rezervat)' : 
+                        shift.status === 'reserved' ? ' (Rezervat)' :
                         shift.status === 'assigned' ? ' (Asignat)' : ''
                       }${
                         selectedForSwap?.id === shift.id ? ' (Selectat pentru schimb)' : ''

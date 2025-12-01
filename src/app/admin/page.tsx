@@ -2,16 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import { supabase, type User } from '@/lib/supabase'
-import { type Hospital } from '@/types'
+import { type Hospital, type ShiftType } from '@/types'
 import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import HospitalManagement from '@/components/HospitalManagement'
 import HospitalSelector from '@/components/HospitalSelector'
 import StaffManagement from '@/components/StaffManagement'
+import ShiftTypeManagement from '@/components/ShiftTypeManagement'
 
 export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null)
   const [hospitals, setHospitals] = useState<Hospital[]>([])
+  const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -24,6 +26,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (user) {
       loadHospitals()
+      loadShiftTypes()
       loadUsers()
     }
   }, [user, selectedHospitalId])
@@ -53,6 +56,16 @@ export default function AdminPage() {
       .order('name')
 
     setHospitals(data || [])
+  }
+
+  const loadShiftTypes = async () => {
+    const { data } = await supabase
+      .from('shift_types')
+      .select('*')
+      .eq('is_active', true)
+      .order('name')
+
+    setShiftTypes(data || [])
   }
 
   const loadUsers = async () => {
@@ -120,7 +133,79 @@ export default function AdminPage() {
     }
 
     await loadHospitals()
+    await loadShiftTypes()
     await loadUsers()
+    return true
+  }
+
+  // Shift Type CRUD
+  const addShiftType = async (data: Omit<ShiftType, 'id' | 'created_at'>): Promise<boolean> => {
+    // If setting as default, first unset current default
+    if (data.is_default) {
+      await supabase
+        .from('shift_types')
+        .update({ is_default: false })
+        .eq('hospital_id', data.hospital_id)
+        .eq('is_default', true)
+    }
+
+    const { error } = await supabase
+      .from('shift_types')
+      .insert(data)
+
+    if (error) {
+      if (error.code === '23505') {
+        alert('Un tip de tură cu acest nume există deja pentru acest spital!')
+      } else {
+        alert(`Eroare: ${error.message}`)
+      }
+      return false
+    }
+
+    await loadShiftTypes()
+    return true
+  }
+
+  const updateShiftType = async (id: string, data: Partial<ShiftType>): Promise<boolean> => {
+    // If setting as default, first unset current default
+    if (data.is_default) {
+      const shiftType = shiftTypes.find(st => st.id === id)
+      if (shiftType) {
+        await supabase
+          .from('shift_types')
+          .update({ is_default: false })
+          .eq('hospital_id', shiftType.hospital_id)
+          .eq('is_default', true)
+      }
+    }
+
+    const { error } = await supabase
+      .from('shift_types')
+      .update(data)
+      .eq('id', id)
+
+    if (error) {
+      alert(`Eroare: ${error.message}`)
+      return false
+    }
+
+    await loadShiftTypes()
+    return true
+  }
+
+  const deleteShiftType = async (id: string): Promise<boolean> => {
+    // Soft delete by setting is_active to false
+    const { error } = await supabase
+      .from('shift_types')
+      .update({ is_active: false })
+      .eq('id', id)
+
+    if (error) {
+      alert(`Eroare: ${error.message}`)
+      return false
+    }
+
+    await loadShiftTypes()
     return true
   }
 
@@ -228,6 +313,34 @@ export default function AdminPage() {
             onUpdateHospital={updateHospital}
             onDeleteHospital={deleteHospital}
           />
+
+          {/* Shift Type Management */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">⏰</span>
+                <span className="text-lg font-semibold text-gray-900">
+                  Tipuri de Ture
+                </span>
+              </div>
+              <HospitalSelector
+                hospitals={hospitals}
+                selectedHospitalId={selectedHospitalId}
+                onSelect={setSelectedHospitalId}
+                showAllOption={false}
+              />
+            </div>
+            <div className="p-6">
+              <ShiftTypeManagement
+                shiftTypes={shiftTypes}
+                hospitals={hospitals}
+                selectedHospitalId={selectedHospitalId}
+                onAddShiftType={addShiftType}
+                onUpdateShiftType={updateShiftType}
+                onDeleteShiftType={deleteShiftType}
+              />
+            </div>
+          </div>
 
           {/* User Management Section */}
           <div className="bg-white rounded-lg shadow-sm border">

@@ -6,12 +6,13 @@ import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import DepartmentCalendar from '@/components/DepartmentCalendar'
 import StaffManagement from '@/components/StaffManagement'
-import { DEPARTMENTS } from '@/types'
+import { DEPARTMENTS, type ShiftType } from '@/types'
 import { parseISODate, formatDateForDB, getFirstDayOfMonth, getLastDayOfMonth } from '@/lib/dateUtils'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [shifts, setShifts] = useState<Shift[]>([])
+  const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([])
   const [unavailableDates, setUnavailableDates] = useState<UnavailableDate[]>([])
   const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -51,6 +52,7 @@ export default function DashboardPage() {
   const loadData = async () => {
     const promises = [
       loadShifts(),
+      loadShiftTypes(),
       loadUnavailableDates(),
       loadSwapRequests()
     ]
@@ -72,7 +74,8 @@ export default function DashboardPage() {
       .from('shifts')
       .select(`
         *,
-        user:assigned_to(name, department, role)
+        user:assigned_to(name, department, role),
+        shift_type:shift_types(id, name, start_time, end_time, duration_hours)
       `)
       .gte('shift_date', formatDateForDB(startOfMonth))
       .lte('shift_date', formatDateForDB(endOfMonth))
@@ -85,6 +88,24 @@ export default function DashboardPage() {
 
     const { data } = await query
     setShifts(data || [])
+  }
+
+  const loadShiftTypes = async () => {
+    if (!user) return
+
+    let query = supabase
+      .from('shift_types')
+      .select('*')
+      .eq('is_active', true)
+      .order('name')
+
+    // Filter by hospital for non-super-admins
+    if (user.role !== 'SUPER_ADMIN' && user.hospital_id) {
+      query = query.eq('hospital_id', user.hospital_id)
+    }
+
+    const { data } = await query
+    setShiftTypes(data || [])
   }
 
   const loadUnavailableDates = async () => {
@@ -222,13 +243,13 @@ export default function DashboardPage() {
     }
   }
 
-  const createReservation = async (date: Date, department?: string) => {
+  const createReservation = async (date: Date, department?: string, shiftTypeId?: string) => {
     if (!user) return
 
     // For staff, they can only create in their own department
     if (user.role === 'STAFF') {
       if (!user.department) return
-      
+
       // Get reserved shifts count for this month
       const month = date.getMonth()
       const year = date.getFullYear()
@@ -251,25 +272,33 @@ export default function DashboardPage() {
     const targetDepartment = department || user.department
     if (!targetDepartment) return
 
+    // Get default shift type if not provided
+    const targetShiftTypeId = shiftTypeId || shiftTypes.find(st => st.is_default)?.id
+    if (!targetShiftTypeId) {
+      alert('Nu există niciun tip de tură definit. Contactați administratorul.')
+      return
+    }
+
     const dateStr = formatDateForDB(date)
-    
+
     // CHECK FOR EXISTING AVAILABLE SHIFT FIRST!
-    const existingShift = shifts.find(s => 
-      s.shift_date === dateStr && 
+    const existingShift = shifts.find(s =>
+      s.shift_date === dateStr &&
       s.department === targetDepartment &&
+      s.shift_type_id === targetShiftTypeId &&
       s.status === 'available'
     )
-    
+
     if (existingShift) {
       // Reserve the existing shift instead of creating new one
       const { error } = await supabase
         .from('shifts')
-        .update({ 
+        .update({
           assigned_to: user.id,
           status: 'reserved'
         })
         .eq('id', existingShift.id)
-        
+
       if (!error) {
         loadShifts()
       } else {
@@ -277,14 +306,20 @@ export default function DashboardPage() {
       }
     } else {
       // Only create new shift if none exists
+      if (!user.hospital_id) {
+        alert('Nu ești asociat unui spital.')
+        return
+      }
+
       const { error } = await supabase
         .from('shifts')
         .insert({
           shift_date: dateStr,
+          shift_type_id: targetShiftTypeId,
           department: targetDepartment,
+          hospital_id: user.hospital_id,
           assigned_to: user.role === 'STAFF' ? user.id : null,
-          status: user.role === 'STAFF' ? 'reserved' : 'available',
-          shift_time: '24h'
+          status: user.role === 'STAFF' ? 'reserved' : 'available'
         })
 
       if (!error) {
@@ -838,6 +873,7 @@ export default function DashboardPage() {
                 key={department}
                 department={department}
                 shifts={shifts}
+                shiftTypes={shiftTypes}
                 unavailableDates={unavailableDates}
                 swapRequests={swapRequests}
                 onReserveShift={reserveShift}

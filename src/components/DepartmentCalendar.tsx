@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { type User, type Shift, type UnavailableDate, type SwapRequest, supabase } from '@/lib/supabase'
-import { type Department, DEPARTMENT_COLORS } from '@/types'
+import { type Department, type ShiftType, DEPARTMENT_COLORS } from '@/types'
 import { parseISODate, formatDateForDB, addDays } from '@/lib/dateUtils'
 import Calendar from './Calendar'
 
 interface DepartmentCalendarProps {
   department: Department
   shifts: Shift[]
+  shiftTypes: ShiftType[]
   unavailableDates: UnavailableDate[]
   swapRequests?: SwapRequest[]
   onReserveShift: (shiftId: string) => void
@@ -16,7 +17,7 @@ interface DepartmentCalendarProps {
   onMarkUnavailable: (date: Date) => void
   onRemoveUnavailable: (date: Date) => void
   onDeleteShift?: (shiftId: string) => void
-  onCreateReservation?: (date: Date, department?: string) => void
+  onCreateReservation?: (date: Date, department?: string, shiftTypeId?: string) => void
   onRequestSwap?: (requesterShiftId: string, targetShiftIds: string[]) => void
   onAssignShift?: (shiftId: string, userId: string | null) => void
   onAcceptSwap?: (swapRequestId: string) => void
@@ -31,6 +32,7 @@ interface DepartmentCalendarProps {
 export default function DepartmentCalendar({
   department,
   shifts,
+  shiftTypes,
   unavailableDates,
   swapRequests,
   onReserveShift,
@@ -50,6 +52,16 @@ export default function DepartmentCalendar({
   onShiftsGenerated
 }: DepartmentCalendarProps) {
   const [generating, setGenerating] = useState(false)
+  const [selectedShiftTypeId, setSelectedShiftTypeId] = useState<string>('')
+
+  // Get default shift type for user's hospital
+  const hospitalShiftTypes = shiftTypes.filter(
+    st => st.hospital_id === currentUser.hospital_id
+  )
+  const defaultShiftType = hospitalShiftTypes.find(st => st.is_default)
+
+  // Use default shift type if none selected
+  const activeShiftTypeId = selectedShiftTypeId || defaultShiftType?.id || ''
 
   // Filter shifts for this department only
   const departmentShifts = shifts.filter(shift => shift.department === department)
@@ -58,13 +70,18 @@ export default function DepartmentCalendar({
   const canGenerateShifts = currentUser.role !== 'STAFF'
 
   const generateShiftsForDepartment = async () => {
+    if (!activeShiftTypeId || !currentUser.hospital_id) {
+      alert('Selectează un tip de tură și asigură-te că ești asociat unui spital.')
+      return
+    }
+
     setGenerating(true)
 
     try {
       // Calculate month range from selectedDate
       const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
       const end = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
-      
+
       // Get staff for this department
       const departmentStaff = users.filter(
         u => u.department === department && u.role === 'STAFF'
@@ -78,8 +95,9 @@ export default function DepartmentCalendar({
 
       const shiftsToCreate: Array<{
         shift_date: string
-        shift_time: string
+        shift_type_id: string
         department: string
+        hospital_id: string
         assigned_to?: string
         status: 'available' | 'reserved' | 'assigned'
       }> = []
@@ -100,15 +118,18 @@ export default function DepartmentCalendar({
       while (currentDate <= end) {
         const dateStr = formatDateForDB(currentDate)
         
-        // Check if a 24h shift already exists for this day and department
+        // Check if a shift of this type already exists for this day and department
         const existingDayShift = shifts.find(
-          s => s.shift_date === dateStr && s.department === department
+          s => s.shift_date === dateStr &&
+               s.department === department &&
+               s.shift_type_id === activeShiftTypeId
         )
-        
-        // Get all reservations for this date in this department
+
+        // Get all reservations for this date in this department for this shift type
         const reservationsForDate = shifts.filter(
-          s => s.shift_date === dateStr && 
-               s.department === department && 
+          s => s.shift_date === dateStr &&
+               s.department === department &&
+               s.shift_type_id === activeShiftTypeId &&
                s.status === 'reserved'
         )
 
@@ -222,11 +243,12 @@ export default function DepartmentCalendar({
 
           // Assign shift to the selected staff
           const assignedStaff = availableStaff[0]
-          
+
           shiftsToCreate.push({
             shift_date: dateStr,
-            shift_time: '24h',
+            shift_type_id: activeShiftTypeId,
             department: department,
+            hospital_id: currentUser.hospital_id!,
             assigned_to: assignedStaff.id,
             status: 'assigned'
           })
@@ -237,8 +259,9 @@ export default function DepartmentCalendar({
           // Create unassigned shift
           shiftsToCreate.push({
             shift_date: dateStr,
-            shift_time: '24h',
+            shift_type_id: activeShiftTypeId,
             department: department,
+            hospital_id: currentUser.hospital_id!,
             status: 'available'
           })
         }
@@ -268,25 +291,39 @@ export default function DepartmentCalendar({
 
   return (
     <div className="mb-8">
-      <div 
-        className="flex justify-between items-center p-4 rounded-t-lg text-white font-semibold"
+      <div
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-4 rounded-t-lg text-white font-semibold"
         style={{ backgroundColor: DEPARTMENT_COLORS[department] }}
       >
         <h2 className="text-lg">{department}</h2>
-        {canGenerateShifts && (
-          <button
-            onClick={generateShiftsForDepartment}
-            disabled={generating}
-            className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            {generating ? 'Se generează...' : 'Generează'}
-          </button>
+        {canGenerateShifts && hospitalShiftTypes.length > 0 && (
+          <div className="flex items-center gap-2">
+            <select
+              value={activeShiftTypeId}
+              onChange={e => setSelectedShiftTypeId(e.target.value)}
+              className="bg-white/20 text-white text-sm px-2 py-1 rounded border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+            >
+              {hospitalShiftTypes.map(st => (
+                <option key={st.id} value={st.id} className="text-gray-900">
+                  {st.name} ({st.start_time.slice(0, 5)}-{st.end_time.slice(0, 5)})
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={generateShiftsForDepartment}
+              disabled={generating || !activeShiftTypeId}
+              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {generating ? 'Se generează...' : 'Generează'}
+            </button>
+          </div>
         )}
       </div>
       
       <div className="border border-t-0 rounded-b-lg">
         <Calendar
           shifts={departmentShifts}
+          shiftTypes={shiftTypes}
           unavailableDates={unavailableDates}
           swapRequests={swapRequests}
           onReserveShift={onReserveShift}
@@ -304,6 +341,7 @@ export default function DepartmentCalendar({
           onDateChange={onDateChange}
           department={department}
           users={users.filter(u => u.department === department)}
+          defaultShiftTypeId={activeShiftTypeId}
         />
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { type Hospital } from '@/types'
+import { type Hospital, type ShiftType } from '@/types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -32,7 +32,8 @@ export type User = {
 export type Shift = {
   id: string
   shift_date: string
-  shift_time: '24h'
+  shift_type_id: string
+  shift_type?: ShiftType
   department: 'ATI' | 'Urgente' | 'Chirurgie' | 'Medicina Interna'
   hospital_id: string
   assigned_to?: string
@@ -64,4 +65,4 @@ export type SwapRequest = {
   target_shift?: Shift
 }
 
-export { type Hospital }
+export { type Hospital, type ShiftType }
