@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { type User, type Shift, type UnavailableDate, type SwapRequest, supabase } from '@/lib/supabase'
-import { type ShiftType, DEPARTMENT_COLORS } from '@/types'
+import { type ShiftType } from '@/types'
 import { parseISODate, formatDateForDB, addDays } from '@/lib/dateUtils'
 import Calendar from './Calendar'
 
@@ -291,8 +291,8 @@ export default function DepartmentCalendar({
     }
   }
 
-  // Get the color to use (from prop or fallback to DEPARTMENT_COLORS or default)
-  const headerColor = departmentColor || DEPARTMENT_COLORS[department] || '#6B7280'
+  // Get the color to use (from prop or default gray)
+  const headerColor = departmentColor || '#6B7280'
 
   return (
     <div className="mb-8">
@@ -345,6 +345,7 @@ export default function DepartmentCalendar({
           selectedDate={selectedDate}
           onDateChange={onDateChange}
           department={department}
+          departmentColor={headerColor}
           users={users.filter(u => u.department === department)}
           defaultShiftTypeId={activeShiftTypeId}
         />
