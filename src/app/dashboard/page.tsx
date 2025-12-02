@@ -6,9 +6,11 @@ import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import DepartmentCalendar from '@/components/DepartmentCalendar'
 import StaffManagement from '@/components/StaffManagement'
+import ReportsPanel from '@/components/ReportsPanel'
+import ExportMenu from '@/components/ExportMenu'
+import NotificationBell from '@/components/NotificationBell'
 import { useDashboardData, useShiftActions, useSwapActions, useUserActions } from '@/hooks'
 import { useToast } from '@/hooks/useToast'
-import { formatDateForDB } from '@/lib/dateUtils'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -69,51 +71,6 @@ export default function DashboardPage() {
     router.push('/')
   }
 
-  const exportToCSV = () => {
-    if (!user) return
-
-    const year = selectedDate.getFullYear()
-    const month = selectedDate.getMonth()
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-
-    const rows = []
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day, 12, 0, 0)
-      const dateStr = formatDateForDB(date)
-      const dayShifts = shifts.filter(s => s.shift_date === dateStr)
-
-      const row = {
-        date: `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`,
-        medicina: '',
-        chirurgie: '',
-        urgente: '',
-        ati: ''
-      }
-
-      dayShifts.forEach(shift => {
-        if (shift.department === 'Medicina Interna') row.medicina = shift.user?.name || ''
-        if (shift.department === 'Chirurgie') row.chirurgie = shift.user?.name || ''
-        if (shift.department === 'Urgente') row.urgente = shift.user?.name || ''
-        if (shift.department === 'ATI') row.ati = shift.user?.name || ''
-      })
-
-      rows.push(row)
-    }
-
-    const csv = [
-      'Data,Interne,Chirurgie,CPU,ATI',
-      ...rows.map(r => `${r.date},${r.medicina},${r.chirurgie},${r.urgente},${r.ati}`)
-    ].join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    const monthNames = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
-                       'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie']
-    link.download = `Garzi ${monthNames[month]} ${year}.csv`
-    link.click()
-  }
-
   const userShifts = shifts.filter(shift => shift.assigned_to === user?.id)
 
   if (authLoading || dataLoading) {
@@ -170,9 +127,19 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <button onClick={exportToCSV} className="btn btn-secondary">
-                Descarcă Excel
-              </button>
+              <NotificationBell
+                shifts={shifts}
+                swapRequests={swapRequests}
+                currentUser={user}
+                onAcceptSwap={swapActions.acceptSwapRequest}
+                onRejectSwap={swapActions.rejectSwapRequest}
+              />
+              <ExportMenu
+                shifts={shifts}
+                users={allUsers}
+                selectedDate={selectedDate}
+                currentUser={user}
+              />
               {(user.role === 'SUPER_ADMIN' || user.role === 'HOSPITAL_ADMIN') && (
                 <button
                   onClick={shiftActions.deleteAllShifts}
@@ -243,6 +210,15 @@ export default function DashboardPage() {
           />
         )}
 
+        {/* Reports Panel - Analytics for managers and admins */}
+        <ReportsPanel
+          shifts={shifts}
+          users={allUsers}
+          swapRequests={swapRequests}
+          selectedDate={selectedDate}
+          currentUser={user}
+        />
+
         {/* Department Calendars */}
         <div className="space-y-6">
           {filteredDepartments.map(dept => (
@@ -263,6 +239,7 @@ export default function DashboardPage() {
               onAssignShift={shiftActions.assignShift}
               onAcceptSwap={swapActions.acceptSwapRequest}
               onRejectSwap={swapActions.rejectSwapRequest}
+              onCheckConflicts={shiftActions.checkConflicts}
               currentUser={user}
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { type User, type Shift, type UnavailableDate, type SwapRequest, supabase } from '@/lib/supabase'
 import { type ShiftType } from '@/types'
+import { type Conflict } from '@/hooks/useShiftActions'
 import { parseISODate, formatDateForDB, addDays } from '@/lib/dateUtils'
 import { useToast } from '@/hooks/useToast'
 import Calendar from './Calendar'
@@ -23,6 +24,7 @@ interface DepartmentCalendarProps {
   onAssignShift?: (shiftId: string, userId: string | null) => void
   onAcceptSwap?: (swapRequestId: string) => void
   onRejectSwap?: (swapRequestId: string) => void
+  onCheckConflicts?: (userId: string, shiftDate: string) => Conflict[]
   currentUser: User
   selectedDate: Date
   onDateChange: (date: Date) => void
@@ -47,6 +49,7 @@ export default function DepartmentCalendar({
   onAssignShift,
   onAcceptSwap,
   onRejectSwap,
+  onCheckConflicts,
   currentUser,
   selectedDate,
   onDateChange,
@@ -344,6 +347,7 @@ export default function DepartmentCalendar({
           onAssignShift={onAssignShift}
           onAcceptSwap={onAcceptSwap}
           onRejectSwap={onRejectSwap}
+          onCheckConflicts={onCheckConflicts}
           currentUser={currentUser}
           selectedDate={selectedDate}
           onDateChange={onDateChange}

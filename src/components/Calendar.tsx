@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { type User, type Shift, type UnavailableDate, type SwapRequest } from '@/lib/supabase'
 import { type ShiftType } from '@/types'
+import { type Conflict } from '@/hooks/useShiftActions'
 import { parseISODate, formatDateForDB } from '@/lib/dateUtils'
 import ShiftCell, { EmptyDayCell } from './calendar/ShiftCell'
 import ShiftActionMenu from './calendar/ShiftActionMenu'
@@ -24,6 +25,7 @@ interface CalendarProps {
   onAssignShift?: (shiftId: string, userId: string | null) => void
   onAcceptSwap?: (swapRequestId: string) => void
   onRejectSwap?: (swapRequestId: string) => void
+  onCheckConflicts?: (userId: string, shiftDate: string) => Conflict[]
   currentUser: User
   selectedDate: Date
   onDateChange: (date: Date) => void
@@ -49,6 +51,7 @@ export default function Calendar({
   onAssignShift,
   onAcceptSwap,
   onRejectSwap,
+  onCheckConflicts,
   currentUser,
   selectedDate,
   onDateChange,
@@ -356,17 +359,25 @@ export default function Calendar({
 
               {/* Shifts */}
               <div className="absolute inset-0 flex flex-col pt-6">
-                {dayShifts.map((shift) => (
-                  <ShiftCell
-                    key={shift.id}
-                    shift={shift}
-                    currentUser={currentUser}
-                    incomingSwapRequests={getIncomingSwapRequests(shift.id)}
-                    outgoingSwapRequests={getOutgoingSwapRequests(shift.id)}
-                    departmentColor={departmentColor}
-                    onClick={(e) => handleShiftClick(shift, e)}
-                  />
-                ))}
+                {dayShifts.map((shift) => {
+                  // Check conflicts for this shift if it's assigned to someone
+                  const shiftConflicts = shift.assigned_to && onCheckConflicts
+                    ? onCheckConflicts(shift.assigned_to, shift.shift_date)
+                    : []
+
+                  return (
+                    <ShiftCell
+                      key={shift.id}
+                      shift={shift}
+                      currentUser={currentUser}
+                      incomingSwapRequests={getIncomingSwapRequests(shift.id)}
+                      outgoingSwapRequests={getOutgoingSwapRequests(shift.id)}
+                      conflicts={shiftConflicts}
+                      departmentColor={departmentColor}
+                      onClick={(e) => handleShiftClick(shift, e)}
+                    />
+                  )
+                })}
               </div>
 
               {/* Empty day state */}
@@ -394,6 +405,11 @@ export default function Calendar({
         isUnavailable={selectedDate2 ? isUnavailable(selectedDate2) : false}
         hasReservation={selectedDate2 ? hasUserReservation(selectedDate2) : false}
         users={users}
+        conflicts={selectedDate2 && onCheckConflicts
+          ? onCheckConflicts(currentUser.id, formatDateForDB(selectedDate2))
+          : []
+        }
+        onCheckConflicts={onCheckConflicts}
         onMarkUnavailable={handleMarkUnavailable}
         onRemoveUnavailable={handleRemoveUnavailable}
         onReserve={handleReserve}

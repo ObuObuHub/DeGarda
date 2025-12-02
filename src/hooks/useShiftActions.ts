@@ -12,6 +12,119 @@ interface ToastFunctions {
   info: (message: string) => void
 }
 
+// Conflict types for scheduling validation
+export interface Conflict {
+  type: 'double_booking' | 'rest_violation' | 'max_exceeded'
+  message: string
+  severity: 'warning' | 'error'
+}
+
+/**
+ * Check for scheduling conflicts when assigning/reserving a shift
+ * @param userId - The user being assigned to the shift
+ * @param shiftDate - The date of the shift (YYYY-MM-DD)
+ * @param allShifts - All shifts to check against
+ * @param shiftTypes - Shift types for duration calculation
+ * @param maxShiftsPerMonth - User's max shifts per month limit
+ * @returns Array of conflicts found
+ */
+export function checkConflicts(
+  userId: string,
+  shiftDate: string,
+  allShifts: Shift[],
+  shiftTypes: ShiftType[],
+  maxShiftsPerMonth: number = 8
+): Conflict[] {
+  const conflicts: Conflict[] = []
+  const targetDate = parseISODate(shiftDate)
+  const targetMonth = targetDate.getMonth()
+  const targetYear = targetDate.getFullYear()
+
+  // Get user's existing assigned/reserved shifts
+  const userShifts = allShifts.filter(s =>
+    s.assigned_to === userId &&
+    (s.status === 'assigned' || s.status === 'reserved')
+  )
+
+  // 1. Check for double-booking (same day)
+  const sameDayShifts = userShifts.filter(s => s.shift_date === shiftDate)
+  if (sameDayShifts.length > 0) {
+    conflicts.push({
+      type: 'double_booking',
+      message: `Utilizatorul are deja ${sameDayShifts.length} tură(e) în această zi`,
+      severity: 'error'
+    })
+  }
+
+  // 2. Check for rest period violation (8 hours between shifts)
+  // Get shifts from day before and day after
+  const dayBefore = new Date(targetDate)
+  dayBefore.setDate(dayBefore.getDate() - 1)
+  const dayAfter = new Date(targetDate)
+  dayAfter.setDate(dayAfter.getDate() + 1)
+
+  const dayBeforeStr = formatDateForDB(dayBefore)
+  const dayAfterStr = formatDateForDB(dayAfter)
+
+  const adjacentShifts = userShifts.filter(s =>
+    s.shift_date === dayBeforeStr || s.shift_date === dayAfterStr
+  )
+
+  // Check if any adjacent shift could violate rest period
+  // This is simplified - assumes shift end time to next start time should be >= 8h
+  for (const adjShift of adjacentShifts) {
+    const adjShiftType = shiftTypes.find(st => st.id === adjShift.shift_type_id)
+    if (adjShiftType && adjShiftType.duration_hours >= 12) {
+      // For 12h+ shifts on adjacent days, there's likely a rest violation
+      const isYesterday = adjShift.shift_date === dayBeforeStr
+      conflicts.push({
+        type: 'rest_violation',
+        message: isYesterday
+          ? `Perioadă de odihnă insuficientă - tură în ziua precedentă (${adjShiftType.name})`
+          : `Perioadă de odihnă insuficientă - tură în ziua următoare (${adjShiftType.name})`,
+        severity: 'warning'
+      })
+    }
+  }
+
+  // 3. Check max shifts per month exceeded
+  const monthlyShifts = userShifts.filter(s => {
+    const sDate = parseISODate(s.shift_date)
+    return sDate.getMonth() === targetMonth && sDate.getFullYear() === targetYear
+  })
+
+  if (monthlyShifts.length >= maxShiftsPerMonth) {
+    conflicts.push({
+      type: 'max_exceeded',
+      message: `Limita de ${maxShiftsPerMonth} ture pe lună a fost atinsă (${monthlyShifts.length} ture existente)`,
+      severity: 'warning'
+    })
+  }
+
+  return conflicts
+}
+
+/**
+ * Get conflicts for a specific user on a specific shift
+ * Utility function to be used by components
+ */
+export function getConflictsForShift(
+  shift: Shift,
+  currentUserId: string,
+  allShifts: Shift[],
+  shiftTypes: ShiftType[],
+  maxShiftsPerMonth: number = 8
+): Conflict[] {
+  if (!shift.assigned_to || shift.assigned_to !== currentUserId) {
+    return []
+  }
+
+  // Check conflicts for this user's shift
+  // We filter out this shift from allShifts to avoid self-conflict
+  const otherShifts = allShifts.filter(s => s.id !== shift.id)
+  return checkConflicts(shift.assigned_to, shift.shift_date, otherShifts, shiftTypes, maxShiftsPerMonth)
+}
+
 interface UseShiftActionsReturn {
   reserveShift: (shiftId: string) => Promise<void>
   cancelShift: (shiftId: string) => Promise<void>
@@ -21,6 +134,7 @@ interface UseShiftActionsReturn {
   deleteShift: (shiftId: string) => Promise<void>
   assignShift: (shiftId: string, userId: string | null) => Promise<void>
   deleteAllShifts: () => Promise<void>
+  checkConflicts: (userId: string, shiftDate: string) => Conflict[]
 }
 
 export function useShiftActions(
@@ -261,6 +375,13 @@ export function useShiftActions(
     }
   }, [user, onRefreshShifts, onRefreshUnavailable, toast])
 
+  // Wrapper for checkConflicts that uses hook's shifts and shiftTypes
+  const checkConflictsForUser = useCallback((userId: string, shiftDate: string): Conflict[] => {
+    const targetUser = user?.id === userId ? user : null
+    const maxShifts = targetUser?.max_shifts_per_month || 8
+    return checkConflicts(userId, shiftDate, shifts, shiftTypes, maxShifts)
+  }, [user, shifts, shiftTypes])
+
   return {
     reserveShift,
     cancelShift,
@@ -269,6 +390,7 @@ export function useShiftActions(
     removeUnavailable,
     deleteShift,
     assignShift,
-    deleteAllShifts
+    deleteAllShifts,
+    checkConflicts: checkConflictsForUser
   }
 }

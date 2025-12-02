@@ -1,6 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { type User, type Shift } from '@/lib/supabase'
+import { type Conflict } from '@/hooks/useShiftActions'
+import Tooltip from '@/components/ui/Tooltip'
 
 interface ShiftActionMenuProps {
   isOpen: boolean
@@ -11,6 +14,8 @@ interface ShiftActionMenuProps {
   isUnavailable: boolean
   hasReservation: boolean
   users?: User[]
+  conflicts?: Conflict[]
+  onCheckConflicts?: (userId: string, shiftDate: string) => Conflict[]
   onMarkUnavailable: () => void
   onRemoveUnavailable: () => void
   onReserve: () => void
@@ -29,6 +34,8 @@ export default function ShiftActionMenu({
   isUnavailable,
   hasReservation,
   users = [],
+  conflicts = [],
+  onCheckConflicts,
   onMarkUnavailable,
   onRemoveUnavailable,
   onReserve,
@@ -37,11 +44,46 @@ export default function ShiftActionMenu({
   onDelete,
   onStartSwap
 }: ShiftActionMenuProps) {
+  const [showOverrideConfirm, setShowOverrideConfirm] = useState(false)
+  const [pendingAssignUserId, setPendingAssignUserId] = useState<string | null>(null)
+  const [pendingConflicts, setPendingConflicts] = useState<Conflict[]>([])
+
   if (!isOpen) return null
 
   const isStaff = currentUser.role === 'STAFF'
   const isManager = currentUser.role !== 'STAFF'
   const isAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'HOSPITAL_ADMIN'
+
+  // Check if there are blocking conflicts (errors)
+  const hasBlockingConflicts = conflicts.some(c => c.severity === 'error')
+
+  // Handler for assigning with conflict check
+  const handleAssignWithCheck = (userId: string) => {
+    if (onCheckConflicts && date) {
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      const userConflicts = onCheckConflicts(userId, dateStr)
+
+      if (userConflicts.length > 0) {
+        setPendingConflicts(userConflicts)
+        setPendingAssignUserId(userId)
+        setShowOverrideConfirm(true)
+        return
+      }
+    }
+    onAssign(userId)
+    onClose()
+  }
+
+  // Handler for confirming assignment despite conflicts
+  const handleConfirmAssign = () => {
+    if (pendingAssignUserId !== null) {
+      onAssign(pendingAssignUserId)
+    }
+    setShowOverrideConfirm(false)
+    setPendingAssignUserId(null)
+    setPendingConflicts([])
+    onClose()
+  }
 
   const formatDate = (d: Date) => {
     const dayNames = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă']
@@ -81,6 +123,72 @@ export default function ShiftActionMenu({
           </p>
         </div>
 
+        {/* Conflict Warnings Banner */}
+        {conflicts.length > 0 && (
+          <div className={`mb-4 p-3 rounded-lg ${
+            hasBlockingConflicts ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'
+          }`}>
+            <div className="flex items-start gap-2">
+              <span className="text-lg">{hasBlockingConflicts ? '🚫' : '⚠️'}</span>
+              <div className="flex-1">
+                <p className={`font-medium text-sm ${hasBlockingConflicts ? 'text-red-800' : 'text-yellow-800'}`}>
+                  {hasBlockingConflicts ? 'Conflict de programare' : 'Avertismente'}
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {conflicts.map((conflict, index) => (
+                    <li key={index} className={`text-xs ${
+                      conflict.severity === 'error' ? 'text-red-700' : 'text-yellow-700'
+                    }`}>
+                      • {conflict.message}
+                    </li>
+                  ))}
+                </ul>
+                {isStaff && hasBlockingConflicts && (
+                  <p className="text-xs text-red-600 mt-2 font-medium">
+                    Nu poți rezerva această tură din cauza conflictelor.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Override Confirmation Modal */}
+        {showOverrideConfirm && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="font-medium text-sm text-yellow-800 mb-2">
+              Confirmare asignare cu conflicte
+            </p>
+            <ul className="mb-3 space-y-1">
+              {pendingConflicts.map((conflict, index) => (
+                <li key={index} className={`text-xs ${
+                  conflict.severity === 'error' ? 'text-red-700' : 'text-yellow-700'
+                }`}>
+                  • {conflict.message}
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-2">
+              <button
+                onClick={handleConfirmAssign}
+                className="flex-1 px-3 py-2 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+              >
+                Asignează oricum
+              </button>
+              <button
+                onClick={() => {
+                  setShowOverrideConfirm(false)
+                  setPendingAssignUserId(null)
+                  setPendingConflicts([])
+                }}
+                className="flex-1 px-3 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Anulează
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-2">
           {/* Staff Actions */}
           {isStaff && !shift && (
@@ -89,8 +197,8 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="🚫"
                   label="Marchează indisponibil"
-                  onClick={() => {
-                    onMarkUnavailable()
+                  onClick={async () => {
+                    await onMarkUnavailable()
                     onClose()
                   }}
                 />
@@ -100,8 +208,8 @@ export default function ShiftActionMenu({
                   <ActionButton
                     icon="✅"
                     label="Anulează indisponibilitate"
-                    onClick={() => {
-                      onRemoveUnavailable()
+                    onClick={async () => {
+                      await onRemoveUnavailable()
                       onClose()
                     }}
                   />
@@ -109,8 +217,8 @@ export default function ShiftActionMenu({
                     icon="⭐"
                     label="Rezervă tură"
                     variant="success"
-                    onClick={() => {
-                      onReserve()
+                    onClick={async () => {
+                      await onReserve()
                       onClose()
                     }}
                   />
@@ -121,8 +229,8 @@ export default function ShiftActionMenu({
                   icon="❌"
                   label="Anulează rezervarea"
                   variant="danger"
-                  onClick={() => {
-                    onCancelReservation()
+                  onClick={async () => {
+                    await onCancelReservation()
                     onClose()
                   }}
                 />
@@ -137,8 +245,8 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="↔️"
                   label="Solicită schimb"
-                  onClick={() => {
-                    onStartSwap()
+                  onClick={async () => {
+                    await onStartSwap()
                     onClose()
                   }}
                 />
@@ -148,8 +256,8 @@ export default function ShiftActionMenu({
                   icon="❌"
                   label="Anulează rezervarea"
                   variant="danger"
-                  onClick={() => {
-                    onCancelReservation()
+                  onClick={async () => {
+                    await onCancelReservation()
                     onClose()
                   }}
                 />
@@ -159,8 +267,8 @@ export default function ShiftActionMenu({
                   icon="⭐"
                   label="Rezervă această tură"
                   variant="success"
-                  onClick={() => {
-                    onReserve()
+                  onClick={async () => {
+                    await onReserve()
                     onClose()
                   }}
                 />
@@ -179,18 +287,32 @@ export default function ShiftActionMenu({
                 }}
                 subMenu={
                   <div className="mt-2 ml-8 space-y-1 border-l-2 border-gray-200 pl-3">
-                    {users.filter(u => u.role === 'STAFF').map(user => (
-                      <button
-                        key={user.id}
-                        onClick={() => {
-                          onAssign(user.id)
-                          onClose()
-                        }}
-                        className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
-                      >
-                        {user.name}
-                      </button>
-                    ))}
+                    {users.filter(u => u.role === 'STAFF').map(user => {
+                      // Check conflicts for this user when rendering
+                      let userConflicts: Conflict[] = []
+                      if (onCheckConflicts && date) {
+                        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+                        userConflicts = onCheckConflicts(user.id, dateStr)
+                      }
+                      const hasConflict = userConflicts.length > 0
+
+                      return (
+                        <button
+                          key={user.id}
+                          onClick={() => handleAssignWithCheck(user.id)}
+                          className={`block w-full text-left px-3 py-2 text-sm rounded flex items-center justify-between ${
+                            hasConflict ? 'hover:bg-yellow-50' : 'hover:bg-gray-100'
+                          }`}
+                        >
+                          <span>{user.name}</span>
+                          {hasConflict && (
+                            <Tooltip content={userConflicts.map(c => c.message).join(', ')} position="left">
+                              <span className="text-yellow-600 cursor-help">⚠️</span>
+                            </Tooltip>
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
                 }
               />
@@ -198,8 +320,8 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="🔓"
                   label="Marchează disponibil"
-                  onClick={() => {
-                    onAssign(null)
+                  onClick={async () => {
+                    await onAssign(null)
                     onClose()
                   }}
                 />
@@ -209,8 +331,8 @@ export default function ShiftActionMenu({
                   icon="🗑️"
                   label="Șterge tura"
                   variant="danger"
-                  onClick={() => {
-                    onDelete()
+                  onClick={async () => {
+                    await onDelete()
                     onClose()
                   }}
                 />

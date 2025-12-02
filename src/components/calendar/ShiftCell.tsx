@@ -1,6 +1,7 @@
 'use client'
 
 import { type Shift, type SwapRequest, type User } from '@/lib/supabase'
+import { type Conflict } from '@/hooks/useShiftActions'
 import Tooltip from '@/components/ui/Tooltip'
 
 interface ShiftCellProps {
@@ -8,6 +9,7 @@ interface ShiftCellProps {
   currentUser: User
   incomingSwapRequests: SwapRequest[]
   outgoingSwapRequests: SwapRequest[]
+  conflicts?: Conflict[]
   departmentColor?: string
   onClick: (e: React.MouseEvent) => void
 }
@@ -19,6 +21,7 @@ export default function ShiftCell({
   currentUser,
   incomingSwapRequests,
   outgoingSwapRequests,
+  conflicts = [],
   departmentColor = '#6B7280',
   onClick
 }: ShiftCellProps) {
@@ -34,6 +37,8 @@ export default function ShiftCell({
   const status = getStatus()
   const hasIncoming = incomingSwapRequests.length > 0
   const hasOutgoing = outgoingSwapRequests.length > 0
+  const hasConflicts = conflicts.length > 0
+  const hasBlockingConflict = conflicts.some(c => c.severity === 'error')
 
   // Simplified color scheme
   const getBackgroundColor = () => {
@@ -76,6 +81,18 @@ export default function ShiftCell({
         <Tooltip content="Ai trimis o cerere de schimb" position="left">
           <span className="absolute top-0.5 right-0.5 px-1.5 py-0.5 text-xs font-bold bg-blue-600 text-white rounded cursor-help">
             !
+          </span>
+        </Tooltip>
+      )
+    }
+    if (hasConflicts) {
+      const conflictMessage = conflicts.map(c => c.message).join('; ')
+      return (
+        <Tooltip content={conflictMessage} position="left">
+          <span className={`absolute top-0.5 right-0.5 px-1.5 py-0.5 text-xs font-bold text-white rounded cursor-help ${
+            hasBlockingConflict ? 'bg-red-600' : 'bg-yellow-600'
+          }`}>
+            ⚠
           </span>
         </Tooltip>
       )
