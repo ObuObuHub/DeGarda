@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { type User, type Shift, type UnavailableDate, type SwapRequest, supabase } from '@/lib/supabase'
 import { type ShiftType } from '@/types'
 import { parseISODate, formatDateForDB, addDays } from '@/lib/dateUtils'
+import { useToast } from '@/hooks/useToast'
 import Calendar from './Calendar'
 
 interface DepartmentCalendarProps {
@@ -55,6 +56,7 @@ export default function DepartmentCalendar({
 }: DepartmentCalendarProps) {
   const [generating, setGenerating] = useState(false)
   const [selectedShiftTypeId, setSelectedShiftTypeId] = useState<string>('')
+  const { toast } = useToast()
 
   // Get default shift type for user's hospital
   const hospitalShiftTypes = shiftTypes.filter(
@@ -73,7 +75,7 @@ export default function DepartmentCalendar({
 
   const generateShiftsForDepartment = async () => {
     if (!activeShiftTypeId || !currentUser.hospital_id) {
-      alert('Selectează un tip de tură și asigură-te că ești asociat unui spital.')
+      toast.warning('Selectează un tip de tură și asigură-te că ești asociat unui spital.')
       return
     }
 
@@ -90,7 +92,7 @@ export default function DepartmentCalendar({
       )
 
       if (departmentStaff.length === 0) {
-        alert('Nu există personal în acest departament!')
+        toast.warning('Nu există personal în acest departament!')
         setGenerating(false)
         return
       }
@@ -279,13 +281,14 @@ export default function DepartmentCalendar({
           .insert(shiftsToCreate)
 
         if (!error) {
+          toast.success('Turele au fost generate cu succes!')
           onShiftsGenerated()
         } else {
-          alert('Eroare la generare: ' + error.message)
+          toast.error('Eroare la generare: ' + error.message)
         }
       }
     } catch {
-      alert('Eroare la generare')
+      toast.error('Eroare la generarea turelor.')
     } finally {
       setGenerating(false)
     }

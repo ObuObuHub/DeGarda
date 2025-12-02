@@ -5,6 +5,7 @@ import { type ShiftType, type Hospital } from '@/types'
 import DataTable, { Column } from './ui/DataTable'
 import FormModal, { FormField, TextInput } from './ui/FormModal'
 import ConfirmDialog from './ui/ConfirmDialog'
+import { useToast } from '@/hooks/useToast'
 
 interface ShiftTypeManagementProps {
   shiftTypes: ShiftType[]
@@ -60,6 +61,7 @@ export default function ShiftTypeManagement({
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM)
   const [loading, setLoading] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<ShiftType | null>(null)
+  const { toast } = useToast()
 
   const filteredShiftTypes = selectedHospitalId
     ? shiftTypes.filter(st => st.hospital_id === selectedHospitalId)
@@ -129,7 +131,7 @@ export default function ShiftTypeManagement({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedHospitalId) {
-      alert('Selectează un spital mai întâi.')
+      toast.warning('Selectează un spital mai întâi.')
       return
     }
     setLoading(true)
@@ -157,7 +159,7 @@ export default function ShiftTypeManagement({
   const handleDelete = async () => {
     if (!deleteConfirm) return
     if (deleteConfirm.is_default) {
-      alert('Nu poți șterge tipul de tură implicit. Setează alt tip ca implicit mai întâi.')
+      toast.warning('Nu poți șterge tipul de tură implicit. Setează alt tip ca implicit mai întâi.')
       setDeleteConfirm(null)
       return
     }

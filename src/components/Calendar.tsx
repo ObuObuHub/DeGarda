@@ -277,9 +277,11 @@ export default function Calendar({
         <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
           <button
             onClick={() => navigateMonth('prev')}
-            className="btn btn-secondary"
+            className="btn btn-secondary focus-ring"
+            aria-label="Luna precedentă"
           >
-            ← Luna precedentă
+            <span className="sm:hidden">←</span>
+            <span className="hidden sm:inline">← Luna precedentă</span>
           </button>
 
           <div className="text-center">
@@ -301,9 +303,11 @@ export default function Calendar({
 
           <button
             onClick={() => navigateMonth('next')}
-            className="btn btn-secondary"
+            className="btn btn-secondary focus-ring"
+            aria-label="Luna următoare"
           >
-            Luna următoare →
+            <span className="sm:hidden">→</span>
+            <span className="hidden sm:inline">Luna următoare →</span>
           </button>
         </div>
       )}

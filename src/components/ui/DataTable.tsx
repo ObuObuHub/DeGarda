@@ -1,6 +1,7 @@
 'use client'
 
 import { ReactNode } from 'react'
+import Tooltip from './Tooltip'
 
 export interface Column<T> {
   key: string
@@ -66,22 +67,26 @@ export default function DataTable<T>({
                 <td className="py-3 px-4 text-right">
                   <div className="flex justify-end gap-2">
                     {onEdit && (
-                      <button
-                        onClick={() => onEdit(item)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        title="Editează"
-                      >
-                        <EditIcon />
-                      </button>
+                      <Tooltip content="Editează">
+                        <button
+                          onClick={() => onEdit(item)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          aria-label="Editează"
+                        >
+                          <EditIcon />
+                        </button>
+                      </Tooltip>
                     )}
                     {onDelete && (
-                      <button
-                        onClick={() => onDelete(item)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Șterge"
-                      >
-                        <DeleteIcon />
-                      </button>
+                      <Tooltip content="Șterge">
+                        <button
+                          onClick={() => onDelete(item)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          aria-label="Șterge"
+                        >
+                          <DeleteIcon />
+                        </button>
+                      </Tooltip>
                     )}
                   </div>
                 </td>

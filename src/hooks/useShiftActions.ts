@@ -5,6 +5,13 @@ import { supabase, type User, type Shift } from '@/lib/supabase'
 import { type ShiftType } from '@/types'
 import { formatDateForDB, parseISODate } from '@/lib/dateUtils'
 
+interface ToastFunctions {
+  success: (message: string) => void
+  error: (message: string) => void
+  warning: (message: string) => void
+  info: (message: string) => void
+}
+
 interface UseShiftActionsReturn {
   reserveShift: (shiftId: string) => Promise<void>
   cancelShift: (shiftId: string) => Promise<void>
@@ -22,7 +29,8 @@ export function useShiftActions(
   shiftTypes: ShiftType[],
   selectedDate: Date,
   onRefreshShifts: () => Promise<void>,
-  onRefreshUnavailable: () => Promise<void>
+  onRefreshUnavailable: () => Promise<void>,
+  toast?: ToastFunctions
 ): UseShiftActionsReturn {
 
   const reserveShift = useCallback(async (shiftId: string) => {
@@ -36,7 +44,7 @@ export function useShiftActions(
         .single()
 
       if (!shiftData || shiftData.department !== user.department) {
-        alert('Poți rezerva doar ture din departamentul tău!')
+        toast?.error('Poți rezerva doar ture din departamentul tău!')
         return
       }
     }
@@ -48,11 +56,12 @@ export function useShiftActions(
       .eq('status', 'available')
 
     if (!error) {
+      toast?.success('Tura a fost rezervată!')
       await onRefreshShifts()
     } else {
-      alert('Nu s-a putut rezerva tura. Poate a fost deja luată.')
+      toast?.error('Nu s-a putut rezerva tura. Poate a fost deja luată.')
     }
-  }, [user, onRefreshShifts])
+  }, [user, onRefreshShifts, toast])
 
   const cancelShift = useCallback(async (shiftId: string) => {
     if (!user) return
@@ -66,6 +75,7 @@ export function useShiftActions(
         .eq('id', shiftId)
 
       if (!error) {
+        toast?.info('Rezervarea a fost anulată.')
         await onRefreshShifts()
       }
     } else {
@@ -76,10 +86,11 @@ export function useShiftActions(
         .eq('assigned_to', user.id)
 
       if (!error) {
+        toast?.info('Rezervarea a fost anulată.')
         await onRefreshShifts()
       }
     }
-  }, [user, shifts, onRefreshShifts])
+  }, [user, shifts, onRefreshShifts, toast])
 
   const createReservation = useCallback(async (date: Date, department?: string, shiftTypeId?: string) => {
     if (!user) return
@@ -98,7 +109,7 @@ export function useShiftActions(
       }).length
 
       if (reservedCount >= 2) {
-        alert('Poți rezerva maxim 2 ture pe lună!')
+        toast?.warning('Poți rezerva maxim 2 ture pe lună!')
         return
       }
     }
@@ -108,7 +119,7 @@ export function useShiftActions(
 
     const targetShiftTypeId = shiftTypeId || shiftTypes.find(st => st.is_default)?.id
     if (!targetShiftTypeId) {
-      alert('Nu există niciun tip de tură definit. Contactați administratorul.')
+      toast?.error('Nu există niciun tip de tură definit. Contactați administratorul.')
       return
     }
 
@@ -128,13 +139,14 @@ export function useShiftActions(
         .eq('id', existingShift.id)
 
       if (!error) {
+        toast?.success('Tura a fost rezervată!')
         await onRefreshShifts()
       } else {
-        alert('Nu s-a putut rezerva tura.')
+        toast?.error('Nu s-a putut rezerva tura.')
       }
     } else {
       if (!user.hospital_id) {
-        alert('Nu ești asociat unui spital.')
+        toast?.error('Nu ești asociat unui spital.')
         return
       }
 
@@ -150,12 +162,13 @@ export function useShiftActions(
         })
 
       if (!error) {
+        toast?.success('Rezervarea a fost creată!')
         await onRefreshShifts()
       } else {
-        alert('Nu s-a putut crea rezervarea.')
+        toast?.error('Nu s-a putut crea rezervarea.')
       }
     }
-  }, [user, shifts, shiftTypes, onRefreshShifts])
+  }, [user, shifts, shiftTypes, onRefreshShifts, toast])
 
   const markUnavailable = useCallback(async (date: Date) => {
     if (!user) return
@@ -167,9 +180,10 @@ export function useShiftActions(
       .insert({ user_id: user.id, unavailable_date: dateStr })
 
     if (!error) {
+      toast?.info('Zi marcată ca indisponibilă.')
       await onRefreshUnavailable()
     }
-  }, [user, onRefreshUnavailable])
+  }, [user, onRefreshUnavailable, toast])
 
   const removeUnavailable = useCallback(async (date: Date) => {
     if (!user) return
@@ -183,9 +197,10 @@ export function useShiftActions(
       .eq('unavailable_date', dateStr)
 
     if (!error) {
+      toast?.info('Disponibilitate restabilită.')
       await onRefreshUnavailable()
     }
-  }, [user, onRefreshUnavailable])
+  }, [user, onRefreshUnavailable, toast])
 
   const deleteShift = useCallback(async (shiftId: string) => {
     if (!user || user.role === 'STAFF') return
@@ -196,11 +211,12 @@ export function useShiftActions(
       .eq('id', shiftId)
 
     if (!error) {
+      toast?.success('Tura a fost ștearsă.')
       await onRefreshShifts()
     } else {
-      alert('Nu s-a putut șterge tura.')
+      toast?.error('Nu s-a putut șterge tura.')
     }
-  }, [user, onRefreshShifts])
+  }, [user, onRefreshShifts, toast])
 
   const assignShift = useCallback(async (shiftId: string, userId: string | null) => {
     if (!user || user.role === 'STAFF') return
@@ -214,18 +230,15 @@ export function useShiftActions(
       .eq('id', shiftId)
 
     if (!error) {
+      toast?.success(userId ? 'Tura a fost asignată.' : 'Asignarea a fost anulată.')
       await onRefreshShifts()
     } else {
-      alert('Nu s-a putut asigna tura.')
+      toast?.error('Nu s-a putut asigna tura.')
     }
-  }, [user, onRefreshShifts])
+  }, [user, onRefreshShifts, toast])
 
   const deleteAllShifts = useCallback(async () => {
     if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'HOSPITAL_ADMIN')) return
-
-    if (!confirm('Sigur vrei să ștergi TOATE turele și zilele indisponibile? Această acțiune nu poate fi anulată!')) {
-      return
-    }
 
     const { error: shiftsError } = await supabase
       .from('shifts')
@@ -238,15 +251,15 @@ export function useShiftActions(
       .gte('id', '00000000-0000-0000-0000-000000000000')
 
     if (!shiftsError && !unavailableError) {
-      alert('Toate turele și zilele indisponibile au fost șterse!')
+      toast?.success('Toate turele și zilele indisponibile au fost șterse!')
       await Promise.all([onRefreshShifts(), onRefreshUnavailable()])
     } else {
       const errors = []
       if (shiftsError) errors.push(`Ture: ${shiftsError.message}`)
       if (unavailableError) errors.push(`Zile indisponibile: ${unavailableError.message}`)
-      alert('Eroare la ștergere: ' + errors.join(', '))
+      toast?.error('Eroare la ștergere: ' + errors.join(', '))
     }
-  }, [user, onRefreshShifts, onRefreshUnavailable])
+  }, [user, onRefreshShifts, onRefreshUnavailable, toast])
 
   return {
     reserveShift,

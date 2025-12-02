@@ -3,6 +3,13 @@
 import { useCallback } from 'react'
 import { supabase, type User, type Shift, type SwapRequest } from '@/lib/supabase'
 
+interface ToastFunctions {
+  success: (message: string) => void
+  error: (message: string) => void
+  warning: (message: string) => void
+  info: (message: string) => void
+}
+
 interface UseSwapActionsReturn {
   requestSwap: (requesterShiftId: string, targetShiftIds: string[]) => Promise<void>
   acceptSwapRequest: (swapRequestId: string) => Promise<void>
@@ -14,7 +21,8 @@ export function useSwapActions(
   shifts: Shift[],
   swapRequests: SwapRequest[],
   onRefreshShifts: () => Promise<void>,
-  onRefreshSwapRequests: () => Promise<void>
+  onRefreshSwapRequests: () => Promise<void>,
+  toast?: ToastFunctions
 ): UseSwapActionsReturn {
 
   const requestSwap = useCallback(async (requesterShiftId: string, targetShiftIds: string[]) => {
@@ -34,7 +42,7 @@ export function useSwapActions(
     }).filter(Boolean)
 
     if (swapRequestsToCreate.length === 0) {
-      alert('Nu s-au putut crea cererile de schimb.')
+      toast?.error('Nu s-au putut crea cererile de schimb.')
       return
     }
 
@@ -44,11 +52,11 @@ export function useSwapActions(
 
     if (!error) {
       await onRefreshSwapRequests()
-      alert(`${swapRequestsToCreate.length} cereri de schimb trimise!`)
+      toast?.success(`${swapRequestsToCreate.length} cereri de schimb trimise!`)
     } else {
-      alert('Nu s-au putut înregistra cererile de schimb.')
+      toast?.error('Nu s-au putut înregistra cererile de schimb.')
     }
-  }, [user, shifts, onRefreshSwapRequests])
+  }, [user, shifts, onRefreshSwapRequests, toast])
 
   const acceptSwapRequest = useCallback(async (swapRequestId: string) => {
     if (!user) return
@@ -57,14 +65,14 @@ export function useSwapActions(
     if (!swapRequest) return
 
     if (swapRequest.target_user_id !== user.id) {
-      alert('Nu ai autorizare pentru această acțiune.')
+      toast?.error('Nu ai autorizare pentru această acțiune.')
       return
     }
 
     const requesterShift = shifts.find(s => s.id === swapRequest.requester_shift_id)
     const targetShift = shifts.find(s => s.id === swapRequest.target_shift_id)
     if (!requesterShift || !targetShift) {
-      alert('Una din ture nu mai există.')
+      toast?.warning('Una din ture nu mai există.')
       await onRefreshSwapRequests()
       return
     }
@@ -76,7 +84,7 @@ export function useSwapActions(
       .eq('id', swapRequest.requester_shift_id)
 
     if (error1) {
-      alert(`Eroare la schimbarea turei: ${error1.message}`)
+      toast?.error(`Eroare la schimbarea turei: ${error1.message}`)
       return
     }
 
@@ -92,7 +100,7 @@ export function useSwapActions(
         .from('shifts')
         .update({ assigned_to: swapRequest.requester_id, status: 'assigned' })
         .eq('id', swapRequest.requester_shift_id)
-      alert(`Eroare la schimbarea turei: ${error2.message}`)
+      toast?.error(`Eroare la schimbarea turei: ${error2.message}`)
       return
     }
 
@@ -111,8 +119,8 @@ export function useSwapActions(
       .neq('id', swapRequestId)
 
     await Promise.all([onRefreshShifts(), onRefreshSwapRequests()])
-    alert('Schimb acceptat cu succes!')
-  }, [user, shifts, swapRequests, onRefreshShifts, onRefreshSwapRequests])
+    toast?.success('Schimb acceptat cu succes!')
+  }, [user, shifts, swapRequests, onRefreshShifts, onRefreshSwapRequests, toast])
 
   const rejectSwapRequest = useCallback(async (swapRequestId: string) => {
     if (!user) return
@@ -121,7 +129,7 @@ export function useSwapActions(
     if (!swapRequest) return
 
     if (swapRequest.target_user_id !== user.id && swapRequest.requester_id !== user.id) {
-      alert('Nu ai autorizare pentru această acțiune.')
+      toast?.error('Nu ai autorizare pentru această acțiune.')
       return
     }
 
@@ -132,9 +140,9 @@ export function useSwapActions(
 
     if (!error) {
       await onRefreshSwapRequests()
-      alert('Cerere de schimb refuzată.')
+      toast?.info('Cerere de schimb refuzată.')
     }
-  }, [user, swapRequests, onRefreshSwapRequests])
+  }, [user, swapRequests, onRefreshSwapRequests, toast])
 
   return {
     requestSwap,

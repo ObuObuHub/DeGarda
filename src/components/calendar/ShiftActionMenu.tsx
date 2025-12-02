@@ -61,7 +61,7 @@ export default function ShiftActionMenu({
       <div
         className={`fixed z-50 bg-white rounded-lg shadow-xl border ${
           isMobile
-            ? 'bottom-0 left-0 right-0 rounded-b-none p-4'
+            ? 'bottom-0 left-0 right-0 rounded-b-none p-4 pb-safe'
             : 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-4 min-w-[320px]'
         }`}
       >
@@ -76,6 +76,9 @@ export default function ShiftActionMenu({
               {shift?.user && ` • ${shift.user.name}`}
             </p>
           )}
+          <p className="text-xs text-gray-400 mt-2">
+            Alege o acțiune din lista de mai jos:
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -218,7 +221,8 @@ export default function ShiftActionMenu({
 
         <button
           onClick={onClose}
-          className="mt-4 w-full py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          className="mt-4 w-full py-2 min-h-[44px] text-gray-600 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          aria-label="Închide meniul"
         >
           Închide
         </button>
@@ -246,7 +250,7 @@ function ActionButton({ icon, label, onClick, variant = 'default', subMenu }: Ac
     <div>
       <button
         onClick={onClick}
-        className={`w-full text-left px-4 py-3 rounded-lg text-base flex items-center gap-3 transition-colors ${variantStyles[variant]}`}
+        className={`w-full text-left px-4 py-3 min-h-[44px] rounded-lg text-base flex items-center gap-3 transition-colors active:bg-gray-200 ${variantStyles[variant]}`}
       >
         <span className="text-xl">{icon}</span>
         <span>{label}</span>

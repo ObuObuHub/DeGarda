@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import Providers from '@/components/Providers'
 
 export const metadata: Metadata = {
   title: 'Degarda - Programare Ture Spital',
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="ro">
       <body className="bg-gray-50 min-h-screen">
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   )

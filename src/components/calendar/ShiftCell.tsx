@@ -1,6 +1,7 @@
 'use client'
 
 import { type Shift, type SwapRequest, type User } from '@/lib/supabase'
+import Tooltip from '@/components/ui/Tooltip'
 
 interface ShiftCellProps {
   shift: Shift
@@ -59,27 +60,33 @@ export default function ShiftCell({
     return 'text-white'
   }
 
-  // Simple status badge
+  // Simple status badge with tooltip
   const getBadge = () => {
     if (hasIncoming) {
       return (
-        <span className="absolute top-0.5 right-0.5 px-1.5 py-0.5 text-xs font-bold bg-red-600 text-white rounded">
-          {incomingSwapRequests.length}
-        </span>
+        <Tooltip content={`${incomingSwapRequests.length} cereri de schimb primite`} position="left">
+          <span className="absolute top-0.5 right-0.5 px-1.5 py-0.5 text-xs font-bold bg-red-600 text-white rounded cursor-help">
+            {incomingSwapRequests.length}
+          </span>
+        </Tooltip>
       )
     }
     if (hasOutgoing) {
       return (
-        <span className="absolute top-0.5 right-0.5 px-1.5 py-0.5 text-xs font-bold bg-blue-600 text-white rounded">
-          !
-        </span>
+        <Tooltip content="Ai trimis o cerere de schimb" position="left">
+          <span className="absolute top-0.5 right-0.5 px-1.5 py-0.5 text-xs font-bold bg-blue-600 text-white rounded cursor-help">
+            !
+          </span>
+        </Tooltip>
       )
     }
     if (status === 'your-reserved') {
       return (
-        <span className="absolute top-0.5 right-0.5 px-1.5 py-0.5 text-xs font-bold bg-yellow-600 text-white rounded">
-          R
-        </span>
+        <Tooltip content="Rezervat de tine - nu este confirmat" position="left">
+          <span className="absolute top-0.5 right-0.5 px-1.5 py-0.5 text-xs font-bold bg-yellow-600 text-white rounded cursor-help">
+            R
+          </span>
+        </Tooltip>
       )
     }
     return null

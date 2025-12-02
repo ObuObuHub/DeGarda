@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import DepartmentCalendar from '@/components/DepartmentCalendar'
 import StaffManagement from '@/components/StaffManagement'
 import { useDashboardData, useShiftActions, useSwapActions, useUserActions } from '@/hooks'
+import { useToast } from '@/hooks/useToast'
 import { formatDateForDB } from '@/lib/dateUtils'
 
 export default function DashboardPage() {
@@ -14,6 +15,7 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [authLoading, setAuthLoading] = useState(true)
   const router = useRouter()
+  const { toast } = useToast()
 
   // Use custom hooks for data and actions
   const {
@@ -36,7 +38,8 @@ export default function DashboardPage() {
     shiftTypes,
     selectedDate,
     loadShifts,
-    loadUnavailableDates
+    loadUnavailableDates,
+    toast
   )
 
   const swapActions = useSwapActions(
@@ -44,10 +47,11 @@ export default function DashboardPage() {
     shifts,
     swapRequests,
     loadShifts,
-    loadSwapRequests
+    loadSwapRequests,
+    toast
   )
 
-  const userActions = useUserActions(user, allUsers, loadUsers)
+  const userActions = useUserActions(user, allUsers, loadUsers, toast)
 
   // Auth check
   useEffect(() => {

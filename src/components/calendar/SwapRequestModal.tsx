@@ -69,7 +69,7 @@ export default function SwapRequestModal({
       <div
         className={`fixed z-50 bg-white rounded-lg shadow-xl border ${
           isMobile
-            ? 'bottom-0 left-0 right-0 rounded-b-none max-h-[80vh]'
+            ? 'bottom-0 left-0 right-0 rounded-b-none max-h-[80vh] pb-safe'
             : 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md max-h-[80vh]'
         } flex flex-col`}
       >
@@ -96,7 +96,7 @@ export default function SwapRequestModal({
                 {eligibleShifts.map(shift => (
                   <label
                     key={shift.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    className={`flex items-center gap-3 p-4 min-h-[56px] rounded-lg border-2 cursor-pointer transition-all active:scale-[0.98] ${
                       selectedTargets.has(shift.id)
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:border-gray-300'
@@ -106,7 +106,7 @@ export default function SwapRequestModal({
                       type="checkbox"
                       checked={selectedTargets.has(shift.id)}
                       onChange={() => toggleTarget(shift.id)}
-                      className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="h-6 w-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <div className="flex-1">
                       <p className="font-medium">{shift.user?.name || 'Necunoscut'}</p>
@@ -177,7 +177,7 @@ export function SwapRequestsView({
       <div
         className={`fixed z-50 bg-white rounded-lg shadow-xl border ${
           isMobile
-            ? 'bottom-0 left-0 right-0 rounded-b-none max-h-[60vh]'
+            ? 'bottom-0 left-0 right-0 rounded-b-none max-h-[60vh] pb-safe'
             : 'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md max-h-[80vh]'
         } flex flex-col`}
       >
@@ -208,13 +208,13 @@ export function SwapRequestsView({
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => onAccept(request.id)}
-                      className="flex-1 py-2 px-3 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                      className="flex-1 py-3 px-3 min-h-[44px] text-sm text-white bg-green-600 hover:bg-green-700 active:bg-green-800 rounded-lg transition-colors"
                     >
                       Acceptă
                     </button>
                     <button
                       onClick={() => onReject(request.id)}
-                      className="flex-1 py-2 px-3 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                      className="flex-1 py-3 px-3 min-h-[44px] text-sm text-white bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-lg transition-colors"
                     >
                       Refuză
                     </button>

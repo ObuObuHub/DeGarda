@@ -8,7 +8,7 @@
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 active:scale-95;
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
   }
   
   .btn-primary {
@@ -28,7 +28,7 @@
   }
   
   .input {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply w-full px-4 py-2 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
   }
   
   .card {
@@ -72,7 +72,17 @@
   .shift-badge {
     @apply relative text-white font-medium cursor-pointer transition-all hover:shadow-sm;
   }
-  
+
+  /* Touch target utility - minimum 44px for accessibility */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Focus states for accessibility */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
+  }
+
   /* Mobile bottom sheet animation */
   @keyframes slide-up {
     from {
@@ -82,8 +92,31 @@
       transform: translateY(0);
     }
   }
-  
+
   .animate-slide-up {
     animation: slide-up 0.3s ease-out;
+  }
+
+  /* Toast animation */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-in {
+    animation: fade-in 0.2s ease-out;
+  }
+
+  /* Safe area for iOS devices */
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
   }
 }
