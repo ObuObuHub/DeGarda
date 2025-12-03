@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { type Hospital, type ShiftType, type Department } from '@/types'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
 // Check if environment variables are properly configured
 if (!supabaseUrl || supabaseUrl === 'your_supabase_url_here' ||
