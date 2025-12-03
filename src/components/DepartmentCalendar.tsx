@@ -156,10 +156,13 @@ export default function DepartmentCalendar({
             // Delete other reservations
             for (const reservation of reservationsForDate) {
               if (reservation.id !== winnerReservation.id) {
-                await supabase
+                const { error } = await supabase
                   .from('shifts')
                   .delete()
                   .eq('id', reservation.id)
+                if (error) {
+                  console.error('Failed to delete reservation:', error)
+                }
               }
             }
           } else if (existingDayShift.status === 'reserved' && existingDayShift.assigned_to) {

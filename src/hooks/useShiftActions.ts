@@ -369,8 +369,8 @@ export function useShiftActions(
       await Promise.all([onRefreshShifts(), onRefreshUnavailable()])
     } else {
       const errors = []
-      if (shiftsError) errors.push(`Ture: ${shiftsError.message}`)
-      if (unavailableError) errors.push(`Zile indisponibile: ${unavailableError.message}`)
+      if (shiftsError) errors.push(`Ture: ${shiftsError.message || 'Unknown error'}`)
+      if (unavailableError) errors.push(`Zile indisponibile: ${unavailableError.message || 'Unknown error'}`)
       toast?.error('Eroare la ștergere: ' + errors.join(', '))
     }
   }, [user, onRefreshShifts, onRefreshUnavailable, toast])

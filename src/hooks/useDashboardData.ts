@@ -52,7 +52,10 @@ export function useDashboardData(
       query = query.eq('hospital_id', user.hospital_id)
     }
 
-    const { data } = await query
+    const { data, error } = await query
+    if (error) {
+      console.error('Failed to load shifts:', error)
+    }
     setShifts(data || [])
   }, [user, selectedDate])
 
@@ -69,7 +72,10 @@ export function useDashboardData(
       query = query.eq('hospital_id', user.hospital_id)
     }
 
-    const { data } = await query
+    const { data, error } = await query
+    if (error) {
+      console.error('Failed to load shift types:', error)
+    }
     setShiftTypes(data || [])
   }, [user])
 
@@ -86,29 +92,35 @@ export function useDashboardData(
       query = query.eq('hospital_id', user.hospital_id)
     }
 
-    const { data } = await query
+    const { data, error } = await query
+    if (error) {
+      console.error('Failed to load departments:', error)
+    }
     setDepartments(data || [])
   }, [user])
 
   const loadUnavailableDates = useCallback(async () => {
     if (!user) return
 
-    const query = supabase
+    let query = supabase
       .from('unavailable_dates')
       .select('*')
 
     if (user.role === 'STAFF') {
-      query.eq('user_id', user.id)
+      query = query.eq('user_id', user.id)
     }
 
-    const { data } = await query
+    const { data, error } = await query
+    if (error) {
+      console.error('Failed to load unavailable dates:', error)
+    }
     setUnavailableDates(data || [])
   }, [user])
 
   const loadSwapRequests = useCallback(async () => {
     if (!user) return
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('swap_requests')
       .select(`
         *,
@@ -120,6 +132,9 @@ export function useDashboardData(
       .or(`requester_id.eq.${user.id},target_user_id.eq.${user.id}`)
       .eq('status', 'pending')
 
+    if (error) {
+      console.error('Failed to load swap requests:', error)
+    }
     setSwapRequests(data || [])
   }, [user])
 
@@ -135,7 +150,10 @@ export function useDashboardData(
       query = query.eq('hospital_id', user.hospital_id)
     }
 
-    const { data } = await query
+    const { data, error } = await query
+    if (error) {
+      console.error('Failed to load users:', error)
+    }
     setAllUsers(data || [])
   }, [user])
 

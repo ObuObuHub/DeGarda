@@ -202,7 +202,7 @@ export default function ReportsPanel({
                 const rate = total > 0 ? Math.round((covered / total) * 100) : 0
 
                 return (
-                  <div key={day} className="text-center">
+                  <div key={index} className="text-center">
                     <div className="text-xs text-gray-500 mb-1">{day}</div>
                     <div
                       className={`h-12 rounded flex items-end justify-center ${

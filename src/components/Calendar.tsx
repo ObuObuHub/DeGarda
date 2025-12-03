@@ -223,7 +223,7 @@ export default function Calendar({
 
   const handleReserve = async () => {
     if (selectedShift) {
-      onReserveShift(selectedShift.id)
+      await onReserveShift(selectedShift.id)
     } else if (selectedDate2 && onCreateReservation) {
       await onCreateReservation(selectedDate2, currentUser.department, defaultShiftTypeId)
     }
