@@ -44,10 +44,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// No-op toast for SSR/outside provider
+const noOpToast = {
+  success: () => {},
+  error: () => {},
+  warning: () => {},
+  info: () => {}
+}
+
 export function useToast(): ToastContextValue {
   const context = useContext(ToastContext)
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider')
+    // Return no-op instead of throwing - safe for SSR
+    return { toast: noOpToast }
   }
   return context
 }
