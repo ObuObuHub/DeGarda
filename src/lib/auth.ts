@@ -3,6 +3,9 @@ import type { User } from './supabase'
 
 const AUTH_STORAGE_KEY = 'degarda_user'
 
+// Check if running in browser (not during SSR)
+const isBrowser = typeof window !== 'undefined'
+
 export const auth = {
   // Login with personal code
   async loginWithCode(personalCode: string): Promise<{ user: User | null; error: string | null }> {
@@ -18,7 +21,9 @@ export const auth = {
       }
 
       // Store user in localStorage for session management
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data))
+      if (isBrowser) {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data))
+      }
 
       return { user: data, error: null }
     } catch {
@@ -28,6 +33,7 @@ export const auth = {
 
   // Get current user from localStorage
   getCurrentUser(): User | null {
+    if (!isBrowser) return null
     try {
       const userData = localStorage.getItem(AUTH_STORAGE_KEY)
       return userData ? JSON.parse(userData) : null
@@ -38,6 +44,7 @@ export const auth = {
 
   // Logout - clear session
   logout(): void {
+    if (!isBrowser) return
     localStorage.removeItem(AUTH_STORAGE_KEY)
   },
 
