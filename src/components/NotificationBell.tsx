@@ -44,6 +44,12 @@ export default function NotificationBell({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Helper function - must be defined before use
+  const formatDate = (date: Date) => {
+    const dayNames = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm']
+    return `${dayNames[date.getDay()]} ${date.getDate()}.${String(date.getMonth() + 1).padStart(2, '0')}`
+  }
+
   // Generate notifications from current data
   const notifications: Notification[] = []
 
@@ -123,11 +129,6 @@ export default function NotificationBell({
 
   const markAllAsRead = () => {
     setReadNotificationIds(new Set(notifications.map(n => n.id)))
-  }
-
-  const formatDate = (date: Date) => {
-    const dayNames = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm']
-    return `${dayNames[date.getDay()]} ${date.getDate()}.${String(date.getMonth() + 1).padStart(2, '0')}`
   }
 
   const getIcon = (type: Notification['type']) => {
