@@ -355,7 +355,7 @@ export default function ShiftActionMenu({
           )}
 
           {/* Manager/Admin Actions */}
-          {isManager && shift && (
+          {isManager && shift && (isAdmin || shift.department === currentUser.department) && (
             <>
               <ActionButton
                 icon="👥"

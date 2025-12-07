@@ -6,7 +6,6 @@ import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import DepartmentCalendar from '@/components/DepartmentCalendar'
 import StaffManagement from '@/components/StaffManagement'
-import ReportsPanel from '@/components/ReportsPanel'
 import ExportMenu from '@/components/ExportMenu'
 import NotificationBell from '@/components/NotificationBell'
 import { useDashboardData, useShiftActions, useSwapActions, useUserActions } from '@/hooks'
@@ -209,15 +208,6 @@ export default function DashboardPage() {
             onDeleteUser={userActions.deleteUser}
           />
         )}
-
-        {/* Reports Panel - Analytics for managers and admins */}
-        <ReportsPanel
-          shifts={shifts}
-          users={allUsers}
-          swapRequests={swapRequests}
-          selectedDate={selectedDate}
-          currentUser={user}
-        />
 
         {/* Department Calendars */}
         <div className="space-y-6">

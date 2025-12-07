@@ -230,7 +230,15 @@ export function useShiftActions(
       }
     }
 
-    const targetDepartment = department || user.department
+    // DEPARTMENT_MANAGER can only create shifts in their own department
+    if (user.role === 'DEPARTMENT_MANAGER') {
+      if (department && department !== user.department) {
+        toast?.error('Poți crea ture doar în departamentul tău.')
+        return
+      }
+    }
+
+    const targetDepartment = user.role === 'DEPARTMENT_MANAGER' ? user.department : (department || user.department)
     if (!targetDepartment) return
 
     const targetShiftTypeId = shiftTypeId || shiftTypes.find(st => st.is_default)?.id
@@ -371,6 +379,15 @@ export function useShiftActions(
   const assignShift = useCallback(async (shiftId: string, userId: string | null) => {
     if (!user || user.role === 'STAFF') return
 
+    // DEPARTMENT_MANAGER can only assign shifts in their own department
+    if (user.role === 'DEPARTMENT_MANAGER') {
+      const shift = shifts.find(s => s.id === shiftId)
+      if (!shift || shift.department !== user.department) {
+        toast?.error('Poți gestiona doar ture din departamentul tău.')
+        return
+      }
+    }
+
     const { error } = await supabase
       .from('shifts')
       .update({
@@ -385,7 +402,7 @@ export function useShiftActions(
     } else {
       toast?.error('Nu s-a putut asigna tura.')
     }
-  }, [user, onRefreshShifts, toast])
+  }, [user, shifts, onRefreshShifts, toast])
 
   const deleteAllShifts = useCallback(async () => {
     if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'HOSPITAL_ADMIN')) return
