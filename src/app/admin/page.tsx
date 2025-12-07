@@ -86,12 +86,17 @@ export default function AdminPage() {
   }
 
   const loadDepartments = async () => {
-    const { data } = await supabase
+    let query = supabase
       .from('departments')
       .select('*')
       .eq('is_active', true)
       .order('name')
 
+    if (selectedHospitalId) {
+      query = query.eq('hospital_id', selectedHospitalId)
+    }
+
+    const { data } = await query
     setDepartments(data || [])
   }
 
@@ -377,6 +382,31 @@ export default function AdminPage() {
             onDeleteHospital={deleteHospital}
           />
 
+          {/* Department Management */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🏢</span>
+                <span className="text-lg font-semibold text-gray-900">
+                  Departamente
+                </span>
+              </div>
+              <HospitalSelector
+                hospitals={hospitals}
+                selectedHospitalId={selectedHospitalId}
+                onSelect={setSelectedHospitalId}
+                showAllOption={false}
+              />
+            </div>
+            <DepartmentManagement
+              departments={departments}
+              selectedHospitalId={selectedHospitalId}
+              onAddDepartment={addDepartment}
+              onUpdateDepartment={updateDepartment}
+              onDeleteDepartment={deleteDepartment}
+            />
+          </div>
+
           {/* Shift Type Management */}
           <div className="bg-white rounded-lg shadow-sm border">
             <div className="px-6 py-4 border-b flex items-center justify-between">
@@ -403,31 +433,6 @@ export default function AdminPage() {
                 onDeleteShiftType={deleteShiftType}
               />
             </div>
-          </div>
-
-          {/* Department Management */}
-          <div className="bg-white rounded-lg shadow-sm border">
-            <div className="px-6 py-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🏢</span>
-                <span className="text-lg font-semibold text-gray-900">
-                  Departamente
-                </span>
-              </div>
-              <HospitalSelector
-                hospitals={hospitals}
-                selectedHospitalId={selectedHospitalId}
-                onSelect={setSelectedHospitalId}
-                showAllOption={false}
-              />
-            </div>
-            <DepartmentManagement
-              departments={departments}
-              selectedHospitalId={selectedHospitalId}
-              onAddDepartment={addDepartment}
-              onUpdateDepartment={updateDepartment}
-              onDeleteDepartment={deleteDepartment}
-            />
           </div>
 
           {/* User Management Section */}
