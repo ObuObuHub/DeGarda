@@ -19,6 +19,8 @@ interface CalendarProps {
   onCancelShift: (shiftId: string) => void
   onMarkUnavailable: (date: Date) => void
   onRemoveUnavailable: (date: Date) => void
+  onSetPreference?: (date: Date, type: 'unavailable' | 'preferred') => void
+  onRemovePreference?: (date: Date) => void
   onDeleteShift?: (shiftId: string) => void
   onCreateReservation?: (date: Date, department?: string, shiftTypeId?: string) => void
   onRequestSwap?: (requesterShiftId: string, targetShiftIds: string[]) => void
@@ -46,6 +48,8 @@ export default function Calendar({
   onCancelShift,
   onMarkUnavailable,
   onRemoveUnavailable,
+  onSetPreference,
+  onRemovePreference,
   onDeleteShift,
   onCreateReservation,
   onRequestSwap,
@@ -127,7 +131,18 @@ export default function Calendar({
   const isUnavailable = (date: Date) => {
     const dateStr = formatDateForDB(date)
     return unavailableDates.some(
-      ud => ud.user_id === currentUser.id && ud.unavailable_date === dateStr
+      ud => ud.user_id === currentUser.id &&
+            ud.unavailable_date === dateStr &&
+            (ud.preference_type === 'unavailable' || !ud.preference_type)
+    )
+  }
+
+  const isPreferred = (date: Date) => {
+    const dateStr = formatDateForDB(date)
+    return unavailableDates.some(
+      ud => ud.user_id === currentUser.id &&
+            ud.unavailable_date === dateStr &&
+            ud.preference_type === 'preferred'
     )
   }
 
@@ -220,6 +235,18 @@ export default function Calendar({
   const handleRemoveUnavailable = async () => {
     if (selectedDate2) {
       await onRemoveUnavailable(selectedDate2)
+    }
+  }
+
+  const handleSetPreference = (type: 'unavailable' | 'preferred') => {
+    if (selectedDate2 && onSetPreference) {
+      onSetPreference(selectedDate2, type)
+    }
+  }
+
+  const handleRemovePreference = () => {
+    if (selectedDate2 && onRemovePreference) {
+      onRemovePreference(selectedDate2)
     }
   }
 
@@ -334,6 +361,10 @@ export default function Calendar({
             <span>Altă persoană</span>
           </div>
           <div className="flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded bg-green-100 ring-2 ring-green-500 flex items-center justify-center text-green-600 text-xs">💚</span>
+            <span>Prefer să lucrez</span>
+          </div>
+          <div className="flex items-center gap-1.5">
             <span className="w-4 h-4 rounded bg-gray-100 flex items-center justify-center text-red-500 text-xs">✕</span>
             <span>Indisponibil</span>
           </div>
@@ -418,6 +449,7 @@ export default function Calendar({
                 <EmptyDayCell
                   date={date}
                   isUnavailable={unavailable}
+                  isPreferred={isPreferred(date)}
                   hasReservation={hasReservation}
                   canInteract={canInteract}
                   onClick={() => handleDateClick(date)}
@@ -436,6 +468,7 @@ export default function Calendar({
         date={selectedDate2}
         currentUser={currentUser}
         isUnavailable={selectedDate2 ? isUnavailable(selectedDate2) : false}
+        isPreferred={selectedDate2 ? isPreferred(selectedDate2) : false}
         hasReservation={selectedDate2 ? hasUserReservation(selectedDate2) : false}
         users={users}
         conflicts={selectedDate2 && onCheckConflicts
@@ -444,6 +477,8 @@ export default function Calendar({
         }
         outgoingSwapRequestId={selectedShift ? getOutgoingSwapRequests(selectedShift.id)[0]?.id : undefined}
         onCheckConflicts={onCheckConflicts}
+        onSetPreference={handleSetPreference}
+        onRemovePreference={handleRemovePreference}
         onMarkUnavailable={handleMarkUnavailable}
         onRemoveUnavailable={handleRemoveUnavailable}
         onReserve={handleReserve}

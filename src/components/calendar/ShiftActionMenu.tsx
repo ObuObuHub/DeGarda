@@ -12,13 +12,16 @@ interface ShiftActionMenuProps {
   date: Date | null
   currentUser: User
   isUnavailable: boolean
+  isPreferred: boolean
   hasReservation: boolean
   users?: User[]
   conflicts?: Conflict[]
   outgoingSwapRequestId?: string
   onCheckConflicts?: (userId: string, shiftDate: string) => Conflict[]
-  onMarkUnavailable: () => void
-  onRemoveUnavailable: () => void
+  onSetPreference: (type: 'unavailable' | 'preferred') => void
+  onRemovePreference: () => void
+  onMarkUnavailable: () => void  // Legacy
+  onRemoveUnavailable: () => void  // Legacy
   onReserve: () => void
   onCancelReservation: () => void
   onAssign: (userId: string | null) => void
@@ -34,12 +37,18 @@ export default function ShiftActionMenu({
   date,
   currentUser,
   isUnavailable,
+  isPreferred,
   hasReservation,
   users = [],
   conflicts = [],
   outgoingSwapRequestId,
   onCheckConflicts,
+  onSetPreference,
+  onRemovePreference,
+  // Legacy props kept for backward compatibility (unused)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onMarkUnavailable,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onRemoveUnavailable,
   onReserve,
   onCancelReservation,
@@ -197,28 +206,72 @@ export default function ShiftActionMenu({
           {/* Staff Actions */}
           {isStaff && !shift && (
             <>
-              {!isUnavailable && !hasReservation && (
-                <ActionButton
-                  icon="🚫"
-                  label="Marchează indisponibil"
-                  tooltip="Nu vei fi programat în această zi"
-                  onClick={async () => {
-                    await onMarkUnavailable()
-                    onClose()
-                  }}
-                />
+              {/* Preference options - show when no reservation */}
+              {!hasReservation && !isPreferred && !isUnavailable && (
+                <>
+                  <ActionButton
+                    icon="💚"
+                    label="Prefer să lucrez"
+                    tooltip="Marchează că preferi să lucrezi în această zi"
+                    variant="success"
+                    onClick={async () => {
+                      onSetPreference('preferred')
+                      onClose()
+                    }}
+                  />
+                  <ActionButton
+                    icon="🚫"
+                    label="Indisponibil"
+                    tooltip="Nu poți lucra în această zi"
+                    variant="danger"
+                    onClick={async () => {
+                      onSetPreference('unavailable')
+                      onClose()
+                    }}
+                  />
+                </>
               )}
-              {isUnavailable && !hasReservation && (
-                <ActionButton
-                  icon="✅"
-                  label="Anulează indisponibilitate"
-                  tooltip="Redevii disponibil pentru programare"
-                  onClick={async () => {
-                    await onRemoveUnavailable()
-                    onClose()
-                  }}
-                />
+
+              {/* Already has a preference - show remove option and switch option */}
+              {!hasReservation && (isPreferred || isUnavailable) && (
+                <>
+                  {isPreferred && (
+                    <ActionButton
+                      icon="🚫"
+                      label="Schimbă în Indisponibil"
+                      tooltip="Marchează că nu poți lucra"
+                      variant="danger"
+                      onClick={async () => {
+                        onSetPreference('unavailable')
+                        onClose()
+                      }}
+                    />
+                  )}
+                  {isUnavailable && (
+                    <ActionButton
+                      icon="💚"
+                      label="Schimbă în Preferată"
+                      tooltip="Marchează că preferi să lucrezi"
+                      variant="success"
+                      onClick={async () => {
+                        onSetPreference('preferred')
+                        onClose()
+                      }}
+                    />
+                  )}
+                  <ActionButton
+                    icon="❌"
+                    label="Șterge preferința"
+                    tooltip="Revino la starea normală"
+                    onClick={async () => {
+                      onRemovePreference()
+                      onClose()
+                    }}
+                  />
+                </>
               )}
+
+              {/* Reserve option - always available if no reservation */}
               {!hasReservation && (
                 <ActionButton
                   icon="⭐"
@@ -231,6 +284,8 @@ export default function ShiftActionMenu({
                   }}
                 />
               )}
+
+              {/* Cancel reservation */}
               {hasReservation && (
                 <ActionButton
                   icon="❌"
@@ -351,7 +406,7 @@ export default function ShiftActionMenu({
                   }}
                 />
               )}
-              {isAdmin && (
+              {(isAdmin || currentUser.role === 'DEPARTMENT_MANAGER') && (
                 <ActionButton
                   icon="🗑️"
                   label="Șterge tura"

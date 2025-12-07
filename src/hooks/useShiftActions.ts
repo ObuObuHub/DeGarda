@@ -129,8 +129,10 @@ interface UseShiftActionsReturn {
   reserveShift: (shiftId: string) => Promise<void>
   cancelShift: (shiftId: string) => Promise<void>
   createReservation: (date: Date, department?: string, shiftTypeId?: string) => Promise<void>
-  markUnavailable: (date: Date) => Promise<void>
-  removeUnavailable: (date: Date) => Promise<void>
+  setPreference: (date: Date, preferenceType: 'unavailable' | 'preferred') => Promise<void>
+  removePreference: (date: Date) => Promise<void>
+  markUnavailable: (date: Date) => Promise<void>  // Legacy
+  removeUnavailable: (date: Date) => Promise<void>  // Legacy
   deleteShift: (shiftId: string) => Promise<void>
   assignShift: (shiftId: string, userId: string | null) => Promise<void>
   deleteAllShifts: () => Promise<void>
@@ -284,22 +286,42 @@ export function useShiftActions(
     }
   }, [user, shifts, shiftTypes, onRefreshShifts, toast])
 
-  const markUnavailable = useCallback(async (date: Date) => {
+  const setPreference = useCallback(async (date: Date, preferenceType: 'unavailable' | 'preferred') => {
     if (!user) return
 
     const dateStr = formatDateForDB(date)
 
+    // First, remove any existing preference for this date
+    await supabase
+      .from('unavailable_dates')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('unavailable_date', dateStr)
+
+    // Then insert the new preference
     const { error } = await supabase
       .from('unavailable_dates')
-      .insert({ user_id: user.id, unavailable_date: dateStr })
+      .insert({
+        user_id: user.id,
+        unavailable_date: dateStr,
+        preference_type: preferenceType
+      })
 
     if (!error) {
-      toast?.info('Zi marcată ca indisponibilă.')
+      const message = preferenceType === 'preferred'
+        ? 'Zi marcată ca preferată.'
+        : 'Zi marcată ca indisponibilă.'
+      toast?.info(message)
       await onRefreshUnavailable()
     }
   }, [user, onRefreshUnavailable, toast])
 
-  const removeUnavailable = useCallback(async (date: Date) => {
+  // Legacy wrapper for backward compatibility
+  const markUnavailable = useCallback(async (date: Date) => {
+    await setPreference(date, 'unavailable')
+  }, [setPreference])
+
+  const removePreference = useCallback(async (date: Date) => {
     if (!user) return
 
     const dateStr = formatDateForDB(date)
@@ -311,13 +333,27 @@ export function useShiftActions(
       .eq('unavailable_date', dateStr)
 
     if (!error) {
-      toast?.info('Disponibilitate restabilită.')
+      toast?.info('Preferința a fost ștearsă.')
       await onRefreshUnavailable()
     }
   }, [user, onRefreshUnavailable, toast])
 
+  // Legacy wrapper for backward compatibility
+  const removeUnavailable = useCallback(async (date: Date) => {
+    await removePreference(date)
+  }, [removePreference])
+
   const deleteShift = useCallback(async (shiftId: string) => {
     if (!user || user.role === 'STAFF') return
+
+    // DEPARTMENT_MANAGER can only delete shifts in their own department
+    if (user.role === 'DEPARTMENT_MANAGER') {
+      const shift = shifts.find(s => s.id === shiftId)
+      if (!shift || shift.department !== user.department) {
+        toast?.error('Poți șterge doar ture din departamentul tău.')
+        return
+      }
+    }
 
     const { error } = await supabase
       .from('shifts')
@@ -330,7 +366,7 @@ export function useShiftActions(
     } else {
       toast?.error('Nu s-a putut șterge tura.')
     }
-  }, [user, onRefreshShifts, toast])
+  }, [user, shifts, onRefreshShifts, toast])
 
   const assignShift = useCallback(async (shiftId: string, userId: string | null) => {
     if (!user || user.role === 'STAFF') return
@@ -386,6 +422,8 @@ export function useShiftActions(
     reserveShift,
     cancelShift,
     createReservation,
+    setPreference,
+    removePreference,
     markUnavailable,
     removeUnavailable,
     deleteShift,

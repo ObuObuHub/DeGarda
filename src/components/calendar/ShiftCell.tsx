@@ -158,6 +158,7 @@ export default function ShiftCell({
 interface EmptyDayCellProps {
   date: Date // kept for potential future use
   isUnavailable: boolean
+  isPreferred?: boolean
   hasReservation: boolean
   canInteract: boolean
   onClick: () => void
@@ -167,6 +168,7 @@ export function EmptyDayCell({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   date,
   isUnavailable,
+  isPreferred = false,
   hasReservation,
   canInteract,
   onClick
@@ -182,6 +184,22 @@ export function EmptyDayCell({
         <div className="text-center">
           <span className="text-2xl">⭐</span>
           <span className="block text-xs text-yellow-800 font-medium">Rezervat</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (isPreferred) {
+    return (
+      <div
+        className={`absolute inset-0 flex items-center justify-center bg-green-50 ring-2 ring-inset ring-green-400 ${
+          canInteract ? 'cursor-pointer hover:bg-green-100' : ''
+        }`}
+        onClick={canInteract ? onClick : undefined}
+      >
+        <div className="text-center">
+          <span className="text-lg">💚</span>
+          <span className="block text-xs text-green-700 font-medium">Prefer</span>
         </div>
       </div>
     )

@@ -18,6 +18,8 @@ interface DepartmentCalendarProps {
   onCancelShift: (shiftId: string) => void
   onMarkUnavailable: (date: Date) => void
   onRemoveUnavailable: (date: Date) => void
+  onSetPreference?: (date: Date, type: 'unavailable' | 'preferred') => void
+  onRemovePreference?: (date: Date) => void
   onDeleteShift?: (shiftId: string) => void
   onCreateReservation?: (date: Date, department?: string, shiftTypeId?: string) => void
   onRequestSwap?: (requesterShiftId: string, targetShiftIds: string[]) => void
@@ -44,6 +46,8 @@ export default function DepartmentCalendar({
   onCancelShift,
   onMarkUnavailable,
   onRemoveUnavailable,
+  onSetPreference,
+  onRemovePreference,
   onDeleteShift,
   onCreateReservation,
   onRequestSwap,
@@ -346,6 +350,8 @@ export default function DepartmentCalendar({
           onCancelShift={onCancelShift}
           onMarkUnavailable={onMarkUnavailable}
           onRemoveUnavailable={onRemoveUnavailable}
+          onSetPreference={onSetPreference}
+          onRemovePreference={onRemovePreference}
           onDeleteShift={onDeleteShift}
           onCreateReservation={onCreateReservation}
           onRequestSwap={onRequestSwap}

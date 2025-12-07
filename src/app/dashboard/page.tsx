@@ -233,6 +233,8 @@ export default function DashboardPage() {
               onCancelShift={shiftActions.cancelShift}
               onMarkUnavailable={shiftActions.markUnavailable}
               onRemoveUnavailable={shiftActions.removeUnavailable}
+              onSetPreference={shiftActions.setPreference}
+              onRemovePreference={shiftActions.removePreference}
               onDeleteShift={shiftActions.deleteShift}
               onCreateReservation={shiftActions.createReservation}
               onRequestSwap={swapActions.requestSwap}

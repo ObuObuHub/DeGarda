@@ -46,10 +46,13 @@ export type Shift = {
   user?: User
 }
 
+export type PreferenceType = 'unavailable' | 'preferred'
+
 export type UnavailableDate = {
   id: string
   user_id: string
   unavailable_date: string
+  preference_type: PreferenceType
   reason?: string
   created_at: string
 }
