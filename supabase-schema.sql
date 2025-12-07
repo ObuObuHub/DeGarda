@@ -75,12 +75,13 @@ CREATE TABLE swap_requests (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Unavailable dates table (when staff cannot work)
+-- Unavailable dates table (when staff cannot work OR prefer to work)
 CREATE TABLE unavailable_dates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     unavailable_date DATE NOT NULL,
     reason VARCHAR,
+    preference_type VARCHAR(20) CHECK (preference_type IN ('unavailable', 'preferred')) DEFAULT 'unavailable',
     created_at TIMESTAMP DEFAULT NOW(),
 
     -- Prevent duplicate entries for same user and date

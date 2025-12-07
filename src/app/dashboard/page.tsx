@@ -108,8 +108,7 @@ export default function DashboardPage() {
   const filteredDepartments = departments.filter(dept =>
     user.role === 'SUPER_ADMIN' ||
     user.role === 'HOSPITAL_ADMIN' ||
-    user.role === 'DEPARTMENT_MANAGER' ||
-    dept.name === user.department
+    dept.name === user.department  // DEPARTMENT_MANAGER and STAFF see only their department
   )
 
   return (
