@@ -209,27 +209,27 @@ export default function ShiftActionMenu({
                 />
               )}
               {isUnavailable && !hasReservation && (
-                <>
-                  <ActionButton
-                    icon="✅"
-                    label="Anulează indisponibilitate"
-                    tooltip="Redevii disponibil pentru programare"
-                    onClick={async () => {
-                      await onRemoveUnavailable()
-                      onClose()
-                    }}
-                  />
-                  <ActionButton
-                    icon="⭐"
-                    label="Rezervă tură"
-                    tooltip="Solicită să lucrezi în această zi"
-                    variant="success"
-                    onClick={async () => {
-                      await onReserve()
-                      onClose()
-                    }}
-                  />
-                </>
+                <ActionButton
+                  icon="✅"
+                  label="Anulează indisponibilitate"
+                  tooltip="Redevii disponibil pentru programare"
+                  onClick={async () => {
+                    await onRemoveUnavailable()
+                    onClose()
+                  }}
+                />
+              )}
+              {!hasReservation && (
+                <ActionButton
+                  icon="⭐"
+                  label="Rezervă tură"
+                  tooltip="Solicită să lucrezi în această zi"
+                  variant="success"
+                  onClick={async () => {
+                    await onReserve()
+                    onClose()
+                  }}
+                />
               )}
               {hasReservation && (
                 <ActionButton
