@@ -14,6 +14,7 @@ interface UseSwapActionsReturn {
   requestSwap: (requesterShiftId: string, targetShiftIds: string[]) => Promise<void>
   acceptSwapRequest: (swapRequestId: string) => Promise<void>
   rejectSwapRequest: (swapRequestId: string) => Promise<void>
+  cancelSwapRequest: (swapRequestId: string) => Promise<void>
 }
 
 export function useSwapActions(
@@ -144,9 +145,33 @@ export function useSwapActions(
     }
   }, [user, swapRequests, onRefreshSwapRequests, toast])
 
+  const cancelSwapRequest = useCallback(async (swapRequestId: string) => {
+    if (!user) return
+
+    const swapRequest = swapRequests.find(sr => sr.id === swapRequestId)
+    if (!swapRequest) return
+
+    // Only the requester can cancel their own request
+    if (swapRequest.requester_id !== user.id) {
+      toast?.error('Poți anula doar cererile trimise de tine.')
+      return
+    }
+
+    const { error } = await supabase
+      .from('swap_requests')
+      .update({ status: 'cancelled' })
+      .eq('id', swapRequestId)
+
+    if (!error) {
+      await onRefreshSwapRequests()
+      toast?.info('Cerere de schimb anulată.')
+    }
+  }, [user, swapRequests, onRefreshSwapRequests, toast])
+
   return {
     requestSwap,
     acceptSwapRequest,
-    rejectSwapRequest
+    rejectSwapRequest,
+    cancelSwapRequest
   }
 }

@@ -134,10 +134,17 @@ export default function ShiftCell({
         </div>
       )}
 
-      {/* Available indicator */}
+      {/* Available indicator - more prominent */}
       {!shift.user && status === 'available' && (
-        <div className="flex items-center justify-center h-full">
-          <span className="text-gray-400 text-xs">Liber</span>
+        <div className="flex items-center justify-center h-full border-2 border-dashed border-blue-400 rounded m-0.5">
+          <span className="text-blue-600 text-xs font-medium">LIBER</span>
+        </div>
+      )}
+
+      {/* Show swap target when outgoing swap exists */}
+      {hasOutgoing && shift.user && (
+        <div className="absolute bottom-0 left-0 right-0 bg-blue-600 text-white text-xs px-1 truncate text-center">
+          Schimb trimis
         </div>
       )}
 
@@ -183,14 +190,17 @@ export function EmptyDayCell({
   if (isUnavailable) {
     return (
       <div
-        className={`absolute inset-0 flex items-center justify-center bg-gray-100 ${
-          canInteract ? 'cursor-pointer hover:bg-gray-200' : ''
+        className={`absolute inset-0 flex items-center justify-center ${
+          canInteract ? 'cursor-pointer hover:opacity-80' : ''
         }`}
+        style={{
+          background: 'repeating-linear-gradient(45deg, #fee2e2, #fee2e2 5px, #fecaca 5px, #fecaca 10px)'
+        }}
         onClick={canInteract ? onClick : undefined}
       >
-        <div className="text-center">
-          <span className="text-2xl">🚫</span>
-          <span className="block text-xs text-gray-600">Indisponibil</span>
+        <div className="text-center bg-white/80 rounded px-2 py-1">
+          <span className="text-red-500 text-lg font-bold">✕</span>
+          <span className="block text-xs text-red-600 font-medium">Indisponibil</span>
         </div>
       </div>
     )

@@ -24,6 +24,7 @@ interface DepartmentCalendarProps {
   onAssignShift?: (shiftId: string, userId: string | null) => void
   onAcceptSwap?: (swapRequestId: string) => void
   onRejectSwap?: (swapRequestId: string) => void
+  onCancelSwap?: (swapRequestId: string) => void
   onCheckConflicts?: (userId: string, shiftDate: string) => Conflict[]
   currentUser: User
   selectedDate: Date
@@ -49,6 +50,7 @@ export default function DepartmentCalendar({
   onAssignShift,
   onAcceptSwap,
   onRejectSwap,
+  onCancelSwap,
   onCheckConflicts,
   currentUser,
   selectedDate,
@@ -350,6 +352,7 @@ export default function DepartmentCalendar({
           onAssignShift={onAssignShift}
           onAcceptSwap={onAcceptSwap}
           onRejectSwap={onRejectSwap}
+          onCancelSwap={onCancelSwap}
           onCheckConflicts={onCheckConflicts}
           currentUser={currentUser}
           selectedDate={selectedDate}

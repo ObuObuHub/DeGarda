@@ -15,6 +15,7 @@ interface ShiftActionMenuProps {
   hasReservation: boolean
   users?: User[]
   conflicts?: Conflict[]
+  outgoingSwapRequestId?: string
   onCheckConflicts?: (userId: string, shiftDate: string) => Conflict[]
   onMarkUnavailable: () => void
   onRemoveUnavailable: () => void
@@ -23,6 +24,7 @@ interface ShiftActionMenuProps {
   onAssign: (userId: string | null) => void
   onDelete: () => void
   onStartSwap: () => void
+  onCancelSwap?: (swapRequestId: string) => void
 }
 
 export default function ShiftActionMenu({
@@ -35,6 +37,7 @@ export default function ShiftActionMenu({
   hasReservation,
   users = [],
   conflicts = [],
+  outgoingSwapRequestId,
   onCheckConflicts,
   onMarkUnavailable,
   onRemoveUnavailable,
@@ -42,7 +45,8 @@ export default function ShiftActionMenu({
   onCancelReservation,
   onAssign,
   onDelete,
-  onStartSwap
+  onStartSwap,
+  onCancelSwap
 }: ShiftActionMenuProps) {
   const [showOverrideConfirm, setShowOverrideConfirm] = useState(false)
   const [pendingAssignUserId, setPendingAssignUserId] = useState<string | null>(null)
@@ -197,6 +201,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="🚫"
                   label="Marchează indisponibil"
+                  tooltip="Nu vei fi programat în această zi"
                   onClick={async () => {
                     await onMarkUnavailable()
                     onClose()
@@ -208,6 +213,7 @@ export default function ShiftActionMenu({
                   <ActionButton
                     icon="✅"
                     label="Anulează indisponibilitate"
+                    tooltip="Redevii disponibil pentru programare"
                     onClick={async () => {
                       await onRemoveUnavailable()
                       onClose()
@@ -216,6 +222,7 @@ export default function ShiftActionMenu({
                   <ActionButton
                     icon="⭐"
                     label="Rezervă tură"
+                    tooltip="Solicită să lucrezi în această zi"
                     variant="success"
                     onClick={async () => {
                       await onReserve()
@@ -228,6 +235,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="❌"
                   label="Anulează rezervarea"
+                  tooltip="Renunță la rezervarea făcută"
                   variant="danger"
                   onClick={async () => {
                     await onCancelReservation()
@@ -241,12 +249,25 @@ export default function ShiftActionMenu({
           {/* Staff Actions for existing shift */}
           {isStaff && shift && (
             <>
-              {shift.assigned_to === currentUser.id && shift.status === 'assigned' && (
+              {shift.assigned_to === currentUser.id && shift.status === 'assigned' && !outgoingSwapRequestId && (
                 <ActionButton
                   icon="↔️"
                   label="Solicită schimb"
+                  tooltip="Propune schimb de tură cu un coleg"
                   onClick={async () => {
                     await onStartSwap()
+                    onClose()
+                  }}
+                />
+              )}
+              {shift.assigned_to === currentUser.id && outgoingSwapRequestId && onCancelSwap && (
+                <ActionButton
+                  icon="🚫"
+                  label="Anulează cererea de schimb"
+                  tooltip="Retrage cererea de schimb trimisă"
+                  variant="danger"
+                  onClick={async () => {
+                    await onCancelSwap(outgoingSwapRequestId)
                     onClose()
                   }}
                 />
@@ -255,6 +276,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="❌"
                   label="Anulează rezervarea"
+                  tooltip="Renunță la rezervarea făcută"
                   variant="danger"
                   onClick={async () => {
                     await onCancelReservation()
@@ -266,6 +288,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="⭐"
                   label="Rezervă această tură"
+                  tooltip="Solicită să lucrezi această tură"
                   variant="success"
                   onClick={async () => {
                     await onReserve()
@@ -282,6 +305,7 @@ export default function ShiftActionMenu({
               <ActionButton
                 icon="👥"
                 label={shift.assigned_to ? 'Reasignează tura' : 'Asignează tura'}
+                tooltip="Alege un membru al echipei"
                 onClick={() => {
                   // Show staff list - handled by parent
                 }}
@@ -320,6 +344,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="🔓"
                   label="Marchează disponibil"
+                  tooltip="Eliberează tura pentru a fi rezervată de altcineva"
                   onClick={async () => {
                     await onAssign(null)
                     onClose()
@@ -330,6 +355,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="🗑️"
                   label="Șterge tura"
+                  tooltip="Șterge definitiv această tură"
                   variant="danger"
                   onClick={async () => {
                     await onDelete()
@@ -356,12 +382,13 @@ export default function ShiftActionMenu({
 interface ActionButtonProps {
   icon: string
   label: string
+  tooltip?: string
   onClick?: () => void
   variant?: 'default' | 'success' | 'danger'
   subMenu?: React.ReactNode
 }
 
-function ActionButton({ icon, label, onClick, variant = 'default', subMenu }: ActionButtonProps) {
+function ActionButton({ icon, label, tooltip, onClick, variant = 'default', subMenu }: ActionButtonProps) {
   const variantStyles = {
     default: 'hover:bg-gray-100',
     success: 'hover:bg-green-50 text-green-700',
@@ -372,10 +399,14 @@ function ActionButton({ icon, label, onClick, variant = 'default', subMenu }: Ac
     <div>
       <button
         onClick={onClick}
+        title={tooltip}
         className={`w-full text-left px-4 py-3 min-h-[44px] rounded-lg text-base flex items-center gap-3 transition-colors active:bg-gray-200 ${variantStyles[variant]}`}
       >
         <span className="text-xl">{icon}</span>
-        <span>{label}</span>
+        <div className="flex-1">
+          <span>{label}</span>
+          {tooltip && <p className="text-xs text-gray-400 mt-0.5">{tooltip}</p>}
+        </div>
       </button>
       {subMenu}
     </div>

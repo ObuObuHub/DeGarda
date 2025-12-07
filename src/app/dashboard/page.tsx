@@ -239,6 +239,7 @@ export default function DashboardPage() {
               onAssignShift={shiftActions.assignShift}
               onAcceptSwap={swapActions.acceptSwapRequest}
               onRejectSwap={swapActions.rejectSwapRequest}
+              onCancelSwap={swapActions.cancelSwapRequest}
               onCheckConflicts={shiftActions.checkConflicts}
               currentUser={user}
               selectedDate={selectedDate}

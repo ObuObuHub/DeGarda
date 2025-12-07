@@ -25,6 +25,7 @@ interface CalendarProps {
   onAssignShift?: (shiftId: string, userId: string | null) => void
   onAcceptSwap?: (swapRequestId: string) => void
   onRejectSwap?: (swapRequestId: string) => void
+  onCancelSwap?: (swapRequestId: string) => void
   onCheckConflicts?: (userId: string, shiftDate: string) => Conflict[]
   currentUser: User
   selectedDate: Date
@@ -51,6 +52,7 @@ export default function Calendar({
   onAssignShift,
   onAcceptSwap,
   onRejectSwap,
+  onCancelSwap,
   onCheckConflicts,
   currentUser,
   selectedDate,
@@ -315,6 +317,37 @@ export default function Calendar({
         </div>
       )}
 
+      {/* Calendar Legend */}
+      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+        <p className="text-xs text-gray-500 mb-2 font-medium">Legendă:</p>
+        <div className="flex flex-wrap gap-3 text-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded bg-yellow-200 ring-2 ring-yellow-500"></span>
+            <span>Tura ta</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded bg-gray-100 border-2 border-dashed border-blue-400"></span>
+            <span>Disponibil</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded" style={{ backgroundColor: departmentColor || '#6B7280' }}></span>
+            <span>Altă persoană</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded bg-gray-100 flex items-center justify-center text-red-500 text-xs">✕</span>
+            <span>Indisponibil</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded bg-blue-100"></span>
+            <span>Schimb trimis</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded bg-red-100"></span>
+            <span>Schimb primit</span>
+          </div>
+        </div>
+      </div>
+
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
         {/* Week day headers */}
@@ -409,6 +442,7 @@ export default function Calendar({
           ? onCheckConflicts(currentUser.id, formatDateForDB(selectedDate2))
           : []
         }
+        outgoingSwapRequestId={selectedShift ? getOutgoingSwapRequests(selectedShift.id)[0]?.id : undefined}
         onCheckConflicts={onCheckConflicts}
         onMarkUnavailable={handleMarkUnavailable}
         onRemoveUnavailable={handleRemoveUnavailable}
@@ -417,6 +451,7 @@ export default function Calendar({
         onAssign={handleAssign}
         onDelete={handleDelete}
         onStartSwap={handleStartSwap}
+        onCancelSwap={onCancelSwap}
       />
 
       {/* Swap Request Modal - simplified flow */}
