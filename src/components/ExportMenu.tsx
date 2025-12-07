@@ -42,8 +42,21 @@ export default function ExportMenu({
   const getMonthShifts = () => {
     return shifts.filter(s => {
       const d = parseISODate(s.shift_date)
-      return d.getMonth() === month && d.getFullYear() === year
+      const inMonth = d.getMonth() === month && d.getFullYear() === year
+      // DEPARTMENT_MANAGER can only see their own department
+      if (currentUser.role === 'DEPARTMENT_MANAGER') {
+        return inMonth && s.department === currentUser.department
+      }
+      return inMonth
     })
+  }
+
+  const getFilteredUsers = () => {
+    // DEPARTMENT_MANAGER can only see staff from their own department
+    if (currentUser.role === 'DEPARTMENT_MANAGER') {
+      return users.filter(u => u.role === 'STAFF' && u.department === currentUser.department)
+    }
+    return users.filter(u => u.role === 'STAFF')
   }
 
   const downloadCSV = (content: string, filename: string) => {
@@ -56,11 +69,12 @@ export default function ExportMenu({
   }
 
   const exportSimple = () => {
+    const monthShifts = getMonthShifts()
     const rows = []
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day, 12, 0, 0)
       const dateStr = formatDateForDB(date)
-      const dayShifts = shifts.filter(s => s.shift_date === dateStr)
+      const dayShifts = monthShifts.filter(s => s.shift_date === dateStr)
 
       const row: Record<string, string> = {
         date: `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`,
@@ -120,7 +134,7 @@ export default function ExportMenu({
 
   const exportStaffReport = () => {
     const monthShifts = getMonthShifts()
-    const staffUsers = users.filter(u => u.role === 'STAFF')
+    const staffUsers = getFilteredUsers()
 
     const staffStats = staffUsers.map(user => {
       const userShifts = monthShifts.filter(s => s.assigned_to === user.id)

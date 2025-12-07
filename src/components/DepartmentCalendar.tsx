@@ -83,6 +83,12 @@ export default function DepartmentCalendar({
   const canGenerateShifts = currentUser.role !== 'STAFF'
 
   const generateShiftsForDepartment = async () => {
+    // DEPARTMENT_MANAGER can only generate for their own department
+    if (currentUser.role === 'DEPARTMENT_MANAGER' && department !== currentUser.department) {
+      toast.error('Poți genera ture doar pentru departamentul tău.')
+      return
+    }
+
     if (!activeShiftTypeId || !currentUser.hospital_id) {
       toast.warning('Selectează un tip de tură și asigură-te că ești asociat unui spital.')
       return

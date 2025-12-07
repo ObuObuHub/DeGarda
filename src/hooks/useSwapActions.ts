@@ -29,6 +29,15 @@ export function useSwapActions(
   const requestSwap = useCallback(async (requesterShiftId: string, targetShiftIds: string[]) => {
     if (!user) return
 
+    // DEPARTMENT_MANAGER can only manage swaps within their own department
+    if (user.role === 'DEPARTMENT_MANAGER') {
+      const requesterShift = shifts.find(s => s.id === requesterShiftId)
+      if (!requesterShift || requesterShift.department !== user.department) {
+        toast?.error('Poți gestiona doar schimburi din departamentul tău.')
+        return
+      }
+    }
+
     const swapRequestsToCreate = targetShiftIds.map(targetShiftId => {
       const targetShift = shifts.find(s => s.id === targetShiftId)
       if (!targetShift || !targetShift.assigned_to) return null
