@@ -40,6 +40,50 @@ const ROLE_VARIANTS: Record<UserRole, 'purple' | 'danger' | 'info' | 'default'> 
   'STAFF': 'default'
 }
 
+// Inline quick-edit for max shifts
+function InlineShiftEdit({
+  value,
+  onSave
+}: {
+  value: number
+  onSave: (newValue: number) => Promise<boolean>
+}) {
+  const [saving, setSaving] = useState(false)
+
+  const handleChange = async (delta: number) => {
+    const newValue = Math.max(1, Math.min(31, value + delta))
+    if (newValue === value) return
+
+    setSaving(true)
+    await onSave(newValue)
+    setSaving(false)
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={(e) => { e.stopPropagation(); handleChange(-1) }}
+        disabled={saving || value <= 1}
+        className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold"
+        title="Scade cu 1"
+      >
+        −
+      </button>
+      <span className={`w-6 text-center font-medium ${saving ? 'opacity-50' : ''}`}>
+        {value}
+      </span>
+      <button
+        onClick={(e) => { e.stopPropagation(); handleChange(1) }}
+        disabled={saving || value >= 31}
+        className="w-6 h-6 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold"
+        title="Crește cu 1"
+      >
+        +
+      </button>
+    </div>
+  )
+}
+
 export default function StaffManagement({
   currentUser,
   allUsers,
@@ -105,9 +149,18 @@ export default function StaffManagement({
     if (currentUser.role === 'SUPER_ADMIN') {
       cols.push({ key: 'hospital', header: 'Spital', render: u => <span className="text-sm text-gray-600">{u.hospital?.name || '-'}</span> })
     }
-    cols.push({ key: 'shifts', header: 'Ture/lună', render: u => u.max_shifts_per_month || 8 })
+    cols.push({
+      key: 'shifts',
+      header: 'Ture/lună',
+      render: u => (
+        <InlineShiftEdit
+          value={u.max_shifts_per_month || 8}
+          onSave={(newValue) => onUpdateUser(u.id, { max_shifts_per_month: newValue })}
+        />
+      )
+    })
     return cols
-  }, [currentUser.role])
+  }, [currentUser.role, onUpdateUser])
 
   const canManageUsers = ['SUPER_ADMIN', 'HOSPITAL_ADMIN', 'DEPARTMENT_MANAGER'].includes(currentUser.role)
   if (!canManageUsers) return null
