@@ -10,6 +10,7 @@ import ExportMenu from '@/components/ExportMenu'
 import NotificationBell from '@/components/NotificationBell'
 import { useDashboardData, useShiftActions, useSwapActions, useUserActions } from '@/hooks'
 import { useToast } from '@/hooks/useToast'
+import { isWorkingStaff } from '@/lib/roles'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -98,9 +99,10 @@ export default function DashboardPage() {
     if (user.role === 'SUPER_ADMIN') return true
     if (user.role === 'HOSPITAL_ADMIN') return u.hospital_id === user.hospital_id
     if (user.role === 'DEPARTMENT_MANAGER') {
+      // Department managers see all working staff in their department (including themselves)
       return u.hospital_id === user.hospital_id &&
              u.department === user.department &&
-             u.role === 'STAFF'
+             isWorkingStaff(u.role)
     }
     return false
   })

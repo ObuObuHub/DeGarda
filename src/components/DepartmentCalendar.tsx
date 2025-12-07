@@ -6,6 +6,7 @@ import { type ShiftType } from '@/types'
 import { type Conflict } from '@/hooks/useShiftActions'
 import { parseISODate, formatDateForDB, addDays } from '@/lib/dateUtils'
 import { useToast } from '@/hooks/useToast'
+import { isWorkingStaff } from '@/lib/roles'
 import Calendar from './Calendar'
 
 interface DepartmentCalendarProps {
@@ -101,9 +102,9 @@ export default function DepartmentCalendar({
       const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
       const end = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
 
-      // Get staff for this department
+      // Get working staff for this department (includes DEPARTMENT_MANAGER)
       const departmentStaff = users.filter(
-        u => u.department === department && u.role === 'STAFF'
+        u => u.department === department && isWorkingStaff(u.role)
       )
 
       if (departmentStaff.length === 0) {

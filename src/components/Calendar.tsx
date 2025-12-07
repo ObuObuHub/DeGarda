@@ -5,6 +5,7 @@ import { type User, type Shift, type UnavailableDate, type SwapRequest } from '@
 import { type ShiftType } from '@/types'
 import { type Conflict } from '@/hooks/useShiftActions'
 import { parseISODate, formatDateForDB } from '@/lib/dateUtils'
+import { isWorkingStaff } from '@/lib/roles'
 import ShiftCell, { EmptyDayCell } from './calendar/ShiftCell'
 import ShiftActionMenu from './calendar/ShiftActionMenu'
 import SwapRequestModal, { SwapRequestsView } from './calendar/SwapRequestModal'
@@ -201,7 +202,8 @@ export default function Calendar({
   const handleDateClick = (date: Date) => {
     if (!isCurrentMonth(date)) return
     if (date < new Date(new Date().setHours(0, 0, 0, 0))) return
-    if (currentUser.role !== 'STAFF') return
+    // Working staff (STAFF and DEPARTMENT_MANAGER) can click on dates
+    if (!isWorkingStaff(currentUser.role)) return
 
     setSelectedDate2(date)
     setSelectedShift(null)
@@ -321,7 +323,7 @@ export default function Calendar({
             <p className="text-sm text-gray-600">
               Turele tale: {getUserShiftsCount()} din {currentUser.max_shifts_per_month || 8}
             </p>
-            {currentUser.role === 'STAFF' && (
+            {isWorkingStaff(currentUser.role) && (
               <>
                 <p className="text-sm text-gray-600">
                   Rezervări: {getReservedShiftsCount()} din 2
@@ -399,7 +401,7 @@ export default function Calendar({
           const unavailable = isUnavailable(date)
           const hasReservation = hasUserReservation(date)
           const isPastDate = date < new Date(new Date().setHours(0, 0, 0, 0))
-          const canInteract = currentUser.role === 'STAFF' && isCurrentMonthDay && !isPastDate
+          const canInteract = isWorkingStaff(currentUser.role) && isCurrentMonthDay && !isPastDate
 
           return (
             <div

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { type User, type Shift } from '@/lib/supabase'
 import { type Conflict } from '@/hooks/useShiftActions'
+import { isWorkingStaff } from '@/lib/roles'
 import Tooltip from '@/components/ui/Tooltip'
 
 interface ShiftActionMenuProps {
@@ -63,7 +64,8 @@ export default function ShiftActionMenu({
 
   if (!isOpen) return null
 
-  const isStaff = currentUser.role === 'STAFF'
+  // Check if user can perform staff-like actions (reserve, preferences, swap)
+  const canDoStaffActions = isWorkingStaff(currentUser.role)
   const isManager = currentUser.role !== 'STAFF'
   const isAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'HOSPITAL_ADMIN'
 
@@ -156,7 +158,7 @@ export default function ShiftActionMenu({
                     </li>
                   ))}
                 </ul>
-                {isStaff && hasBlockingConflicts && (
+                {canDoStaffActions && hasBlockingConflicts && (
                   <p className="text-xs text-red-600 mt-2 font-medium">
                     Nu poți rezerva această tură din cauza conflictelor.
                   </p>
@@ -203,8 +205,8 @@ export default function ShiftActionMenu({
         )}
 
         <div className="space-y-2">
-          {/* Staff Actions */}
-          {isStaff && !shift && (
+          {/* Staff-like Actions (for STAFF and DEPARTMENT_MANAGER) */}
+          {canDoStaffActions && !shift && (
             <>
               {/* Preference options - show when no reservation */}
               {!hasReservation && !isPreferred && !isUnavailable && (
@@ -301,8 +303,8 @@ export default function ShiftActionMenu({
             </>
           )}
 
-          {/* Staff Actions for existing shift */}
-          {isStaff && shift && (
+          {/* Staff-like Actions for existing shift */}
+          {canDoStaffActions && shift && (
             <>
               {shift.assigned_to === currentUser.id && shift.status === 'assigned' && !outgoingSwapRequestId && (
                 <ActionButton
@@ -366,7 +368,7 @@ export default function ShiftActionMenu({
                 }}
                 subMenu={
                   <div className="mt-2 ml-8 space-y-1 border-l-2 border-gray-200 pl-3">
-                    {users.filter(u => u.role === 'STAFF').map(user => {
+                    {users.filter(u => isWorkingStaff(u.role)).map(user => {
                       // Check conflicts for this user when rendering
                       let userConflicts: Conflict[] = []
                       if (onCheckConflicts && date) {

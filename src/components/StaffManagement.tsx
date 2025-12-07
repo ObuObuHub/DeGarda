@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { type User } from '@/lib/supabase'
 import { type UserRole, type Hospital, type Department } from '@/types'
+import { isWorkingStaff } from '@/lib/roles'
 import DataTable, { Column, Badge } from './ui/DataTable'
 import FormModal, { FormField, TextInput, SelectInput } from './ui/FormModal'
 import ConfirmDialog from './ui/ConfirmDialog'
@@ -111,9 +112,10 @@ export default function StaffManagement({
     if (currentUser.role === 'SUPER_ADMIN') return true
     if (currentUser.role === 'HOSPITAL_ADMIN') return u.hospital_id === currentUser.hospital_id
     if (currentUser.role === 'DEPARTMENT_MANAGER') {
+      // Department managers see all working staff in their department (including themselves)
       return u.hospital_id === currentUser.hospital_id &&
              u.department === currentUser.department &&
-             u.role === 'STAFF'
+             isWorkingStaff(u.role)
     }
     return false
   }), [allUsers, currentUser])
@@ -330,7 +332,7 @@ export default function StaffManagement({
           </FormField>
         )}
 
-        {formData.role === 'STAFF' && (
+        {isWorkingStaff(formData.role) && (
           <FormField label="Ture maxime pe lună">
             <TextInput
               type="number"

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { type Shift, type SwapRequest, type User } from '@/lib/supabase'
 import { parseISODate } from '@/lib/dateUtils'
+import { isWorkingStaff } from '@/lib/roles'
 
 interface Notification {
   id: string
@@ -75,8 +76,8 @@ export default function NotificationBell({
     })
   })
 
-  // Available shifts in user's department (if staff)
-  if (currentUser.role === 'STAFF') {
+  // Available shifts in user's department (for working staff - STAFF and DEPARTMENT_MANAGER)
+  if (isWorkingStaff(currentUser.role)) {
     const today = new Date()
     const availableShifts = shifts.filter(s =>
       s.status === 'available' &&

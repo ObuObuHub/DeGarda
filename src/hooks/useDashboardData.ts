@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase, type User, type Shift, type UnavailableDate, type SwapRequest } from '@/lib/supabase'
 import { type ShiftType, type Department } from '@/types'
 import { formatDateForDB, getFirstDayOfMonth, getLastDayOfMonth } from '@/lib/dateUtils'
+import { isWorkingStaff } from '@/lib/roles'
 
 interface UseDashboardDataReturn {
   shifts: Shift[]
@@ -106,7 +107,8 @@ export function useDashboardData(
       .from('unavailable_dates')
       .select('*')
 
-    if (user.role === 'STAFF') {
+    // Working staff (STAFF and DEPARTMENT_MANAGER) only see their own unavailable dates
+    if (isWorkingStaff(user.role)) {
       query = query.eq('user_id', user.id)
     }
 

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { type Shift, type User } from '@/lib/supabase'
 import { parseISODate, formatDateForDB } from '@/lib/dateUtils'
+import { isWorkingStaff } from '@/lib/roles'
 
 interface ExportMenuProps {
   shifts: Shift[]
@@ -52,11 +53,12 @@ export default function ExportMenu({
   }
 
   const getFilteredUsers = () => {
-    // DEPARTMENT_MANAGER can only see staff from their own department
+    // DEPARTMENT_MANAGER can only see working staff from their own department
     if (currentUser.role === 'DEPARTMENT_MANAGER') {
-      return users.filter(u => u.role === 'STAFF' && u.department === currentUser.department)
+      return users.filter(u => isWorkingStaff(u.role) && u.department === currentUser.department)
     }
-    return users.filter(u => u.role === 'STAFF')
+    // Include all working staff (STAFF and DEPARTMENT_MANAGER)
+    return users.filter(u => isWorkingStaff(u.role))
   }
 
   const downloadCSV = (content: string, filename: string) => {

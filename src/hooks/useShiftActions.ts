@@ -4,6 +4,7 @@ import { useCallback } from 'react'
 import { supabase, type User, type Shift } from '@/lib/supabase'
 import { type ShiftType } from '@/types'
 import { formatDateForDB, parseISODate } from '@/lib/dateUtils'
+import { isWorkingStaff } from '@/lib/roles'
 
 interface ToastFunctions {
   success: (message: string) => void
@@ -152,7 +153,8 @@ export function useShiftActions(
   const reserveShift = useCallback(async (shiftId: string) => {
     if (!user) return
 
-    if (user.role === 'STAFF') {
+    // Working staff (STAFF and DEPARTMENT_MANAGER) can only reserve from their department
+    if (isWorkingStaff(user.role)) {
       const { data: shiftData } = await supabase
         .from('shifts')
         .select('department')
@@ -184,7 +186,8 @@ export function useShiftActions(
 
     const shift = shifts.find(s => s.id === shiftId)
 
-    if (shift && shift.status === 'reserved' && shift.assigned_to === user.id && user.role === 'STAFF') {
+    // Working staff (STAFF and DEPARTMENT_MANAGER) can delete their own reserved shifts
+    if (shift && shift.status === 'reserved' && shift.assigned_to === user.id && isWorkingStaff(user.role)) {
       const { error } = await supabase
         .from('shifts')
         .delete()
@@ -211,7 +214,8 @@ export function useShiftActions(
   const createReservation = useCallback(async (date: Date, department?: string, shiftTypeId?: string) => {
     if (!user) return
 
-    if (user.role === 'STAFF') {
+    // Working staff (STAFF and DEPARTMENT_MANAGER) have reservation limits
+    if (isWorkingStaff(user.role)) {
       if (!user.department) return
 
       const month = date.getMonth()
@@ -228,17 +232,15 @@ export function useShiftActions(
         toast?.warning('Poți rezerva maxim 2 ture pe lună!')
         return
       }
-    }
 
-    // DEPARTMENT_MANAGER can only create shifts in their own department
-    if (user.role === 'DEPARTMENT_MANAGER') {
+      // Working staff can only reserve in their own department
       if (department && department !== user.department) {
         toast?.error('Poți crea ture doar în departamentul tău.')
         return
       }
     }
 
-    const targetDepartment = user.role === 'DEPARTMENT_MANAGER' ? user.department : (department || user.department)
+    const targetDepartment = isWorkingStaff(user.role) ? user.department : (department || user.department)
     if (!targetDepartment) return
 
     const targetShiftTypeId = shiftTypeId || shiftTypes.find(st => st.is_default)?.id
@@ -281,8 +283,9 @@ export function useShiftActions(
           shift_type_id: targetShiftTypeId,
           department: targetDepartment,
           hospital_id: user.hospital_id,
-          assigned_to: user.role === 'STAFF' ? user.id : null,
-          status: user.role === 'STAFF' ? 'reserved' : 'available'
+          // Working staff (STAFF and DEPARTMENT_MANAGER) auto-assign to themselves
+          assigned_to: isWorkingStaff(user.role) ? user.id : null,
+          status: isWorkingStaff(user.role) ? 'reserved' : 'available'
         })
 
       if (!error) {
