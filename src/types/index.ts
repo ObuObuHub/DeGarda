@@ -28,3 +28,14 @@ export interface ShiftType {
   is_active: boolean
   created_at: string
 }
+
+export interface PreferenceDeadline {
+  id: string
+  department_id: string
+  hospital_id: string
+  target_month: string  // ISO date string (first day of month)
+  activated_at: string
+  expires_at: string
+  activated_by: string | null
+  created_at: string
+}

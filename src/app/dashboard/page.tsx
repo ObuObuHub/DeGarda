@@ -6,9 +6,10 @@ import { auth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
 import DepartmentCalendar from '@/components/DepartmentCalendar'
 import StaffManagement from '@/components/StaffManagement'
+import DeadlineManagement from '@/components/DeadlineManagement'
 import ExportMenu from '@/components/ExportMenu'
 import NotificationBell from '@/components/NotificationBell'
-import { useDashboardData, useShiftActions, useSwapActions, useUserActions } from '@/hooks'
+import { useDashboardData, useShiftActions, useSwapActions, useUserActions, usePreferenceDeadline } from '@/hooks'
 import { useToast } from '@/hooks/useToast'
 import { isWorkingStaff } from '@/lib/roles'
 
@@ -34,6 +35,15 @@ export default function DashboardPage() {
     loadUsers
   } = useDashboardData(user, selectedDate)
 
+  // Use deadline hook
+  const {
+    deadlines,
+    activateDeadline,
+    isDeadlineLocked,
+    getDeadlineForDepartment,
+    getTimeRemaining
+  } = usePreferenceDeadline(user, user?.hospital_id || null, toast, selectedDate)
+
   const shiftActions = useShiftActions(
     user,
     shifts,
@@ -41,7 +51,9 @@ export default function DashboardPage() {
     selectedDate,
     loadShifts,
     loadUnavailableDates,
-    toast
+    toast,
+    isDeadlineLocked,  // Pass deadline check function
+    departments  // Pass departments for name-to-ID resolution
   )
 
   const swapActions = useSwapActions(
@@ -210,38 +222,61 @@ export default function DashboardPage() {
           />
         )}
 
+        {/* Deadline Management - Visible to managers and admins */}
+        {user.role !== 'STAFF' && (
+          <div className="bg-white rounded-lg shadow-sm mb-6">
+            <DeadlineManagement
+              departments={filteredDepartments}
+              deadlines={deadlines}
+              selectedHospitalId={user.hospital_id || null}
+              selectedMonth={selectedDate}
+              onActivateDeadline={activateDeadline}
+            />
+          </div>
+        )}
+
         {/* Department Calendars */}
         <div className="space-y-6">
-          {filteredDepartments.map(dept => (
-            <DepartmentCalendar
-              key={dept.id}
-              department={dept.name}
-              shifts={shifts}
-              shiftTypes={shiftTypes}
-              unavailableDates={unavailableDates}
-              swapRequests={swapRequests}
-              onReserveShift={shiftActions.reserveShift}
-              onCancelShift={shiftActions.cancelShift}
-              onMarkUnavailable={shiftActions.markUnavailable}
-              onRemoveUnavailable={shiftActions.removeUnavailable}
-              onSetPreference={shiftActions.setPreference}
-              onRemovePreference={shiftActions.removePreference}
-              onDeleteShift={shiftActions.deleteShift}
-              onCreateReservation={shiftActions.createReservation}
-              onRequestSwap={swapActions.requestSwap}
-              onAssignShift={shiftActions.assignShift}
-              onAcceptSwap={swapActions.acceptSwapRequest}
-              onRejectSwap={swapActions.rejectSwapRequest}
-              onCancelSwap={swapActions.cancelSwapRequest}
-              onCheckConflicts={shiftActions.checkConflicts}
-              currentUser={user}
-              selectedDate={selectedDate}
-              onDateChange={setSelectedDate}
-              users={allUsers}
-              onShiftsGenerated={loadShifts}
-              departmentColor={dept.color}
-            />
-          ))}
+          {filteredDepartments.map(dept => {
+            // Get deadline status for this department
+            const deadline = getDeadlineForDepartment(dept.id, selectedDate)
+            const deptIsLocked = isDeadlineLocked(dept.id, selectedDate)
+            const timeRemaining = deadline ? getTimeRemaining(deadline) : null
+
+            return (
+              <DepartmentCalendar
+                key={dept.id}
+                department={dept.name}
+                departmentId={dept.id}
+                shifts={shifts}
+                shiftTypes={shiftTypes}
+                unavailableDates={unavailableDates}
+                swapRequests={swapRequests}
+                onReserveShift={shiftActions.reserveShift}
+                onCancelShift={shiftActions.cancelShift}
+                onMarkUnavailable={shiftActions.markUnavailable}
+                onRemoveUnavailable={shiftActions.removeUnavailable}
+                onSetPreference={shiftActions.setPreference}
+                onRemovePreference={shiftActions.removePreference}
+                onDeleteShift={shiftActions.deleteShift}
+                onCreateReservation={shiftActions.createReservation}
+                onRequestSwap={swapActions.requestSwap}
+                onAssignShift={shiftActions.assignShift}
+                onAcceptSwap={swapActions.acceptSwapRequest}
+                onRejectSwap={swapActions.rejectSwapRequest}
+                onCancelSwap={swapActions.cancelSwapRequest}
+                onCheckConflicts={shiftActions.checkConflicts}
+                currentUser={user}
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+                users={allUsers}
+                onShiftsGenerated={loadShifts}
+                departmentColor={dept.color}
+                isDeadlineLocked={deptIsLocked}
+                deadlineTimeRemaining={timeRemaining}
+              />
+            )
+          })}
         </div>
       </main>
     </div>

@@ -18,6 +18,8 @@ interface ShiftActionMenuProps {
   users?: User[]
   conflicts?: Conflict[]
   outgoingSwapRequestId?: string
+  isDeadlineLocked?: boolean
+  deadlineTimeRemaining?: { hours: number; minutes: number; seconds: number } | null
   onCheckConflicts?: (userId: string, shiftDate: string) => Conflict[]
   onSetPreference: (type: 'unavailable' | 'preferred') => void
   onRemovePreference: () => void
@@ -43,6 +45,8 @@ export default function ShiftActionMenu({
   users = [],
   conflicts = [],
   outgoingSwapRequestId,
+  isDeadlineLocked = false,
+  deadlineTimeRemaining,
   onCheckConflicts,
   onSetPreference,
   onRemovePreference,
@@ -138,6 +142,40 @@ export default function ShiftActionMenu({
           </p>
         </div>
 
+        {/* Deadline Locked Banner */}
+        {isDeadlineLocked && canDoStaffActions && (
+          <div className="mb-4 p-3 rounded-lg bg-gray-100 border border-gray-300">
+            <div className="flex items-start gap-2">
+              <span className="text-lg">🔒</span>
+              <div className="flex-1">
+                <p className="font-medium text-sm text-gray-800">
+                  Termen limită expirat
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Nu mai poți modifica preferințele sau rezerva ture pentru această lună.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Deadline Countdown Banner */}
+        {!isDeadlineLocked && deadlineTimeRemaining && canDoStaffActions && (
+          <div className="mb-4 p-3 rounded-lg bg-orange-50 border border-orange-200">
+            <div className="flex items-start gap-2">
+              <span className="text-lg">⏰</span>
+              <div className="flex-1">
+                <p className="font-medium text-sm text-orange-800">
+                  Termen limită activ
+                </p>
+                <p className="text-xs text-orange-600 mt-1">
+                  Mai ai {deadlineTimeRemaining.hours}h {deadlineTimeRemaining.minutes}m pentru a seta preferințele.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Conflict Warnings Banner */}
         {conflicts.length > 0 && (
           <div className={`mb-4 p-3 rounded-lg ${
@@ -206,7 +244,7 @@ export default function ShiftActionMenu({
 
         <div className="space-y-2">
           {/* Staff-like Actions (for STAFF and DEPARTMENT_MANAGER) */}
-          {canDoStaffActions && !shift && (
+          {canDoStaffActions && !shift && !isDeadlineLocked && (
             <>
               {/* Preference options - show when no reservation */}
               {!hasReservation && !isPreferred && !isUnavailable && (
@@ -329,7 +367,7 @@ export default function ShiftActionMenu({
                   }}
                 />
               )}
-              {shift.assigned_to === currentUser.id && shift.status === 'reserved' && (
+              {shift.assigned_to === currentUser.id && shift.status === 'reserved' && !isDeadlineLocked && (
                 <ActionButton
                   icon="❌"
                   label="Anulează rezervarea"
@@ -341,7 +379,7 @@ export default function ShiftActionMenu({
                   }}
                 />
               )}
-              {shift.status === 'available' && shift.department === currentUser.department && (
+              {shift.status === 'available' && shift.department === currentUser.department && !isDeadlineLocked && (
                 <ActionButton
                   icon="⭐"
                   label="Rezervă această tură"

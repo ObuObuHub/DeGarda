@@ -37,6 +37,8 @@ interface CalendarProps {
   departmentColor?: string
   users?: User[]
   defaultShiftTypeId?: string
+  isDeadlineLocked?: boolean
+  deadlineTimeRemaining?: { hours: number; minutes: number; seconds: number } | null
 }
 
 export default function Calendar({
@@ -65,7 +67,9 @@ export default function Calendar({
   department,
   departmentColor,
   users = [],
-  defaultShiftTypeId
+  defaultShiftTypeId,
+  isDeadlineLocked = false,
+  deadlineTimeRemaining
 }: CalendarProps) {
   // Simplified state - using action menu instead of toggle cycle
   const [actionMenuOpen, setActionMenuOpen] = useState(false)
@@ -346,6 +350,35 @@ export default function Calendar({
         </div>
       )}
 
+      {/* Deadline Banner for Staff */}
+      {isWorkingStaff(currentUser.role) && isDeadlineLocked && (
+        <div className="mb-4 p-4 bg-gray-100 border border-gray-300 rounded-lg">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔒</span>
+            <div>
+              <p className="font-semibold text-gray-800">Termen limită expirat</p>
+              <p className="text-sm text-gray-600">
+                Nu mai poți modifica preferințele sau rezerva ture pentru această lună.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isWorkingStaff(currentUser.role) && !isDeadlineLocked && deadlineTimeRemaining && (
+        <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⏰</span>
+            <div>
+              <p className="font-semibold text-orange-800">Termen limită activ</p>
+              <p className="text-sm text-orange-600">
+                Mai ai <strong>{deadlineTimeRemaining.hours}h {deadlineTimeRemaining.minutes}m</strong> pentru a seta preferințele și rezerva ture.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Calendar Legend */}
       <div className="mb-4 p-3 bg-gray-50 rounded-lg">
         <p className="text-xs text-gray-500 mb-2 font-medium">Legendă:</p>
@@ -478,6 +511,8 @@ export default function Calendar({
           : []
         }
         outgoingSwapRequestId={selectedShift ? getOutgoingSwapRequests(selectedShift.id)[0]?.id : undefined}
+        isDeadlineLocked={isDeadlineLocked}
+        deadlineTimeRemaining={deadlineTimeRemaining}
         onCheckConflicts={onCheckConflicts}
         onSetPreference={handleSetPreference}
         onRemovePreference={handleRemovePreference}

@@ -11,6 +11,7 @@ import Calendar from './Calendar'
 
 interface DepartmentCalendarProps {
   department: string
+  departmentId?: string
   shifts: Shift[]
   shiftTypes: ShiftType[]
   unavailableDates: UnavailableDate[]
@@ -35,6 +36,8 @@ interface DepartmentCalendarProps {
   users: User[]
   onShiftsGenerated: () => void
   departmentColor?: string
+  isDeadlineLocked?: boolean
+  deadlineTimeRemaining?: { hours: number; minutes: number; seconds: number } | null
 }
 
 export default function DepartmentCalendar({
@@ -62,7 +65,9 @@ export default function DepartmentCalendar({
   onDateChange,
   users,
   onShiftsGenerated,
-  departmentColor
+  departmentColor,
+  isDeadlineLocked = false,
+  deadlineTimeRemaining
 }: DepartmentCalendarProps) {
   const [generating, setGenerating] = useState(false)
   const [selectedShiftTypeId, setSelectedShiftTypeId] = useState<string>('')
@@ -374,6 +379,8 @@ export default function DepartmentCalendar({
           departmentColor={headerColor}
           users={users.filter(u => u.department === department)}
           defaultShiftTypeId={activeShiftTypeId}
+          isDeadlineLocked={isDeadlineLocked}
+          deadlineTimeRemaining={deadlineTimeRemaining}
         />
       </div>
     </div>

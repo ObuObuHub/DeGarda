@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { supabase, type User, type Shift } from '@/lib/supabase'
-import { type ShiftType } from '@/types'
+import { type ShiftType, type Department } from '@/types'
 import { formatDateForDB, parseISODate } from '@/lib/dateUtils'
 import { isWorkingStaff } from '@/lib/roles'
 
@@ -126,6 +126,10 @@ export function getConflictsForShift(
   return checkConflicts(shift.assigned_to, shift.shift_date, otherShifts, shiftTypes, maxShiftsPerMonth)
 }
 
+interface DeadlineCheckFn {
+  (departmentId: string, targetMonth: Date): boolean
+}
+
 interface UseShiftActionsReturn {
   reserveShift: (shiftId: string) => Promise<void>
   cancelShift: (shiftId: string) => Promise<void>
@@ -147,21 +151,49 @@ export function useShiftActions(
   selectedDate: Date,
   onRefreshShifts: () => Promise<void>,
   onRefreshUnavailable: () => Promise<void>,
-  toast?: ToastFunctions
+  toast?: ToastFunctions,
+  isDeadlineLocked?: DeadlineCheckFn,
+  departments?: Department[]
 ): UseShiftActionsReturn {
+  // Resolve user's department name to department ID
+  const userDepartmentId = useMemo(() => {
+    if (!user?.department || !departments) return null
+    return departments.find(d => d.name === user.department)?.id || null
+  }, [user?.department, departments])
+
+  // Helper to check deadline using resolved department ID
+  const checkDeadlineLocked = useCallback((targetDate: Date): boolean => {
+    if (!isDeadlineLocked || !userDepartmentId) return false
+    return isDeadlineLocked(userDepartmentId, targetDate)
+  }, [isDeadlineLocked, userDepartmentId])
 
   const reserveShift = useCallback(async (shiftId: string) => {
     if (!user) return
 
+    // Get shift data first for deadline and department checks
+    const { data: shiftData } = await supabase
+      .from('shifts')
+      .select('department, shift_date')
+      .eq('id', shiftId)
+      .single()
+
+    if (!shiftData) {
+      toast?.error('Tura nu a fost găsită.')
+      return
+    }
+
+    // Check deadline lock for working staff
+    if (isWorkingStaff(user.role)) {
+      const shiftDate = parseISODate(shiftData.shift_date)
+      if (checkDeadlineLocked(shiftDate)) {
+        toast?.error('Termenul limită a expirat. Nu mai poți rezerva ture.')
+        return
+      }
+    }
+
     // Working staff (STAFF and DEPARTMENT_MANAGER) can only reserve from their department
     if (isWorkingStaff(user.role)) {
-      const { data: shiftData } = await supabase
-        .from('shifts')
-        .select('department')
-        .eq('id', shiftId)
-        .single()
-
-      if (!shiftData || shiftData.department !== user.department) {
+      if (shiftData.department !== user.department) {
         toast?.error('Poți rezerva doar ture din departamentul tău!')
         return
       }
@@ -179,7 +211,7 @@ export function useShiftActions(
     } else {
       toast?.error('Nu s-a putut rezerva tura. Poate a fost deja luată.')
     }
-  }, [user, onRefreshShifts, toast])
+  }, [user, onRefreshShifts, toast, checkDeadlineLocked])
 
   const cancelShift = useCallback(async (shiftId: string) => {
     if (!user) return
@@ -217,6 +249,12 @@ export function useShiftActions(
     // Working staff (STAFF and DEPARTMENT_MANAGER) have reservation limits
     if (isWorkingStaff(user.role)) {
       if (!user.department) return
+
+      // Check deadline lock
+      if (checkDeadlineLocked(date)) {
+        toast?.error('Termenul limită a expirat. Nu mai poți rezerva ture.')
+        return
+      }
 
       const month = date.getMonth()
       const year = date.getFullYear()
@@ -295,10 +333,16 @@ export function useShiftActions(
         toast?.error('Nu s-a putut crea rezervarea.')
       }
     }
-  }, [user, shifts, shiftTypes, onRefreshShifts, toast])
+  }, [user, shifts, shiftTypes, onRefreshShifts, toast, checkDeadlineLocked])
 
   const setPreference = useCallback(async (date: Date, preferenceType: 'unavailable' | 'preferred') => {
     if (!user) return
+
+    // Check deadline lock for working staff
+    if (isWorkingStaff(user.role) && checkDeadlineLocked(date)) {
+      toast?.error('Termenul limită a expirat. Nu mai poți marca date.')
+      return
+    }
 
     const dateStr = formatDateForDB(date)
 
@@ -325,7 +369,7 @@ export function useShiftActions(
       toast?.info(message)
       await onRefreshUnavailable()
     }
-  }, [user, onRefreshUnavailable, toast])
+  }, [user, onRefreshUnavailable, toast, checkDeadlineLocked])
 
   // Legacy wrapper for backward compatibility
   const markUnavailable = useCallback(async (date: Date) => {
@@ -334,6 +378,12 @@ export function useShiftActions(
 
   const removePreference = useCallback(async (date: Date) => {
     if (!user) return
+
+    // Check deadline lock for working staff
+    if (isWorkingStaff(user.role) && checkDeadlineLocked(date)) {
+      toast?.error('Termenul limită a expirat. Nu mai poți modifica preferințele.')
+      return
+    }
 
     const dateStr = formatDateForDB(date)
 
@@ -347,7 +397,7 @@ export function useShiftActions(
       toast?.info('Preferința a fost ștearsă.')
       await onRefreshUnavailable()
     }
-  }, [user, onRefreshUnavailable, toast])
+  }, [user, onRefreshUnavailable, toast, checkDeadlineLocked])
 
   // Legacy wrapper for backward compatibility
   const removeUnavailable = useCallback(async (date: Date) => {
