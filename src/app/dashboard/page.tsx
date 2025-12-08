@@ -210,31 +210,6 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Staff Management - Visible to managers and admins */}
-        {user.role !== 'STAFF' && (
-          <StaffManagement
-            currentUser={user}
-            allUsers={filteredUsers}
-            departments={departments}
-            onAddUser={userActions.addUser}
-            onUpdateUser={userActions.updateUser}
-            onDeleteUser={userActions.deleteUser}
-          />
-        )}
-
-        {/* Deadline Management - Visible to managers and admins */}
-        {user.role !== 'STAFF' && (
-          <div className="bg-white rounded-lg shadow-sm mb-6">
-            <DeadlineManagement
-              departments={filteredDepartments}
-              deadlines={deadlines}
-              selectedHospitalId={user.hospital_id || null}
-              selectedMonth={selectedDate}
-              onActivateDeadline={activateDeadline}
-            />
-          </div>
-        )}
-
         {/* Department Calendars */}
         <div className="space-y-6">
           {filteredDepartments.map(dept => {
@@ -278,6 +253,31 @@ export default function DashboardPage() {
             )
           })}
         </div>
+
+        {/* Staff Management - Visible to managers and admins */}
+        {user.role !== 'STAFF' && (
+          <StaffManagement
+            currentUser={user}
+            allUsers={filteredUsers}
+            departments={departments}
+            onAddUser={userActions.addUser}
+            onUpdateUser={userActions.updateUser}
+            onDeleteUser={userActions.deleteUser}
+          />
+        )}
+
+        {/* Deadline Management - Visible to managers and admins */}
+        {user.role !== 'STAFF' && (
+          <div className="bg-white rounded-lg shadow-sm mb-6">
+            <DeadlineManagement
+              departments={filteredDepartments}
+              deadlines={deadlines}
+              selectedHospitalId={user.hospital_id || null}
+              selectedMonth={selectedDate}
+              onActivateDeadline={activateDeadline}
+            />
+          </div>
+        )}
       </main>
     </div>
   )
