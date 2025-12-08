@@ -8,7 +8,6 @@ interface DeadlineManagementProps {
   departments: Department[]
   deadlines: PreferenceDeadline[]
   selectedHospitalId: string | null
-  selectedMonth: Date
   onActivateDeadline: (departmentId: string, targetMonth: Date) => Promise<boolean>
 }
 
@@ -42,16 +41,24 @@ function getDeadlineStatus(deadline: PreferenceDeadline | undefined): 'active' |
   return now > expiresAt ? 'expired' : 'active'
 }
 
+// Always target next month from today
+function getNextMonth(): Date {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth() + 1, 1)
+}
+
 export default function DeadlineManagement({
   departments,
   deadlines,
   selectedHospitalId,
-  selectedMonth,
   onActivateDeadline
 }: DeadlineManagementProps) {
   const [loading, setLoading] = useState<string | null>(null)
   const [confirmDepartment, setConfirmDepartment] = useState<Department | null>(null)
   const [, setTick] = useState(0)
+
+  // Always use next month for deadlines
+  const targetMonth = getNextMonth()
 
   // Refresh countdown every 10 seconds for more responsive UI
   useEffect(() => {
@@ -64,10 +71,10 @@ export default function DeadlineManagement({
     : []
 
   const getTargetMonthStr = useCallback(() => {
-    const year = selectedMonth.getFullYear()
-    const month = String(selectedMonth.getMonth() + 1).padStart(2, '0')
+    const year = targetMonth.getFullYear()
+    const month = String(targetMonth.getMonth() + 1).padStart(2, '0')
     return `${year}-${month}-01`
-  }, [selectedMonth])
+  }, [targetMonth])
 
   const getDeadlineForDepartment = useCallback((departmentId: string): PreferenceDeadline | undefined => {
     const targetMonthStr = getTargetMonthStr()
@@ -79,7 +86,7 @@ export default function DeadlineManagement({
 
     setLoading(confirmDepartment.id)
     try {
-      await onActivateDeadline(confirmDepartment.id, selectedMonth)
+      await onActivateDeadline(confirmDepartment.id, targetMonth)
     } finally {
       setLoading(null)
       setConfirmDepartment(null)
@@ -102,7 +109,7 @@ export default function DeadlineManagement({
     <div className="p-6">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900">
-          Termene Limită pentru {getMonthName(selectedMonth)}
+          Termene Limită pentru {getMonthName(targetMonth)}
         </h3>
         <p className="text-sm text-gray-500 mt-1">
           Activează un termen limită de 24 de ore pentru ca staff-ul să își seteze preferințele.
@@ -189,7 +196,7 @@ export default function DeadlineManagement({
       <ConfirmDialog
         isOpen={!!confirmDepartment}
         title="Activează Termen Limită"
-        message={`Vrei să activezi un termen limită de 24 de ore pentru departamentul "${confirmDepartment?.name}"? Staff-ul va avea 24 de ore să își seteze preferințele pentru ${getMonthName(selectedMonth)}. După expirare, nu vor mai putea modifica preferințele sau rezerva ture.`}
+        message={`Vrei să activezi un termen limită de 24 de ore pentru departamentul "${confirmDepartment?.name}"? Staff-ul va avea 24 de ore să își seteze preferințele pentru ${getMonthName(targetMonth)}. După expirare, nu vor mai putea modifica preferințele sau rezerva ture.`}
         confirmText="Activează"
         variant="info"
         onConfirm={handleActivate}

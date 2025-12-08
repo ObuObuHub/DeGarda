@@ -273,7 +273,6 @@ export default function DashboardPage() {
               departments={filteredDepartments}
               deadlines={deadlines}
               selectedHospitalId={user.hospital_id || null}
-              selectedMonth={selectedDate}
               onActivateDeadline={activateDeadline}
             />
           </div>

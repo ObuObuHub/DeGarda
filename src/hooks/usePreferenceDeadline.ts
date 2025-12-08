@@ -81,6 +81,18 @@ export function usePreferenceDeadline(
   ): Promise<boolean> => {
     if (!user || !hospitalId) return false
 
+    // Application-level role check (defense-in-depth since RLS uses anon key)
+    const allowedRoles = ['SUPER_ADMIN', 'HOSPITAL_ADMIN', 'DEPARTMENT_MANAGER']
+    if (!allowedRoles.includes(user.role)) {
+      console.error('Unauthorized deadline activation attempt:', {
+        userId: user.id,
+        userRole: user.role,
+        requiredRoles: allowedRoles
+      })
+      toast?.error('Nu aveți permisiunea de a activa termene limită.')
+      return false
+    }
+
     const targetMonthStr = getFirstDayOfMonth(targetMonth)
     const now = new Date()
     const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours from now
@@ -102,6 +114,15 @@ export function usePreferenceDeadline(
         .eq('id', existing.id)
 
       if (error) {
+        console.error('Deadline update failed:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          userId: user.id,
+          userRole: user.role,
+          deadlineId: existing.id
+        })
         toast?.error('Nu s-a putut activa termenul limită.')
         return false
       }
@@ -121,6 +142,16 @@ export function usePreferenceDeadline(
         })
 
       if (error) {
+        console.error('Deadline insert failed:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          userId: user.id,
+          userRole: user.role,
+          departmentId,
+          hospitalId
+        })
         toast?.error('Nu s-a putut activa termenul limită.')
         return false
       }
