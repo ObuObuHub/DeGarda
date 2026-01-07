@@ -5,6 +5,7 @@ import { supabase, type User, type Shift } from '@/lib/supabase'
 import { type ShiftType, type Department } from '@/types'
 import { formatDateForDB, parseISODate } from '@/lib/dateUtils'
 import { isWorkingStaff } from '@/lib/roles'
+import { getDaysUntil } from '@/lib/feedback'
 
 interface ToastFunctions {
   success: (message: string) => void
@@ -52,7 +53,7 @@ export function checkConflicts(
   if (sameDayShifts.length > 0) {
     conflicts.push({
       type: 'double_booking',
-      message: `Utilizatorul are deja ${sameDayShifts.length} tură(e) în această zi`,
+      message: 'Există deja o tură în această zi. Alege altă zi sau solicită schimb.',
       severity: 'error'
     })
   }
@@ -81,8 +82,8 @@ export function checkConflicts(
       conflicts.push({
         type: 'rest_violation',
         message: isYesterday
-          ? `Perioadă de odihnă insuficientă - tură în ziua precedentă (${adjShiftType.name})`
-          : `Perioadă de odihnă insuficientă - tură în ziua următoare (${adjShiftType.name})`,
+          ? 'Ai avut tură ieri - verifică dacă ai suficientă odihnă (min. 8h între ture).'
+          : 'Ai tură mâine - verifică dacă vei avea suficientă odihnă (min. 8h între ture).',
         severity: 'warning'
       })
     }
@@ -97,7 +98,7 @@ export function checkConflicts(
   if (monthlyShifts.length >= maxShiftsPerMonth) {
     conflicts.push({
       type: 'max_exceeded',
-      message: `Limita de ${maxShiftsPerMonth} ture pe lună a fost atinsă (${monthlyShifts.length} ture existente)`,
+      message: `Ai deja ${monthlyShifts.length}/${maxShiftsPerMonth} ture luna aceasta. Poți continua, dar discută cu managerul.`,
       severity: 'warning'
     })
   }
@@ -206,10 +207,12 @@ export function useShiftActions(
       .eq('status', 'available')
 
     if (!error) {
-      toast?.success('Tura a fost rezervată!')
+      const daysUntil = getDaysUntil(shiftData.shift_date)
+      const dateInfo = daysUntil === 0 ? 'azi' : daysUntil === 1 ? 'mâine' : `peste ${daysUntil} zile`
+      toast?.success(`Tură rezervată pentru ${dateInfo}! Va fi confirmată la generarea programului.`)
       await onRefreshShifts()
     } else {
-      toast?.error('Nu s-a putut rezerva tura. Poate a fost deja luată.')
+      toast?.error('Tura a fost deja luată de altcineva. Încearcă o altă zi.')
     }
   }, [user, onRefreshShifts, toast, checkDeadlineLocked])
 
@@ -226,7 +229,7 @@ export function useShiftActions(
         .eq('id', shiftId)
 
       if (!error) {
-        toast?.info('Rezervarea a fost anulată.')
+        toast?.info('Rezervare anulată. Tura este din nou disponibilă pentru alții.')
         await onRefreshShifts()
       }
     } else {
@@ -237,7 +240,7 @@ export function useShiftActions(
         .eq('assigned_to', user.id)
 
       if (!error) {
-        toast?.info('Rezervarea a fost anulată.')
+        toast?.info('Rezervare anulată. Tura este din nou disponibilă pentru alții.')
         await onRefreshShifts()
       }
     }
@@ -267,7 +270,7 @@ export function useShiftActions(
       }).length
 
       if (reservedCount >= 2) {
-        toast?.warning('Poți rezerva maxim 2 ture pe lună!')
+        toast?.warning('Ai deja 2 rezervări luna aceasta. Anulează una pentru a rezerva alta.')
         return
       }
 
@@ -296,6 +299,9 @@ export function useShiftActions(
       s.status === 'available'
     )
 
+    const daysUntil = getDaysUntil(dateStr)
+    const dateInfo = daysUntil === 0 ? 'azi' : daysUntil === 1 ? 'mâine' : `peste ${daysUntil} zile`
+
     if (existingShift) {
       const { error } = await supabase
         .from('shifts')
@@ -303,14 +309,14 @@ export function useShiftActions(
         .eq('id', existingShift.id)
 
       if (!error) {
-        toast?.success('Tura a fost rezervată!')
+        toast?.success(`Tură rezervată pentru ${dateInfo}! Va fi confirmată la generarea programului.`)
         await onRefreshShifts()
       } else {
-        toast?.error('Nu s-a putut rezerva tura.')
+        toast?.error('Tura a fost deja luată. Încearcă altă zi.')
       }
     } else {
       if (!user.hospital_id) {
-        toast?.error('Nu ești asociat unui spital.')
+        toast?.error('Nu ești asociat unui spital. Contactează administratorul.')
         return
       }
 
@@ -327,10 +333,13 @@ export function useShiftActions(
         })
 
       if (!error) {
-        toast?.success('Rezervarea a fost creată!')
+        const msg = isWorkingStaff(user.role)
+          ? `Rezervare creată pentru ${dateInfo}! Va fi confirmată la generarea programului.`
+          : 'Tură creată. Poate fi acum rezervată de personal.'
+        toast?.success(msg)
         await onRefreshShifts()
       } else {
-        toast?.error('Nu s-a putut crea rezervarea.')
+        toast?.error('Eroare la creare. Încearcă din nou.')
       }
     }
   }, [user, shifts, shiftTypes, onRefreshShifts, toast, checkDeadlineLocked])
@@ -364,8 +373,8 @@ export function useShiftActions(
 
     if (!error) {
       const message = preferenceType === 'preferred'
-        ? 'Zi marcată ca preferată.'
-        : 'Zi marcată ca indisponibilă.'
+        ? 'Marcat ca zi preferată. Vei avea prioritate la programare!'
+        : 'Marcat indisponibil. Nu vei fi programat în această zi (dacă e posibil).'
       toast?.info(message)
       await onRefreshUnavailable()
     }
@@ -394,7 +403,7 @@ export function useShiftActions(
       .eq('unavailable_date', dateStr)
 
     if (!error) {
-      toast?.info('Preferința a fost ștearsă.')
+      toast?.info('Preferință ștearsă. Ziua este acum disponibilă pentru programare normală.')
       await onRefreshUnavailable()
     }
   }, [user, onRefreshUnavailable, toast, checkDeadlineLocked])

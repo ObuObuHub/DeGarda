@@ -160,6 +160,47 @@ FROM (VALUES
     ('Administrator Buhuși', 'ADM1', 'HOSPITAL_ADMIN', NULL, NULL)
 ) AS staff(name, personal_code, role, department, max_shifts);
 
+-- Insert staff for Spitalul Județean Piatra-Neamț
+INSERT INTO users (name, personal_code, role, department, hospital_id, max_shifts_per_month)
+SELECT
+    name,
+    personal_code,
+    role,
+    department,
+    (SELECT id FROM hospitals WHERE code = 'PIATRA'),
+    max_shifts
+FROM (VALUES
+    -- Chirurgie
+    ('Popescu Ion', 'POP1', 'STAFF', 'Chirurgie', 8),
+    ('Ionescu Maria', 'ION1', 'STAFF', 'Chirurgie', 8),
+    ('Diaconu Alexandru', 'DIA1', 'STAFF', 'Chirurgie', 8),
+    ('Marinescu Elena', 'MAR1', 'STAFF', 'Chirurgie', 7),
+    ('Popa Cristian', 'POC1', 'STAFF', 'Chirurgie', 8),
+
+    -- Medicina Interna
+    ('Georgescu Ana', 'GEO1', 'STAFF', 'Medicina Interna', 8),
+    ('Vasilescu Dan', 'VAS1', 'STAFF', 'Medicina Interna', 8),
+    ('Mihai Andreea', 'MIA1', 'STAFF', 'Medicina Interna', 8),
+    ('Tudor Constantin', 'TUD1', 'STAFF', 'Medicina Interna', 6),
+    ('Radu Simona', 'RAD1', 'STAFF', 'Medicina Interna', 8),
+
+    -- Urgente
+    ('Dumitrescu Elena', 'DUE1', 'STAFF', 'Urgente', 8),
+    ('Marin Andrei', 'MAN1', 'STAFF', 'Urgente', 8),
+    ('Stanescu Laura', 'STL1', 'STAFF', 'Urgente', 8),
+    ('Barbu Mihai', 'BAR1', 'STAFF', 'Urgente', 8),
+
+    -- ATI
+    ('Popa Alexandru', 'POA1', 'STAFF', 'ATI', 8),
+    ('Stan Cristina', 'STC1', 'STAFF', 'ATI', 8),
+    ('Neagu Victor', 'NEA1', 'STAFF', 'ATI', 8),
+    ('Florea Diana', 'FLO1', 'STAFF', 'ATI', 8),
+    ('Costache Marius', 'COS1', 'STAFF', 'ATI', 7),
+
+    -- Hospital Admin for Piatra-Neamț
+    ('Administrator Piatra-Neamț', 'ADM2', 'HOSPITAL_ADMIN', NULL, NULL)
+) AS staff(name, personal_code, role, department, max_shifts);
+
 -- Enable Row Level Security
 ALTER TABLE hospitals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shift_types ENABLE ROW LEVEL SECURITY;

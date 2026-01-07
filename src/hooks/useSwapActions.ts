@@ -62,9 +62,12 @@ export function useSwapActions(
 
     if (!error) {
       await onRefreshSwapRequests()
-      toast?.success(`${swapRequestsToCreate.length} cereri de schimb trimise!`)
+      const msg = swapRequestsToCreate.length === 1
+        ? 'Cerere de schimb trimisă! Colegul va primi notificare și poate accepta sau refuza.'
+        : `${swapRequestsToCreate.length} cereri trimise! Colegii vor primi notificări.`
+      toast?.success(msg)
     } else {
-      toast?.error('Nu s-au putut înregistra cererile de schimb.')
+      toast?.error('Eroare la trimitere. Încearcă din nou.')
     }
   }, [user, shifts, onRefreshSwapRequests, toast])
 
@@ -129,7 +132,8 @@ export function useSwapActions(
       .neq('id', swapRequestId)
 
     await Promise.all([onRefreshShifts(), onRefreshSwapRequests()])
-    toast?.success('Schimb acceptat cu succes!')
+    const partnerName = requesterShift.user?.name || 'colegul'
+    toast?.success(`Schimb acceptat cu ${partnerName}! Calendarul a fost actualizat.`)
   }, [user, shifts, swapRequests, onRefreshShifts, onRefreshSwapRequests, toast])
 
   const rejectSwapRequest = useCallback(async (swapRequestId: string) => {

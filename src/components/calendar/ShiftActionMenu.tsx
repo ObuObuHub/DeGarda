@@ -137,9 +137,54 @@ export default function ShiftActionMenu({
               {shift?.user && ` • ${shift.user.name}`}
             </p>
           )}
-          <p className="text-xs text-gray-400 mt-2">
-            Alege o acțiune din lista de mai jos:
-          </p>
+
+          {/* Status summary for staff */}
+          {canDoStaffActions && !shift && (
+            <div className="mt-3 p-2 bg-gray-50 rounded-lg text-xs text-gray-600">
+              {hasReservation ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-yellow-500">⭐</span>
+                  <span>Ai rezervat o tură în această zi</span>
+                </span>
+              ) : isPreferred ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-green-500">💚</span>
+                  <span>Ai marcat această zi ca preferată pentru lucru</span>
+                </span>
+              ) : isUnavailable ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-red-500">🚫</span>
+                  <span>Ai marcat că NU poți lucra în această zi</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <span className="text-gray-400">📅</span>
+                  <span>Nu ai nicio preferință setată pentru această zi</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {canDoStaffActions && shift && (
+            <div className="mt-3 p-2 bg-gray-50 rounded-lg text-xs text-gray-600">
+              {shift.assigned_to === currentUser.id ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-yellow-500">📋</span>
+                  <span>Aceasta este tura ta {shift.status === 'reserved' ? '(rezervare în așteptare)' : '(confirmată)'}</span>
+                </span>
+              ) : shift.status === 'available' ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-green-500">✅</span>
+                  <span>Această tură este liberă și poate fi rezervată</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <span className="text-blue-500">👤</span>
+                  <span>Această tură este asignată lui {shift.user?.name || 'alt coleg'}</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Deadline Locked Banner */}
@@ -252,7 +297,7 @@ export default function ShiftActionMenu({
                   <ActionButton
                     icon="💚"
                     label="Prefer să lucrez"
-                    tooltip="Marchează că preferi să lucrezi în această zi"
+                    tooltip="Vei avea prioritate când se generează programul"
                     variant="success"
                     onClick={async () => {
                       onSetPreference('preferred')
@@ -262,7 +307,7 @@ export default function ShiftActionMenu({
                   <ActionButton
                     icon="🚫"
                     label="Indisponibil"
-                    tooltip="Nu poți lucra în această zi"
+                    tooltip="Concediu, zi liberă sau alte motive personale"
                     variant="danger"
                     onClick={async () => {
                       onSetPreference('unavailable')
@@ -316,7 +361,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="⭐"
                   label="Rezervă tură"
-                  tooltip="Solicită să lucrezi în această zi"
+                  tooltip="Solicită o tură nouă în această zi (va fi confirmată de manager)"
                   variant="success"
                   onClick={async () => {
                     await onReserve()
@@ -330,7 +375,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="❌"
                   label="Anulează rezervarea"
-                  tooltip="Renunță la rezervarea făcută"
+                  tooltip="Tura va deveni disponibilă pentru alți colegi"
                   variant="danger"
                   onClick={async () => {
                     await onCancelReservation()
@@ -348,7 +393,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="↔️"
                   label="Solicită schimb"
-                  tooltip="Propune schimb de tură cu un coleg"
+                  tooltip="Trimite cerere unui coleg să schimbe tura cu tine"
                   onClick={async () => {
                     await onStartSwap()
                     onClose()
@@ -359,7 +404,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="🚫"
                   label="Anulează cererea de schimb"
-                  tooltip="Retrage cererea de schimb trimisă"
+                  tooltip="Cererea nu a fost încă acceptată - o poți retrage"
                   variant="danger"
                   onClick={async () => {
                     await onCancelSwap(outgoingSwapRequestId)
@@ -371,7 +416,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="❌"
                   label="Anulează rezervarea"
-                  tooltip="Renunță la rezervarea făcută"
+                  tooltip="Tura va deveni disponibilă pentru alți colegi"
                   variant="danger"
                   onClick={async () => {
                     await onCancelReservation()
@@ -383,7 +428,7 @@ export default function ShiftActionMenu({
                 <ActionButton
                   icon="⭐"
                   label="Rezervă această tură"
-                  tooltip="Solicită să lucrezi această tură"
+                  tooltip="Solicită o tură existentă (va fi confirmată de manager)"
                   variant="success"
                   onClick={async () => {
                     await onReserve()

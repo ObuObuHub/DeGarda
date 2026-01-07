@@ -379,40 +379,50 @@ export default function Calendar({
         </div>
       )}
 
-      {/* Calendar Legend */}
-      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-        <p className="text-xs text-gray-500 mb-2 font-medium">Legendă:</p>
-        <div className="flex flex-wrap gap-3 text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded bg-yellow-200 ring-2 ring-yellow-500"></span>
-            <span>Tura ta</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded bg-gray-100 border-2 border-dashed border-blue-400"></span>
-            <span>Disponibil</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded" style={{ backgroundColor: departmentColor || '#6B7280' }}></span>
-            <span>Altă persoană</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded bg-green-100 ring-2 ring-green-500 flex items-center justify-center text-green-600 text-xs">💚</span>
-            <span>Prefer să lucrez</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded bg-gray-100 flex items-center justify-center text-red-500 text-xs">✕</span>
-            <span>Indisponibil</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded bg-blue-100"></span>
-            <span>Schimb trimis</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-4 rounded bg-red-100"></span>
-            <span>Schimb primit</span>
+      {/* Calendar Legend - Collapsible */}
+      <details className="mb-4 bg-gray-50 rounded-lg group">
+        <summary className="p-3 cursor-pointer flex items-center justify-between text-xs text-gray-600 font-medium hover:bg-gray-100 rounded-lg transition-colors">
+          <span className="flex items-center gap-2">
+            <span>📋</span>
+            <span>Legendă culori</span>
+          </span>
+          <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+        <div className="px-3 pb-3">
+          <div className="flex flex-wrap gap-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded bg-yellow-200 ring-2 ring-yellow-500"></span>
+              <span>Tura ta</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded bg-gray-100 border-2 border-dashed border-blue-400"></span>
+              <span>Disponibil</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded" style={{ backgroundColor: departmentColor || '#6B7280' }}></span>
+              <span>Altă persoană</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded bg-green-100 ring-2 ring-green-500 flex items-center justify-center text-green-600 text-xs">💚</span>
+              <span>Prefer să lucrez</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded bg-gray-100 flex items-center justify-center text-red-500 text-xs">✕</span>
+              <span>Indisponibil</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded bg-blue-100"></span>
+              <span>Schimb trimis</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded bg-red-100"></span>
+              <span>Schimb primit</span>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
 
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">

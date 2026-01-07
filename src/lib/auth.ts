@@ -7,16 +7,35 @@ const AUTH_STORAGE_KEY = 'degarda_user'
 const isBrowser = typeof window !== 'undefined'
 
 export const auth = {
-  // Login with personal code
-  async loginWithCode(personalCode: string): Promise<{ user: User | null; error: string | null }> {
+  // Login with personal code and optional hospital selection
+  async loginWithCode(
+    personalCode: string,
+    hospitalId?: string
+  ): Promise<{ user: User | null; error: string | null }> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('users')
         .select('*, hospital:hospitals(id, name, code)')
         .eq('personal_code', personalCode.toUpperCase())
-        .single()
+
+      // Filter by hospital if provided (required for non-SUPER_ADMIN users)
+      if (hospitalId) {
+        query = query.eq('hospital_id', hospitalId)
+      }
+
+      const { data, error } = await query.single()
 
       if (error || !data) {
+        // Provide more specific error messages
+        if (error?.code === 'PGRST116') {
+          // No rows or multiple rows returned
+          return {
+            user: null,
+            error: hospitalId
+              ? 'Cod personal invalid pentru acest spital'
+              : 'Cod personal invalid sau selectează spitalul'
+          }
+        }
         return { user: null, error: 'Cod personal invalid' }
       }
 

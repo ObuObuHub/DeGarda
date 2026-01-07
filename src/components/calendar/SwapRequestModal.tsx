@@ -79,6 +79,12 @@ export default function SwapRequestModal({
           <p className="text-sm text-gray-600 mt-1">
             Tura ta: {formatDate(currentShift.shift_date)} • {currentShift.department}
           </p>
+          <div className="mt-3 p-2 bg-blue-50 rounded-lg">
+            <p className="text-xs text-blue-700">
+              <strong>Cum funcționează:</strong> Selectezi turele colegilor cu care vrei să faci schimb.
+              Ei vor primi notificare și pot accepta sau refuza. Dacă acceptă, turele se schimbă automat.
+            </p>
+          </div>
         </div>
 
         {/* Content */}
@@ -187,6 +193,14 @@ export function SwapRequestsView({
           <p className="text-sm text-gray-600">
             {requests.length} {requests.length === 1 ? 'cerere' : 'cereri'} în așteptare
           </p>
+          {requests.length > 0 && (
+            <div className="mt-3 p-2 bg-yellow-50 rounded-lg">
+              <p className="text-xs text-yellow-700">
+                <strong>Ce se întâmplă:</strong> Dacă accepți, tu vei primi tura colegului, iar el o va primi pe a ta.
+                Calendarul se actualizează automat.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -199,22 +213,40 @@ export function SwapRequestsView({
             <div className="space-y-3">
               {requests.map(request => (
                 <div key={request.id} className="border rounded-lg p-4">
-                  <p className="font-medium">{request.requester?.name || 'Necunoscut'}</p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Dorește să schimbe: {request.requester_shift?.shift_date
-                      ? formatDate(request.requester_shift.shift_date)
-                      : 'Data necunoscută'}
-                  </p>
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">↔️</span>
+                    <p className="font-medium">{request.requester?.name || 'Necunoscut'}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                    <div className="bg-red-50 rounded p-2">
+                      <p className="text-xs text-red-600 font-medium">Vei da:</p>
+                      <p className="text-gray-800">
+                        {request.target_shift?.shift_date
+                          ? formatDate(request.target_shift.shift_date)
+                          : 'Tura ta'}
+                      </p>
+                    </div>
+                    <div className="bg-green-50 rounded p-2">
+                      <p className="text-xs text-green-600 font-medium">Vei primi:</p>
+                      <p className="text-gray-800">
+                        {request.requester_shift?.shift_date
+                          ? formatDate(request.requester_shift.shift_date)
+                          : 'Tura colegului'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
                     <button
                       onClick={() => onAccept(request.id)}
                       className="flex-1 py-3 px-3 min-h-[44px] text-sm text-white bg-green-600 hover:bg-green-700 active:bg-green-800 rounded-lg transition-colors"
                     >
-                      Acceptă
+                      Acceptă schimbul
                     </button>
                     <button
                       onClick={() => onReject(request.id)}
-                      className="flex-1 py-3 px-3 min-h-[44px] text-sm text-white bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-lg transition-colors"
+                      className="flex-1 py-3 px-3 min-h-[44px] text-sm text-gray-700 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 rounded-lg transition-colors"
                     >
                       Refuză
                     </button>

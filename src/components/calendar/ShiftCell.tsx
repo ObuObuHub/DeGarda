@@ -40,19 +40,20 @@ export default function ShiftCell({
   const hasConflicts = conflicts.length > 0
   const hasBlockingConflict = conflicts.some(c => c.severity === 'error')
 
-  // Simplified color scheme
+  // Enhanced color scheme for better visibility
   const getBackgroundColor = () => {
     if (hasIncoming) return '#FEE2E2' // Light red for incoming requests
     if (hasOutgoing) return '#DBEAFE' // Light blue for outgoing
 
     switch (status) {
       case 'your-shift':
+        return '#FEF08A' // Brighter yellow for user's confirmed shifts
       case 'your-reserved':
-        return '#FEF3C7' // Light yellow for user's shifts
+        return '#FDE68A' // Slightly different yellow for reserved
       case 'pending-swap':
         return '#FED7AA' // Light orange for pending swap
       case 'available':
-        return '#F3F4F6' // Light gray for available
+        return '#ECFDF5' // Light green tint for available (more inviting)
       default:
         return departmentColor
     }
@@ -134,10 +135,13 @@ export default function ShiftCell({
         </div>
       )}
 
-      {/* Available indicator - more prominent */}
+      {/* Available indicator - more prominent and inviting */}
       {!shift.user && status === 'available' && (
-        <div className="flex items-center justify-center h-full border-2 border-dashed border-blue-400 rounded m-0.5">
-          <span className="text-blue-600 text-xs font-medium">LIBER</span>
+        <div className="flex items-center justify-center h-full border-2 border-dashed border-green-400 rounded m-0.5 bg-green-50/50">
+          <div className="text-center">
+            <span className="text-green-600 text-xs font-bold block">LIBER</span>
+            <span className="text-green-500 text-[10px]">Rezervă</span>
+          </div>
         </div>
       )}
 
